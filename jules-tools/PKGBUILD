@@ -1,4 +1,5 @@
-_npmname=@google/jules
+_npmscope=@google
+_npmname=jules
 _npmver=0.1.42
 pkgname=jules-tools # All lowercase
 pkgver=0.1.42
@@ -11,17 +12,17 @@ depends=('nodejs' 'npm')
 makedepends=('npm')
 optdepends=()
 source=(
-  "https://registry.npmjs.org/$_npmname/-/$_npmname-$_npmver.tgz"
+  "https://registry.npmjs.org/${_npmscope}/${_npmname}/-/${_npmname}-${pkgver}.tgz"
 )
-noextract=($_npmname-$_npmver.tgz)
-sha1sums=(cc2a1be2ea6e6ca53b51bcccf903ccf457431fe1)
+noextract=("${_npmname}-${pkgver}.tgz")
+sha256sums=('84d85b13777236e4815b787910f4b74d1959cad3b3bf722f2b6306f3786a0f75')
 
 package() {
   cd $srcdir
   local _npmdir="$pkgdir/usr/lib/node_modules/"
   mkdir -p $_npmdir
   cd $_npmdir
-  npm install -g --prefix "$pkgdir/usr" $_npmname@$_npmver
+  npm install -g --prefix "$pkgdir/usr" "$_npmscope/$_npmname@$_npmver"
   chown -R root:root "$pkgdir"
 }
 

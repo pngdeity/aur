@@ -1,0 +1,14 @@
+pkgbase = jules-tools
+	pkgdesc = Jules, the asynchronous coding agent from Google, in the terminal.
+	pkgver = 0.1.42
+	pkgrel = 1
+	url = https://jules.google
+	arch = any
+	makedepends = npm
+	depends = nodejs
+	depends = npm
+	noextract = jules-0.1.42.tgz
+	source = https://registry.npmjs.org/@google/jules/-/jules-0.1.42.tgz
+	sha256sums = 84d85b13777236e4815b787910f4b74d1959cad3b3bf722f2b6306f3786a0f75
+
+pkgname = jules-tools

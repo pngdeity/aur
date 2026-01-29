@@ -1,0 +1,3 @@
+[jules-tools]
+source = "npm"
+npm = "@google/jules"
