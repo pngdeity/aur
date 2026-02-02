@@ -1,0 +1,28 @@
+# Maintainer: pngdeity
+# Contributor: graysky <graysky AT archlinux DOT us>
+# Contributor: pngdeity
+
+pkgname=profile-sync-daemon-opendoas
+pkgver=6.51
+pkgrel=1
+epoch=1
+pkgdesc="Syncs browser profile directories to RAM"
+arch=(any)
+url="https://github.com/pngdeity/profile-sync-daemon"
+license=(MIT)
+depends=(bash findutils procps-ng rsync systemd)
+optdepends=('zsh-completions: for completion when using zsh')
+install=$pkgname.install
+source=($pkgname-$pkgver.tar.gz::$url/archive/v$pkgver.tar.gz)
+sha512sums=('9d2470605e59bcea560fc1cf200a83f03994195191b62ac2218fbdeda3b2fe30e3735968786a55894de3b3f861e42f8756fb322866c26d92bd91756f4b525db2')
+b2sums=('253f89eccfacda0d7b09e2df2fcbab955b8f484ba5a6560c7ce8706782d4b0fc846343da7b627590811e9f6b48b2de79780b57be0419e06771f1380a28b2f5fb')
+
+build() {
+  make -C $pkgname-$pkgver
+}
+
+package() {
+  make DESTDIR="$pkgdir" install -C $pkgname-$pkgver
+  install -vDm 644 $pkgname-$pkgver/MIT -t "$pkgdir/usr/share/licenses/$pkgname/"
+  install -vDm 644 $pkgname-$pkgver/README.md -t "$pkgdir/usr/share/doc/$pkgname/"
+}

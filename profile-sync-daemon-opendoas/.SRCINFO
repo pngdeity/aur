@@ -1,0 +1,20 @@
+pkgbase = profile-sync-daemon
+	pkgdesc = Symlinks and syncs browser profile dirs to RAM
+	pkgver = 6.51
+	pkgrel = 1
+	epoch = 1
+	url = https://github.com/graysky2/profile-sync-daemon
+	install = profile-sync-daemon.install
+	arch = any
+	license = MIT
+	depends = bash
+	depends = findutils
+	depends = procps-ng
+	depends = rsync
+	depends = systemd
+	optdepends = zsh-completions: for completion when using zsh
+	source = profile-sync-daemon-6.51.tar.gz::https://github.com/graysky2/profile-sync-daemon/archive/v6.51.tar.gz
+	sha512sums = 9d2470605e59bcea560fc1cf200a83f03994195191b62ac2218fbdeda3b2fe30e3735968786a55894de3b3f861e42f8756fb322866c26d92bd91756f4b525db2
+	b2sums = 253f89eccfacda0d7b09e2df2fcbab955b8f484ba5a6560c7ce8706782d4b0fc846343da7b627590811e9f6b48b2de79780b57be0419e06771f1380a28b2f5fb
+
+pkgname = profile-sync-daemon
