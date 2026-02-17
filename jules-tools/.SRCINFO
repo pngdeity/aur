@@ -4,6 +4,7 @@ pkgbase = jules-tools
 	pkgrel = 1
 	url = https://jules.google
 	arch = any
+	license = custom:Proprietary
 	makedepends = npm
 	depends = nodejs
 	depends = npm
