@@ -1,0 +1,27 @@
+# Maintainer: pngdeity <https://github.com/pngdeity>
+
+pkgname='profile-sync-daemon-opendoas'
+pkgver=6.55
+pkgrel=1
+pkgdesc='Syncs browser profiles to tmpfs reducing SSD/HDD calls and speeding-up browsers (opendoas variant).'
+arch=('any')
+url='https://github.com/pngdeity/profile-sync-daemon'
+license=('MIT')
+depends=('procps-ng' 'rsync' 'systemd' 'findutils' 'opendoas')
+conflicts=('profile-sync-daemon' 'firefox-sync' 'goanysync' 'go-anysync-git' 'iceweasel-sync'
+'tmpfs-store' 'tmpfs-sync' 'user-profile-sync-daemon')
+provides=('profile-sync-daemon')
+source=("$pkgname-$pkgver.tar.gz::https://github.com/pngdeity/profile-sync-daemon/archive/refs/heads/main.tar.gz")
+install=psd.install
+sha256sums=('2e01fab28a479edc6e46b61dd8180539384310f4c129d81cee982d788083dbeb')
+
+build() {
+  cd "profile-sync-daemon-main"
+  make
+}
+
+package() {
+  cd "profile-sync-daemon-main"
+  make DESTDIR="$pkgdir" install
+  install -Dm644 MIT "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}

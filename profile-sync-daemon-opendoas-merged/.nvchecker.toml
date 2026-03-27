@@ -1,0 +1,3 @@
+[profile-sync-daemon-opendoas]
+source = "git"
+git = "https://github.com/pngdeity/profile-sync-daemon.git"

@@ -1,0 +1,26 @@
+pkgbase = profile-sync-daemon-opendoas
+	pkgdesc = Syncs browser profiles to tmpfs reducing SSD/HDD calls and speeding-up browsers (opendoas variant).
+	pkgver = 6.55
+	pkgrel = 1
+	url = https://github.com/pngdeity/profile-sync-daemon
+	install = psd.install
+	arch = any
+	license = MIT
+	depends = procps-ng
+	depends = rsync
+	depends = systemd
+	depends = findutils
+	depends = opendoas
+	provides = profile-sync-daemon
+	conflicts = profile-sync-daemon
+	conflicts = firefox-sync
+	conflicts = goanysync
+	conflicts = go-anysync-git
+	conflicts = iceweasel-sync
+	conflicts = tmpfs-store
+	conflicts = tmpfs-sync
+	conflicts = user-profile-sync-daemon
+	source = profile-sync-daemon-opendoas-6.55.tar.gz::https://github.com/pngdeity/profile-sync-daemon/archive/refs/heads/main.tar.gz
+	sha256sums = 2e01fab28a479edc6e46b61dd8180539384310f4c129d81cee982d788083dbeb
+
+pkgname = profile-sync-daemon-opendoas
