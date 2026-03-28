@@ -1,5 +1,0 @@
-[profile-sync-daemon]
-source = "github"
-github = "graysky2/profile-sync-daemon"
-use_max_tag = true
-prefix = "v"
