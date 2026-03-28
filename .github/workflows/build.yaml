@@ -1,7 +1,7 @@
-This should follow the instructions laid out in the Arch Build System article, using the PKGBUILDs in each of the top-level directories at the root of the repo.
-This building process is not necessary for this repo to be useful by yay or another AUR package helper. Users of this software can always just build on their own machine.
-Afterwards, the build artifacts should be uploaded to some file server, which pacman can pull binaries from.
+# This should follow the instructions laid out in the Arch Build System article, using the PKGBUILDs in each of the top-level directories at the root of the repo.
+# This building process is not necessary for this repo to be useful by yay or another AUR package helper. Users of this software can always just build on their own machine.
+# Afterwards, the build artifacts should be uploaded to some file server, which pacman can pull binaries from.
 
-This build script should run any time one of the metadata files in one of the package related directories is updated, and it should upload a tar.zst compressed archive file of the compiled program binary and a .sig file for package verification.
-If you want to publish both widely-available and optimized binaries (think like architecture specific or excluding certain dependencies or with differing compiler flags), you could facilitate this at this point. Just create a parallel build (i.e. with the same repo triggers), that then uses the optimized building procedures.
-There are also unknown files in the binary server directories. For example *.db files .db.sig .db.tar.gz etc
+# This build script should run any time one of the metadata files in one of the package related directories is updated, and it should upload a tar.zst compressed archive file of the compiled program binary and a .sig file for package verification.
+# If you want to publish both widely-available and optimized binaries (think like architecture specific or excluding certain dependencies or with differing compiler flags), you could facilitate this at this point. Just create a parallel build (i.e. with the same repo triggers), that then uses the optimized building procedures.
+# There are also unknown files in the binary server directories. For example *.db files .db.sig .db.tar.gz etc
