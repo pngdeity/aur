@@ -1,0 +1,44 @@
+# Maintainer: Nathan Somers <pngdeity@tutanota.com>
+# Contributor: alive4ever <alive4ever at live.com>
+# Contributor: Earnest
+
+pkgname=opendoas
+pkgver=6.0.r56.g8b2a776
+pkgrel=1
+pkgdesc='Run commands as super user or another user'
+url='https://github.com/Duncaen/OpenDoas'
+license=(custom:ISC)
+arch=(x86_64)
+makedepends=(git)
+depends=(pam)
+provides=(doas)
+replaces=(doas)
+install=opendoas.install
+source=(
+	${pkgname}::"git+https://github.com/Duncaen/OpenDoas.git" copyedit.patch
+)
+backup=(/etc/pam.d/doas)
+
+sha256sums=(SKIP)
+# validpgpkeys=()
+
+pkgver() {
+  cd "$pkgname"
+  git describe --long --tags | sed 's,^v,,; s|-\(.*\)-g|.r\1.g|'
+}
+
+prepare() {
+    patch -d $pkgname-$pkgver -Np1 -i ../eject.patch
+}
+
+build() {
+  cd "$pkgname"
+  ./configure --prefix=/usr --with-timestamp
+  make
+}
+
+package() {
+  cd "$pkgname"
+  make DESTDIR="$pkgdir" install
+  install -Dm644 LICENSE -t "$pkgdir/usr/share/licenses/$pkgname"
+}
