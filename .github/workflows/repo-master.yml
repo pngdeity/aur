@@ -65,9 +65,12 @@ jobs:
       matrix:
         package: ${{ fromJson(needs.check-updates.outputs.updates) }}
     container:
-      image: ghcr.io/${{ github.repository }}/arch-builder:latest
+      image: archlinux:latest
       options: --privileged
     steps:
+      - name: Install dependencies
+        run: pacman -Syu --noconfirm devtools jq git sudo base-devel rclone
+
       - name: Checkout Repo
         uses: actions/checkout@v4
 
@@ -112,8 +115,11 @@ jobs:
     if: always() && (needs.build-packages.result == 'success' || (github.event_name == 'push' && needs.build-packages.result != 'failure'))
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/${{ github.repository }}/arch-builder:latest
+      image: archlinux:latest
     steps:
+      - name: Install dependencies
+        run: pacman -Syu --noconfirm rclone devtools jq git
+
       - name: Checkout Repo
         uses: actions/checkout@v4
 
