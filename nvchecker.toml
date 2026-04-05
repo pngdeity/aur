@@ -1,5 +1,6 @@
 [__config__]
 oldver = "nvc_versions.json"
+newver = "nvc_versions_new.json"
 
 [ranger-doas]
 source = "github"

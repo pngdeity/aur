@@ -2,86 +2,145 @@ name: Master Repo Update
 
 on:
   schedule:
-    - cron: '0 0 * * *' # Daily check
+    - cron: '0 0 * * *'
   workflow_dispatch:
   push:
     branches:
       - main
     paths:
       - 'packages/**'
+      - '.github/workflows/repo-master.yml'
 
 permissions:
   contents: write
 
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}/arch-builder
+  REPO_NAME: my_private_repo
+
 jobs:
-  update-and-deploy:
+  check-updates:
     runs-on: ubuntu-latest
     container:
       image: archlinux:latest
-      options: --privileged
-    env:
-      REPO_NAME: my_private_repo
+    outputs:
+      updates: ${{ steps.check.outputs.updates }}
+      has_updates: ${{ steps.check.outputs.has_updates }}
     steps:
-      - name: Install Full Dev Stack
-        run: pacman -Syu --noconfirm devtools nvchecker jq git sudo base-devel rclone
+      - name: Install dependencies
+        run: pacman -Syu --noconfirm nvchecker jq git
 
       - name: Checkout Repo
         uses: actions/checkout@v4
 
+      - name: Run nvchecker
+        id: check
+        env:
+          NVCHECKER_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          nvchecker -c nvchecker.toml
+          # Check if newver file exists and has content
+          if [ -f "nvc_versions_new.json" ]; then
+             UPDATES=$(nvcmp -c nvchecker.toml --json)
+             if [ "$UPDATES" != "[]" ]; then
+               echo "has_updates=true" >> $GITHUB_OUTPUT
+               MATRIX_JSON=$(echo "$UPDATES" | jq -c '[.[] | {name: .name, version: .newver}]')
+               echo "updates=$MATRIX_JSON" >> $GITHUB_OUTPUT
+             else
+               echo "has_updates=false" >> $GITHUB_OUTPUT
+               echo "updates=[]" >> $GITHUB_OUTPUT
+             fi
+          else
+             echo "has_updates=false" >> $GITHUB_OUTPUT
+             echo "updates=[]" >> $GITHUB_OUTPUT
+          fi
+
+  build-packages:
+    needs: check-updates
+    if: needs.check-updates.outputs.has_updates == 'true' || github.event_name == 'push'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        package: ${{ fromJson(needs.check-updates.outputs.updates) }}
+    container:
+      image: archlinux:latest
+      options: --privileged
+    steps:
+      - name: Install dependencies
+        run: pacman -Syu --noconfirm devtools jq git sudo base-devel rclone
+
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+
+      - name: Cache pacman packages
+        uses: actions/cache@v4
+        with:
+          path: /var/cache/pacman/pkg
+          key: ${{ runner.os }}-pacman-${{ hashFiles('packages/${{ matrix.package.name }}/PKGBUILD') }}
+          restore-keys: |
+            ${{ runner.os }}-pacman-
+
       - name: Configure Build User
         run: |
-          useradd -m builder
+          useradd -m builder || true
           echo "builder ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
           chown -R builder:builder .
 
-      - name: Run nvchecker
-        id: nvchecker
+      - name: Update Package source
         run: |
-          nvchecker -c nvchecker.toml
-          # Check for updates and set output
-          if [ -n "$(nvcmp -c nvchecker.toml)" ]; then
-            echo "updates_found=true" >> $GITHUB_OUTPUT
+          cd "packages/${{ matrix.package.name }}"
+          if [ -f "update.sh" ]; then
+             bash "update.sh" "${{ matrix.package.version }}"
           else
-            echo "updates_found=false" >> $GITHUB_OUTPUT
+             sed -i "s/^pkgver=.*/pkgver=${{ matrix.package.version }}/" PKGBUILD
+             sed -i "s/^pkgrel=.*/pkgrel=1/" PKGBUILD
+             updpkgsums
           fi
 
-      - name: Process Updates and Build
+      - name: Build Package
         run: |
-          # Use nvcmp to identify changed packages
-          nvcmp -c nvchecker.toml --json | jq -r '.[] | .name + " " + .newver' | while read pkg version; do
-            echo "Processing $pkg at version $version..."
-            cd "packages/$pkg"
-            
-            # 1. Update pkgver and reset pkgrel
-            if [ -f "update.sh" ]; then
-               bash "update.sh" "$version"
-            else
-               sed -i "s/^pkgver=.*/pkgver=$version/" PKGBUILD
-               sed -i "s/^pkgrel=.*/pkgrel=1/" PKGBUILD
-               # Automatically update checksums for standard packages
-               updpkgsums
-            fi
-            
-            # 2. Build in chroot
-            sudo -u builder extra-x86_64-build
-            cd ../..
-          done
+          cd "packages/${{ matrix.package.name }}"
+          sudo -u builder extra-x86_64-build
 
-      - name: Batch Update Repository Database
-        if: steps.nvchecker.outputs.updates_found == 'true' || github.event_name == 'push'
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: pkg-${{ matrix.package.name }}
+          path: packages/${{ matrix.package.name }}/*.pkg.tar.zst
+
+  deploy-repo:
+    needs: [check-updates, build-packages]
+    if: always() && (needs.build-packages.result == 'success' || (github.event_name == 'push' && needs.build-packages.result != 'failure'))
+    runs-on: ubuntu-latest
+    container:
+      image: archlinux:latest
+    steps:
+      - name: Install dependencies
+        run: pacman -Syu --noconfirm rclone devtools jq git
+
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: all-pkgs
+          pattern: pkg-*
+          merge-multiple: true
+
+      - name: Update Repository Database
         run: |
           mkdir -p deploy/x86_64
-          # Collect all successfully built packages
-          find packages/ -name "*.pkg.tar.zst" -exec cp {} deploy/x86_64/ \;
-          
-          # Update the master database
+          cp all-pkgs/*.pkg.tar.zst deploy/x86_64/
           cd deploy/x86_64
           repo-add ${{ env.REPO_NAME }}.db.tar.gz *.pkg.tar.zst
           ln -sf ${{ env.REPO_NAME }}.db.tar.gz ${{ env.REPO_NAME }}.db
           ln -sf ${{ env.REPO_NAME }}.files.tar.gz ${{ env.REPO_NAME }}.files
 
       - name: Deploy to Backend
-        if: (steps.nvchecker.outputs.updates_found == 'true' || github.event_name == 'push') && env.HAS_RCLONE_CONF == 'true'
+        if: env.HAS_RCLONE_CONF == 'true'
         env:
           RCLONE_CONF_BASE64: ${{ secrets.RCLONE_CONFIG_BASE64 }}
           HAS_RCLONE_CONF: ${{ secrets.RCLONE_CONFIG_BASE64 != '' }}
@@ -90,12 +149,17 @@ jobs:
           echo "$RCLONE_CONF_BASE64" | base64 -d > ~/.config/rclone/rclone.conf
           rclone copy deploy/x86_64/ gdrive:arch-repo/x86_64/ --verbose
 
-      - name: Commit Version State and Updated Packages
-        if: steps.nvchecker.outputs.updates_found == 'true'
+      - name: Commit Version State
+        if: needs.check-updates.outputs.has_updates == 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          # nvtake updates oldver with newver
           nvtake -c nvchecker.toml --all
           git config user.name "Auto-Packager"
           git config user.email "actions@github.com"
-          git add nvc_versions.json packages/*/PKGBUILD packages/*/doas-substitution.patch
+          git add nvc_versions.json packages/*/PKGBUILD
+          # Add extra files if they changed (like ranger-doas patch)
+          git add packages/*/doas-substitution.patch || true
           git commit -m "chore: automated upstream update"
           git push
