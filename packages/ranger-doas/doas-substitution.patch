@@ -1,0 +1,146 @@
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+index b9736c35..75a65feb 100644
+--- a/CHANGELOG.md
++++ b/CHANGELOG.md
+@@ -323,7 +323,7 @@ This log documents changes between stable versions.
+ * Added a reversed visual mode (activate with `uV`)
+ * Added `$RANGER_LEVEL` environment variable which ranger sets to `1` or higher
+   so programs can know that they were spawned from ranger
+-* Added run flag `r` for running with root privileges (needs sudo)
++* Added run flag `r` for running with root privileges (needs doas)
+ * Added run flag `t` for running in a new terminal (as specified in $TERMCMD)
+ * Added :relink command to change destinations of symlinks
+ * Added `dc` binding for getting the cumulative size of a directory
+diff --git a/README.md b/README.md
+index 598c0dbd..1a3b79e9 100644
+--- a/README.md
++++ b/README.md
+@@ -84,7 +84,7 @@ For general usage:
+ 
+ * `file` for determining file types
+ * `chardet` (Python package) for improved encoding detection of text files
+-* `sudo` to use the "run as root" feature
++* `doas` to use the "run as root" feature
+ * `python-bidi` (Python package) to display right-to-left file names correctly
+   (Hebrew, Arabic)
+ 
+@@ -143,12 +143,12 @@ Note that you don't *have* to install ranger; you can simply run `ranger.py`.
+ 
+ To install ranger manually:
+ ```
+-sudo make install
++doas make install
+ ```
+ 
+ This translates roughly to:
+ ```
+-sudo python setup.py install --optimize=1 --record=install_log.txt
++doas python setup.py install --optimize=1 --record=install_log.txt
+ ```
+ 
+ This also saves a list of all installed files to `install_log.txt`, which you can
+diff --git a/doc/cheatsheet.svg b/doc/cheatsheet.svg
+index f34f4a53..c613814e 100644
+--- a/doc/cheatsheet.svg
++++ b/doc/cheatsheet.svg
+@@ -4389,7 +4389,7 @@
+          x="434.66431"
+          y="991.61206"
+          style="font-weight:normal;font-size:12.5px;line-height:1.25;font-family:sans-serif"
+-         id="tspan4905">%f and %s are especially useful here. Example: &quot;:shell -f inkscape %f&quot; or &quot;:shell sudo cp %c ./&quot;</tspan><tspan
++         id="tspan4905">%f and %s are especially useful here. Example: &quot;:shell -f inkscape %f&quot; or &quot;:shell doas cp %c ./&quot;</tspan><tspan
+          sodipodi:role="line"
+          x="434.66431"
+          y="1007.2371"
+diff --git a/doc/ranger.pod b/doc/ranger.pod
+index aa87d693..953d581e 100644
+--- a/doc/ranger.pod
++++ b/doc/ranger.pod
+@@ -211,7 +211,7 @@ C<chardet> (Python package) for improved encoding detection of text files
+ 
+ =item -
+ 
+-C<sudo> to use the "run as root" feature
++C<doas> to use the "run as root" feature
+ 
+ =item -
+ 
+@@ -510,7 +510,7 @@ used in the commands C<:open_with> (key "r") and C<:shell> (key "!").
+      instead of calling "disown" or "nohup", to avoid killing the
+      background command when pressing Ctrl+C in ranger.
+  c   Run the current file only, instead of the selection
+- r   Run application with root privilege (requires sudo)
++ r   Run application with root privilege (requires doas)
+  t   Run application in a new terminal window
+ 
+ There are some additional flags that can currently be used only in the C<shell>
+diff --git a/doc/rifle.pod b/doc/rifle.pod
+index 63c8f9b3..116e6f76 100644
+--- a/doc/rifle.pod
++++ b/doc/rifle.pod
+@@ -36,7 +36,7 @@ letter.
+ 
+ Table of all flags:
+  f   fork program to background
+- r   run program as root, using sudo
++ r   run program as root, using doas
+  t   run program in a separate terminal, as specified by $TERMCMD
+ 
+ =item B<-l>
+diff --git a/ranger/config/rifle.conf b/ranger/config/rifle.conf
+index 2ef76807..2b010280 100644
+--- a/ranger/config/rifle.conf
++++ b/ranger/config/rifle.conf
+@@ -39,7 +39,7 @@
+ #   f | Fork the program, make it run in the background.
+ #     |   New command = setsid $command >& /dev/null &
+ #   r | Execute the command with root permissions
+-#     |   New command = sudo $command
++#     |   New command = doas $command
+ #   t | Run the program in a new terminal.  If $TERMCMD is not defined,
+ #     | rifle will attempt to extract it from $TERM.
+ #     |   New command = $TERMCMD -e $command
+diff --git a/ranger/core/runner.py b/ranger/core/runner.py
+index 7676b6c5..a4cec868 100644
+--- a/ranger/core/runner.py
++++ b/ranger/core/runner.py
+@@ -17,7 +17,7 @@ f: fork the process.
+ p: redirect output to the pager
+ c: run only the current file (not handled here)
+ w: wait for enter-press afterwards
+-r: run application with root privilege (requires sudo)
++r: run application with root privilege (requires doas)
+ t: run application in a new terminal window
+ (An uppercase key negates the respective lower case flag)
+ """
+@@ -227,13 +227,12 @@ class Runner(object):  # pylint: disable=too-few-public-methods
+                 wait_for_enter = True
+         if 'r' in context.flags:
+             # TODO: make 'r' flag work with pipes
+-            if 'sudo' not in get_executables():
+-                return self._log("Can not run with 'r' flag, sudo is not installed!")
+-            f_flag = ('f' in context.flags)
++            if 'doas' not in get_executables():
++                return self._log("Can not run with 'r' flag, doas is not installed!")
+             if isinstance(action, str):
+-                action = 'sudo ' + (f_flag and '-b ' or '') + action
++                action = 'doas ' + action
+             else:
+-                action = ['sudo'] + (f_flag and ['-b'] or []) + action
++                action = ['doas'] + action
+             toggle_ui = True
+             context.wait = True
+         if 't' in context.flags:
+diff --git a/ranger/ext/rifle.py b/ranger/ext/rifle.py
+index 7a3dea3d..0c0dbe7f 100755
+--- a/ranger/ext/rifle.py
++++ b/ranger/ext/rifle.py
+@@ -455,7 +455,7 @@ class Rifle(object):  # pylint: disable=too-many-instance-attributes
+             self.hook_before_executing(command, self._mimetype, self._app_flags)
+             try:
+                 if 'r' in flags:
+-                    prefix = ['sudo', '-E', 'su', 'root', '-mc']
++                    prefix = ['doas', '/bin/sh', '-c']
+                 else:
+                     prefix = ['/bin/sh', '-c']
+ 

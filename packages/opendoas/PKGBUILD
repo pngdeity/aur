@@ -1,0 +1,68 @@
+# Maintainer: Nathan Somers <pngdeity@tutanota.com>
+# Contributor: alive4ever <alive4ever at live.com>
+# Contributor: Earnest
+
+pkgname=opendoas
+pkgver=6.8.2
+pkgrel=1
+pkgdesc='Run commands as super user or another user (patched version)'
+url='https://github.com/Duncaen/OpenDoas'
+license=(custom:ISC)
+arch=(x86_64)
+makedepends=(git)
+depends=(pam)
+provides=(doas)
+conflicts=(doas)
+replaces=(doas)
+install=opendoas.install
+source=(
+    "${pkgname}::git+https://github.com/Duncaen/OpenDoas.git#tag=v${pkgver}"
+    "change-PATH.patch"
+    "rowhammer.patch"
+    "retry.patch"
+    "arg-handling.patch"
+    "post-release-v6.8.2.patch"
+)
+backup=(etc/pam.d/doas)
+sha256sums=('43b4c2de1aaa31aac1d322b98883334b864c606783c4dfb3ddbfa0d88af9332b'
+            'd1784db14976a9988666d27c96cd3ab09f91c3435eb06efd01374712982ff8f8'
+            '80c9ebdb373c552730e13f6c562820a80540a96f0471f2c96170f69fba052d0a'
+            'cae34e452f63dec782fe2e0a3b2ca73045a7a7f21468e7dd1ea84a11296ce8c2'
+            '3e86c2601377aa0ffdf132365838caa4bdcb4c6e6b6ffddb2070e43157337b5e'
+            'dab653136a5adb37991b215963157588a14e16be8aa32d33c37590e86c763477')
+
+pkgver() {
+  cd "$pkgname"
+  git describe --long --tags | sed 's,^v,,; s|-\(.*\)-g|.r\1.g|'
+}
+
+prepare() {
+  cd "$pkgname"
+  
+  # Alpine PATH patch
+  patch -Np1 -i ../change-PATH.patch
+  
+  # GitHub PR #124: Rowhammer resistance
+  patch -Np1 -i ../rowhammer.patch
+  
+  # GitHub PR #123: Retry 3 times
+  patch -Np1 -i ../retry.patch
+  
+  # GitHub PR #130: Argument handling
+  patch -Np1 -i ../arg-handling.patch
+
+  # Post-release 6.8.2 commits (HEAD)
+  patch -Np1 -i ../post-release-v6.8.2.patch
+}
+
+build() {
+  cd "$pkgname"
+  ./configure --prefix=/usr --with-timestamp
+  make
+}
+
+package() {
+  cd "$pkgname"
+  make DESTDIR="$pkgdir" install
+  install -Dm644 LICENSE -t "$pkgdir/usr/share/licenses/$pkgname"
+}

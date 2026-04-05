@@ -1,0 +1,204 @@
+diff --git a/GNUmakefile b/GNUmakefile
+index 9470202..2eef88e 100644
+--- a/GNUmakefile
++++ b/GNUmakefile
+@@ -15,16 +15,13 @@ OBJS:=	${OBJS:.c=.o}
+ ${PROG}: ${OBJS}
+ 	${CC} ${CFLAGS} $^ -o $@ ${LDFLAGS} ${LDLIBS}
+ 
+-install: ${PROG} ${PAM_DOAS} ${MAN}
++install: ${PROG} ${MAN}
+ 	mkdir -p -m 0755 ${DESTDIR}${BINDIR}
+-	[ -n "${PAM_DOAS}" ] && mkdir -p -m 0755 ${DESTDIR}${PAMDIR} || true
+ 	mkdir -p -m 0755 ${DESTDIR}${MANDIR}/man1
+ 	mkdir -p -m 0755 ${DESTDIR}${MANDIR}/man5
+ 	cp -f ${PROG} ${DESTDIR}${BINDIR}
+ 	chown ${BINOWN}:${BINGRP} ${DESTDIR}${BINDIR}/${PROG}
+ 	chmod ${BINMODE} ${DESTDIR}${BINDIR}/${PROG}
+-	[ -n "${PAM_DOAS}" ] && cp ${PAM_DOAS} ${DESTDIR}${PAMDIR}/doas || true
+-	[ -n "${PAM_DOAS}" ] && chmod 0644 ${DESTDIR}${PAMDIR}/doas || true
+ 	cp -f doas.1 ${DESTDIR}${MANDIR}/man1
+ 	cp -f doas.conf.5 ${DESTDIR}${MANDIR}/man5
+ 
+diff --git a/README.md b/README.md
+index 20ef9f2..3d532a2 100644
+--- a/README.md
++++ b/README.md
+@@ -1,21 +1,28 @@
+ # OpenDoas: a portable version of OpenBSD's `doas` command
+ 
+-`doas` is a minimal replacement for the venerable `sudo`. It was
++[`doas`](https://en.wikipedia.org/wiki/Doas) is a minimal replacement for the venerable `sudo`. It was
+ initially [written by Ted Unangst](http://www.tedunangst.com/flak/post/doas)
+ of the OpenBSD project to provide 95% of the features of `sudo` with a
+ fraction of the codebase.
+ 
+-At the moment only linux with GLIBC or musl libc is supported and tested.
++## Building and Installation Warnings
+ 
+-## Building and installing
++There are a few steps you have to carefully consider before building and installing
++OpenDoas:
+ 
+-```
+-$ ./configure
+-$ make
+-# make install
+-```
++* There are fewer eyes on random `doas` ports, just because `sudo` had a vulnerability
++  does not mean random doas ports are more secure if they are not reviewed
++  or [PAM](https://en.wikipedia.org/wiki/Pluggable_authentication_module) is configured incorrectly.
++  * If you want to use PAM; You have to [configure PAM](#pam-configuration)
++    and failing to do so correctly might leave a big open door.
+ 
+-## About the port
++* Use the `configure` script.
++* Use the default make target.
++* If you really want to install a setuid binary that depends on
++  PAM being correctly configured, use the `make install` target
++  to install the software.
++
++## About the OpenDoas Port
+ 
+ This is not an official port/project from OpenBSD!
+ 
+@@ -23,23 +30,35 @@ As much as possible I've attempted to stick to `doas` as tedu desired
+ it. As things stand it's essentially just code lifted from OpenBSD with
+ PAM or shadow based authentication glommed on to it.
+ 
+-Compatibility functions in libopenbsd come from openbsd directly
++Compatibility functions in libopenbsd come from OpenBSD directly
+ (`strtonum.c`, `reallocarray.c`, `strlcpy.c`, `strlcat.c`),
+ from openssh (`readpassphrase.c`) or from sudo (`closefrom.c`).
+ 
+ The PAM and shadow authentication code does not come from the OpenBSD project.
+ 
+-### Perist/Timestamp/Timeout
++### PAM Configuration
++
++I will not ship PAM configuration files, they are distribution specific and
++its simply not safe or productive to ship and install those files.
++
++If you want to use OpenDoas on your system and there is no package that
++ships with a working PAM configuration file, then you have to write and
++test it yourself.
++
++A good starting point is probably the distribution maintained `/etc/pam.d/sudo`
++file.
++
++### Persist/Timestamp/Timeout
+ 
+-The persist feature is disabled by default and can be enabled with the configure
+-flag `--with-timestamp`.
++The persist feature is disabled by default and can be enabled with the
++`--with-timestamp` configure flag.
+ 
+-This feature is new and potentially dangerous, in the original doas, a kernel API
+-is used to set and clear timeouts. This API is openbsd specific and no similar API
++This feature is new and potentially dangerous, in the original `doas`, a kernel API
++is used to set and clear timeouts. This API is OpenBSD specific and no similar API
+ is available on other operating systems.
+ 
+ As a workaround, the persist feature is implemented using timestamp files
+-similar to sudo.
++similar to `sudo`.
+ 
+ See the comment block in `timestamp.c` for an in-depth description on how
+ timestamps are created and checked to be as safe as possible.
+diff --git a/configure b/configure
+index 1c5d989..1f92f01 100755
+--- a/configure
++++ b/configure
+@@ -15,7 +15,6 @@ usage: configure [options]
+   --datadir=DIR          architecture-independent data files [PREFIX/share]
+   --mandir=DIR           manual pages [DATADIR/man]
+   --sysconfdir=DIR       directory for configuration files [/etc]
+-  --pamdir=DIR           PAM directory [SYSCONFDIR/pam.d]
+ 
+   --build=build-alias    a cpu-vendor-opsys for the system where the application will be built
+   --host=host-alias      a cpu-vendor-opsys for the system where the application will run
+@@ -52,7 +51,6 @@ for x; do
+ 	--datadir) SHAREDIR=$var ;;
+ 	--mandir) MANDIR=$var ;;
+ 	--sysconfdir) SYSCONFDIR=$var ;;
+-	--pamdir) PAMDIR=$var ;;
+ 	--build) BUILD=$var ;;
+ 	--host) HOST=$var ;;
+ 	--target) TARGET=$var ;;
+@@ -134,7 +132,6 @@ esac
+ : ${SHAREDIR:=${PREFIX}/share}
+ : ${MANDIR:=${SHAREDIR}/man}
+ : ${SYSCONFDIR:=/etc}
+-: ${PAMDIR:=${SYSCONFDIR}/pam.d}
+ : ${BINMODE:=4755}
+ : ${BINOWN:=root}
+ : ${BINGRP:=root}
+@@ -146,7 +143,6 @@ BINDIR   ?=	${BINDIR}
+ SHAREDIR ?=	${SHAREDIR}
+ MANDIR   ?=	${MANDIR}
+ SYSCONFDIR?=	${SYSCONFDIR}
+-PAMDIR   ?=	${PAMDIR}
+ BINMODE  ?=	${BINMODE}
+ BINOWN  ?=	${BINOWN}
+ BINGRP  ?=	${BINGRP}
+@@ -203,9 +199,6 @@ int main(void) {
+ 		printf 'LDLIBS +=	-lpam\n' >>$CONFIG_MK
+ 		printf '#define USE_PAM\n' >>$CONFIG_H
+ 		printf 'pam\n'
+-
+-		pam_file="pam.d__doas__${OS}"
+-		[ -e "$pam_file" ] && printf 'PAM_DOAS  =	%s\n' "$pam_file" >>$CONFIG_MK
+ 		return 0
+ 	}
+ 
+diff --git a/doas.c b/doas.c
+index 0ea380a..ac3a42a 100644
+--- a/doas.c
++++ b/doas.c
+@@ -260,11 +260,6 @@ main(int argc, char **argv)
+ 	const char *cwd;
+ 	char **envp;
+ 
+-	if (argc <= 0 || argv == NULL || argv[0] == NULL) {
+-		fprintf(stderr, "doas: executed without argv\n");
+-		exit(1);
+-	}
+-
+ 	setprogname("doas");
+ 
+ 	closefrom(STDERR_FILENO + 1);
+diff --git a/pam.c b/pam.c
+index a9e2036..fa483b8 100644
+--- a/pam.c
++++ b/pam.c
+@@ -104,8 +104,7 @@ pamconv(int nmsgs, const struct pam_message **msgs,
+ 
+ 		case PAM_ERROR_MSG:
+ 		case PAM_TEXT_INFO:
+-			if (fprintf(style == PAM_ERROR_MSG ? stderr : stdout,
+-			    "%s\n", msgs[i]->msg) < 0)
++			if (fprintf(stderr, "%s\n", msgs[i]->msg) < 0)
+ 				goto fail;
+ 			break;
+ 
+diff --git a/pam.d__doas__darwin b/pam.d__doas__darwin
+deleted file mode 100644
+index 87551fb..0000000
+--- a/pam.d__doas__darwin
++++ /dev/null
+@@ -1,5 +0,0 @@
+-# sudo: auth account password session
+-auth       required       pam_opendirectory.so
+-account    required       pam_permit.so
+-password   required       pam_deny.so
+-session    required       pam_permit.so
+diff --git a/pam.d__doas__linux b/pam.d__doas__linux
+deleted file mode 100644
+index 98707ef..0000000
+--- a/pam.d__doas__linux
++++ /dev/null
+@@ -1,4 +0,0 @@
+-#%PAM-1.0
+-auth            include         system-auth
+-account         include         system-auth
+-session         include         system-auth

@@ -1,9 +1,0 @@
-# Files typically created during building
-*/src
-*/pkg
-*/*.log
-*/*.zst
-*/*.zst.sig
-
-# Dispatches from the lunatic fringe need not be tracked.
-TODO

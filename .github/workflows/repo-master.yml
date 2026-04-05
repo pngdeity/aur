@@ -1,0 +1,101 @@
+name: Master Repo Update
+
+on:
+  schedule:
+    - cron: '0 0 * * *' # Daily check
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'packages/**'
+
+permissions:
+  contents: write
+
+jobs:
+  update-and-deploy:
+    runs-on: ubuntu-latest
+    container:
+      image: archlinux:latest
+      options: --privileged
+    env:
+      REPO_NAME: my_private_repo
+    steps:
+      - name: Install Full Dev Stack
+        run: pacman -Syu --noconfirm devtools nvchecker jq git sudo base-devel rclone
+
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+
+      - name: Configure Build User
+        run: |
+          useradd -m builder
+          echo "builder ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
+          chown -R builder:builder .
+
+      - name: Run nvchecker
+        id: nvchecker
+        run: |
+          nvchecker -c nvchecker.toml
+          # Check for updates and set output
+          if [ -n "$(nvcmp -c nvchecker.toml)" ]; then
+            echo "updates_found=true" >> $GITHUB_OUTPUT
+          else
+            echo "updates_found=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Process Updates and Build
+        run: |
+          # Use nvcmp to identify changed packages
+          nvcmp -c nvchecker.toml --json | jq -r '.[] | .name + " " + .newver' | while read pkg version; do
+            echo "Processing $pkg at version $version..."
+            cd "packages/$pkg"
+            
+            # 1. Update pkgver and reset pkgrel
+            if [ -f "update.sh" ]; then
+               bash "update.sh" "$version"
+            else
+               sed -i "s/^pkgver=.*/pkgver=$version/" PKGBUILD
+               sed -i "s/^pkgrel=.*/pkgrel=1/" PKGBUILD
+               # Automatically update checksums for standard packages
+               updpkgsums
+            fi
+            
+            # 2. Build in chroot
+            sudo -u builder extra-x86_64-build
+            cd ../..
+          done
+
+      - name: Batch Update Repository Database
+        if: steps.nvchecker.outputs.updates_found == 'true' || github.event_name == 'push'
+        run: |
+          mkdir -p deploy/x86_64
+          # Collect all successfully built packages
+          find packages/ -name "*.pkg.tar.zst" -exec cp {} deploy/x86_64/ \;
+          
+          # Update the master database
+          cd deploy/x86_64
+          repo-add ${{ env.REPO_NAME }}.db.tar.gz *.pkg.tar.zst
+          ln -sf ${{ env.REPO_NAME }}.db.tar.gz ${{ env.REPO_NAME }}.db
+          ln -sf ${{ env.REPO_NAME }}.files.tar.gz ${{ env.REPO_NAME }}.files
+
+      - name: Deploy to Backend
+        if: (steps.nvchecker.outputs.updates_found == 'true' || github.event_name == 'push') && env.HAS_RCLONE_CONF == 'true'
+        env:
+          RCLONE_CONF_BASE64: ${{ secrets.RCLONE_CONFIG_BASE64 }}
+          HAS_RCLONE_CONF: ${{ secrets.RCLONE_CONFIG_BASE64 != '' }}
+        run: |
+          mkdir -p ~/.config/rclone/
+          echo "$RCLONE_CONF_BASE64" | base64 -d > ~/.config/rclone/rclone.conf
+          rclone copy deploy/x86_64/ gdrive:arch-repo/x86_64/ --verbose
+
+      - name: Commit Version State and Updated Packages
+        if: steps.nvchecker.outputs.updates_found == 'true'
+        run: |
+          nvtake -c nvchecker.toml --all
+          git config user.name "Auto-Packager"
+          git config user.email "actions@github.com"
+          git add nvc_versions.json packages/*/PKGBUILD packages/*/doas-substitution.patch
+          git commit -m "chore: automated upstream update"
+          git push

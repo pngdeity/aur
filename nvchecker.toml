@@ -1,0 +1,22 @@
+[__config__]
+oldver = "nvc_versions.json"
+
+[ranger-doas]
+source = "github"
+github = "ranger/ranger"
+use_latest_tag = true
+prefix = "v"
+
+[jules-tools]
+source = "npm"
+npm = "@google/jules"
+
+[opendoas]
+source = "github"
+github = "Duncaen/OpenDoas"
+use_latest_tag = true
+
+[profile-sync-daemon-opendoas]
+source = "github"
+github = "pngdeity/profile-sync-daemon"
+branch = "main"

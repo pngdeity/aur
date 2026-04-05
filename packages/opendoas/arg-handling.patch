@@ -1,0 +1,23 @@
+From 61fb650c8cdd102f1fd607510b4ff891bbe23c2d Mon Sep 17 00:00:00 2001
+From: konsolebox <konsolebox@gmail.com>
+Date: Mon, 14 Oct 2024 10:07:31 +0800
+Subject: [PATCH] configure: Correct value assignment to GID_MAX
+
+Fixes https://github.com/Duncaen/OpenDoas/issues/129.
+---
+ configure | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/configure b/configure
+index 1f92f01..f088d76 100755
+--- a/configure
++++ b/configure
+@@ -63,7 +63,7 @@ for x; do
+ 	--with-timestamp) WITHOUT_TIMESTAMP= ;;
+ 	--without-timestamp) WITHOUT_TIMESTAMP=yes ;;
+ 	--uid-max) UID_MAX=$var ;;
+-	--gid-max) UID_MAX=$var ;;
++	--gid-max) GID_MAX=$var ;;
+ 	--help|-h) usage ;;
+ 	*) die "Error: unknown option $opt" ;;
+ 	esac
