@@ -32,7 +32,7 @@ jobs:
         run: pacman -Syu --noconfirm nvchecker jq git
 
       - name: Checkout Repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Run nvchecker
         id: check
@@ -72,10 +72,10 @@ jobs:
         run: pacman -Syu --noconfirm devtools jq git sudo base-devel rclone
 
       - name: Checkout Repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Cache pacman packages
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: /var/cache/pacman/pkg
           key: ${{ runner.os }}-pacman-${{ hashFiles('packages/${{ matrix.package.name }}/PKGBUILD') }}
@@ -105,7 +105,7 @@ jobs:
           sudo -u builder extra-x86_64-build
 
       - name: Upload Build Artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: pkg-${{ matrix.package.name }}
           path: packages/${{ matrix.package.name }}/*.pkg.tar.zst
@@ -121,10 +121,10 @@ jobs:
         run: pacman -Syu --noconfirm rclone devtools jq git
 
       - name: Checkout Repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Download all artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           path: all-pkgs
           pattern: pkg-*
