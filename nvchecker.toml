@@ -16,8 +16,3 @@ npm = "@google/jules"
 source = "github"
 github = "Duncaen/OpenDoas"
 use_latest_tag = true
-
-[profile-sync-daemon-opendoas]
-source = "github"
-github = "pngdeity/profile-sync-daemon"
-branch = "main"
