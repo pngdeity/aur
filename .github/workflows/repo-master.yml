@@ -73,7 +73,7 @@ jobs:
       options: --privileged
     steps:
       - name: Install dependencies
-        run: pacman -Syu --noconfirm devtools jq git sudo base-devel rclone
+        run: pacman -Syu --noconfirm devtools jq git sudo base-devel rclone pacman-contrib
 
       - name: Checkout Repo
         uses: actions/checkout@v6
