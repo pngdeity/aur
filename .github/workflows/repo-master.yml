@@ -41,8 +41,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo "[github]" > keyfile.toml
-          echo "token = \"$GITHUB_TOKEN\"" >> keyfile.toml
+          echo "[keys]" > keyfile.toml
+          echo "github = \"$GITHUB_TOKEN\"" >> keyfile.toml
           nvchecker -k keyfile.toml -c nvchecker.toml
           # Check if newver file exists and has content
           if [ -f "nvc_versions_new.json" ]; then
