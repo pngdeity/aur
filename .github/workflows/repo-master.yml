@@ -17,8 +17,6 @@ permissions:
   contents: write
 
 env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}/arch-builder
   REPO_NAME: my_private_repo
 
 jobs:
@@ -129,6 +127,7 @@ jobs:
 
       - name: Download all artifacts
         uses: actions/download-artifact@v8
+        continue-on-error: true
         with:
           path: all-pkgs
           pattern: pkg-*
@@ -164,21 +163,26 @@ jobs:
           echo "Downloading existing database from R2..."
           rclone copy r2:$R2_BUCKET_NAME/x86_64/ deploy/x86_64/ --include "*.db*" --include "*.files*" || echo "No existing database found."
 
-          # Copy newly built packages
-          cp all-pkgs/*.pkg.tar.zst deploy/x86_64/
+          # Copy newly built packages if any exist
+          if ls all-pkgs/*.pkg.tar.zst 1> /dev/null 2>&1; then
+            echo "Copying new packages to deploy directory..."
+            cp all-pkgs/*.pkg.tar.zst deploy/x86_64/
 
-          # Update Repository Database
-          cd deploy/x86_64
-          repo-add ${{ env.REPO_NAME }}.db.tar.gz *.pkg.tar.zst
-          ln -sf ${{ env.REPO_NAME }}.db.tar.gz ${{ env.REPO_NAME }}.db
-          ln -sf ${{ env.REPO_NAME }}.files.tar.gz ${{ env.REPO_NAME }}.files
-          cd ../..
+            # Update Repository Database
+            cd deploy/x86_64
+            repo-add ${{ env.REPO_NAME }}.db.tar.gz *.pkg.tar.zst
+            ln -sf ${{ env.REPO_NAME }}.db.tar.gz ${{ env.REPO_NAME }}.db
+            ln -sf ${{ env.REPO_NAME }}.files.tar.gz ${{ env.REPO_NAME }}.files
+            cd ../..
+          else
+            echo "No new packages found to add."
+          fi
 
           # Upload everything back to R2
           rclone copy deploy/x86_64/ r2:$R2_BUCKET_NAME/x86_64/ --verbose
 
       - name: Commit Version State
-        if: needs.check-updates.outputs.has_updates == 'true'
+        if: needs.check-updates.outputs.has_updates == 'true' && needs.build-packages.result == 'success'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -189,5 +193,5 @@ jobs:
           git add nvc_versions.json packages/*/PKGBUILD
           # Add extra files if they changed (like ranger-doas patch)
           git add packages/*/doas-substitution.patch || true
-          git commit -m "chore: automated upstream update"
-          git push
+          git commit -m "chore: automated upstream update" || echo "No changes to commit"
+          git push || echo "No changes to push"
