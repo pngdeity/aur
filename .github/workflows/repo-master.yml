@@ -94,11 +94,11 @@ jobs:
         run: |
           cd "packages/${{ matrix.package.name }}"
           if [ -f "update.sh" ]; then
-             bash "update.sh" "${{ matrix.package.version }}"
+             sudo -u builder bash "update.sh" "${{ matrix.package.version }}"
           else
              sed -i "s/^pkgver=.*/pkgver=${{ matrix.package.version }}/" PKGBUILD
              sed -i "s/^pkgrel=.*/pkgrel=1/" PKGBUILD
-             updpkgsums
+             sudo -u builder updpkgsums
           fi
 
       - name: Build Package
