@@ -1,4 +1,4 @@
-# Nathan's Arch Linux Repository (AUR)
+# My's Arch Linux Repository (AUR)
 
 This repository contains Arch Linux package sources for packages I maintain, co-maintain, or host modified versions of.
 
