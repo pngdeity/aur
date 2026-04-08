@@ -39,7 +39,7 @@ jobs:
       - name: Run nvchecker
         id: check
         env:
-          NVCHECKER_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NVCHECKER_TOKEN_GITHUB: ${{ secrets.GITHUB_TOKEN }}
         run: |
           nvchecker -c nvchecker.toml
           # Check if newver file exists and has content
