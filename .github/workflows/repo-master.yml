@@ -39,12 +39,14 @@ jobs:
       - name: Run nvchecker
         id: check
         env:
-          NVCHECKER_TOKEN_GITHUB: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          nvchecker -c nvchecker.toml
+          echo "[github]" > keyfile.toml
+          echo "token = \"$GITHUB_TOKEN\"" >> keyfile.toml
+          nvchecker -k keyfile.toml -c nvchecker.toml
           # Check if newver file exists and has content
           if [ -f "nvc_versions_new.json" ]; then
-             UPDATES=$(nvcmp -c nvchecker.toml --json)
+             UPDATES=$(nvcmp -k keyfile.toml -c nvchecker.toml --json)
              if [ "$UPDATES" != "[]" ]; then
                echo "has_updates=true" >> $GITHUB_OUTPUT
                MATRIX_JSON=$(echo "$UPDATES" | jq -c '[.[] | {name: .name, version: .newver}]')
