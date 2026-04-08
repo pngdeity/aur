@@ -10,6 +10,8 @@ on:
     paths:
       - 'packages/**'
       - '.github/workflows/repo-master.yml'
+      - 'nvc_versions.json'
+      - 'nvchecker.toml'
 
 permissions:
   contents: write
