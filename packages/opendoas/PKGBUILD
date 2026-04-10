@@ -8,12 +8,12 @@ pkgrel=1
 pkgdesc='Run commands as super user or another user (patched version)'
 url='https://github.com/Duncaen/OpenDoas'
 license=(custom:ISC)
-arch=(x86_64)
-makedepends=(git)
-depends=(pam)
-provides=(doas)
-conflicts=(doas)
-replaces=(doas)
+arch=('x86_64')
+makedepends=('git')
+depends=('pam')
+provides=('doas')
+conflicts=('doas')
+replaces=('doas')
 install=opendoas.install
 source=(
     "${pkgname}::git+https://github.com/Duncaen/OpenDoas.git#tag=v${pkgver}"
@@ -22,14 +22,16 @@ source=(
     "retry.patch"
     "arg-handling.patch"
     "post-release-v6.8.2.patch"
+    "doas.pam"
 )
-backup=(etc/pam.d/doas)
+backup=('etc/pam.d/doas')
 sha256sums=('43b4c2de1aaa31aac1d322b98883334b864c606783c4dfb3ddbfa0d88af9332b'
             'd1784db14976a9988666d27c96cd3ab09f91c3435eb06efd01374712982ff8f8'
             '80c9ebdb373c552730e13f6c562820a80540a96f0471f2c96170f69fba052d0a'
             'cae34e452f63dec782fe2e0a3b2ca73045a7a7f21468e7dd1ea84a11296ce8c2'
             '3e86c2601377aa0ffdf132365838caa4bdcb4c6e6b6ffddb2070e43157337b5e'
-            'dab653136a5adb37991b215963157588a14e16be8aa32d33c37590e86c763477')
+            'dab653136a5adb37991b215963157588a14e16be8aa32d33c37590e86c763477'
+            'a03a55748416eaf4a4bf529933a8eb8acccc5d644d8f296143f76ad7c5a7bdf7')
 
 pkgver() {
   cd "$pkgname"
@@ -65,4 +67,5 @@ package() {
   cd "$pkgname"
   make DESTDIR="$pkgdir" install
   install -Dm644 LICENSE -t "$pkgdir/usr/share/licenses/$pkgname"
+  install -Dm644 ../doas.pam "$pkgdir/etc/pam.d/doas"
 }

@@ -60,8 +60,8 @@ prepare() {
   patch -Np1 -i "../doas-substitution.patch"
 
   # Apply existing ncurses error fixes
-  patch -Np1 -i "../ranger-1.9.4-fix-ncurses-endwin-error-2.patch"
   patch -Np1 -i "../ranger-1.9.4-fix-ncurses-endwin-error-1.patch"
+  patch -Np1 -i "../ranger-1.9.4-fix-ncurses-endwin-error-2.patch"
   patch -Np1 -i "../ranger-1.9.4-fix-ncurses-endwin-error-3.patch"
 }
 

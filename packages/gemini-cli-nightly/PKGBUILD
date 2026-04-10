@@ -1,4 +1,4 @@
-# Maintainer: 
+# Maintainer: pngdeity <email@example.com>
 
 pkgname=gemini-cli-nightly
 _pkgname=gemini-cli
@@ -35,10 +35,9 @@ checkdepends=(
 )
 provides=("$_pkgname")
 conflicts=("$_pkgname")
-changelog=($pkgname.changelog")
+changelog="$pkgname.changelog"
 source=("$_pkgname::git+$url.git#tag=v${pkgver//.nightly/-nightly}")
-# TODO Set during CI/CD
-b2sums=('SKIP')
+sha256sums=('SKIP')
 
 prepare() {
   cd "$_pkgname"

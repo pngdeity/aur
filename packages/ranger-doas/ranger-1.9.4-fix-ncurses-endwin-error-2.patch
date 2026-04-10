@@ -1,0 +1,23 @@
+From a478511e8fd215ad878627d2516cb9253a2ab12f Mon Sep 17 00:00:00 2001
+From: Toni Kukurin <tkukurin@gmail.com>
+Date: Sun, 23 Feb 2020 09:52:36 +0100
+Subject: [PATCH] Update ui.py
+
+Fix 'FileNotFound' if `screen` is not available
+---
+ ranger/gui/ui.py | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/ranger/gui/ui.py b/ranger/gui/ui.py
+index d2dbb759d3..5ffdf4a475 100644
+--- a/ranger/gui/ui.py
++++ b/ranger/gui/ui.py
+@@ -497,7 +497,7 @@ def handle_multiplexer(self):
+                 # gives out a warning if $TERM is not "screen"
+                 try:
+                     self._screen_title = check_output(
+-                        ['screen', '-Q', 'title']).strip()
++                        ['screen', '-Q', 'title'], shell=True).strip()
+                 except CalledProcessError:
+                     self._screen_title = None
+ 

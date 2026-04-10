@@ -1,0 +1,62 @@
+From 0e873ebd8a9302384186a51445382de5936944b9 Mon Sep 17 00:00:00 2001
+From: toonn <toonn@toonn.io>
+Date: Thu, 2 Jan 2025 14:27:03 +0100
+Subject: [PATCH 1/2] ui: endwin already sets cursor to normal visibility
+
+---
+ ranger/gui/ui.py | 4 ----
+ 1 file changed, 4 deletions(-)
+
+diff --git a/ranger/gui/ui.py b/ranger/gui/ui.py
+index 7adb0f1ee..d1615612d 100644
+--- a/ranger/gui/ui.py
++++ b/ranger/gui/ui.py
+@@ -151,10 +151,6 @@ def suspend(self):
+         self.win.keypad(0)
+         curses.nocbreak()
+         curses.echo()
+-        try:
+-            curses.curs_set(1)
+-        except curses.error:
+-            pass
+         if self.settings.mouse_enabled:
+             _setup_mouse({"value": False})
+         curses.endwin()
+
+From 7b0245d5daef80bd91d8e3b703be8b8ec578014b Mon Sep 17 00:00:00 2001
+From: toonn <toonn@toonn.io>
+Date: Thu, 2 Jan 2025 19:56:13 +0100
+Subject: [PATCH 2/2] ui: Refresh window in initialize
+
+NCurses errors when `endwin()` is called twice in a row without the
+window being refreshed.
+
+Runner suspends the window (calling `endwin()` indirectly) and uses
+`initialize` to resume the curses window. The latter was originally
+envisioned as more of a one-item setup and only refreshes the window the
+first time it is called. Refreshing unconditionally avoids the problem.
+
+Fixes #2934
+Closes #2935
+Fixes #3000
+Fixes #3005
+---
+ ranger/gui/ui.py | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/ranger/gui/ui.py b/ranger/gui/ui.py
+index d1615612d..d44b3db99 100644
+--- a/ranger/gui/ui.py
++++ b/ranger/gui/ui.py
+@@ -128,9 +128,10 @@ def initialize(self):
+             self.is_set_up = True
+             self.setup()
+             self.win.addstr("loading...")
+-            self.win.refresh()
+             self._draw_title = curses.tigetflag('hs')  # has_status_line
+ 
++        self.win.refresh()
++
+         self.update_size()
+         self.is_on = True
+ 

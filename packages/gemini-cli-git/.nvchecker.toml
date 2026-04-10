@@ -1,0 +1,4 @@
+[gemini-cli-git]
+source = "github"
+github = "google-gemini/gemini-cli"
+branch = "main"

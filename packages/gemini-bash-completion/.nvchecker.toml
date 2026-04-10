@@ -1,0 +1,5 @@
+[gemini-bash-completion]
+source = "github"
+github = "google-gemini/gemini-cli"
+use_latest_tag = true
+prefix = "v"

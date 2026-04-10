@@ -21,10 +21,11 @@ depends=(
 )
 optdepends=(
   'dialog: for TUI operation (always pass -c|--cli if not desired)'
-  'sudo: for privilege elevation (preferred)'
+  'sudo: for privilege elevation'
+  'doas: for privilege elevation (preferred)'
   'polkit: for privilege elevation'
-  'less: for viewing license information with -l|--licenses'
-  'nnn: for viewing license information with -l|--licenses'
+  'less: for viewing license information'
+  'nnn: for viewing license information'
 )
 _pkgsrc="${pkgname}-${pkgver}"
 source=(
