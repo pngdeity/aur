@@ -1,0 +1,5 @@
+[opendoas]
+source = "github"
+github = "Duncaen/OpenDoas"
+use_latest_tag = true
+prefix = "v"

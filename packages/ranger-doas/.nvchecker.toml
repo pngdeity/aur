@@ -1,0 +1,5 @@
+[ranger-doas]
+source = "github"
+github = "ranger/ranger"
+use_latest_tag = true
+prefix = "v"
