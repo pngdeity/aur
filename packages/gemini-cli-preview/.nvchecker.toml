@@ -1,3 +1,8 @@
-[gemini-cli]
-source = "npm"
-npm = "@google/gemini-cli"
+[gemini-cli-preview]
+source = "github"
+github = "google-gemini/gemini-cli"
+use_latest_release = true
+# nvchecker can't easily distinguish between stable and preview releases on GitHub 
+# without complex regex if they are both 'releases'. 
+# However, if 'preview' tags are used, we can track them.
+# For now, keep it consistent with the monorepo discovery tier.
