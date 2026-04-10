@@ -1,0 +1,36 @@
+From 75cb3a68efa0e97191ff792d4ffa39f3180b6e7b Mon Sep 17 00:00:00 2001
+From: a1346054 <36859588+a1346054@users.noreply.github.com>
+Date: Wed, 22 Sep 2021 11:37:46 +0000
+Subject: [PATCH] fix typos in comments
+
+---
+ pam.c       | 2 +-
+ timestamp.c | 2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/pam.c b/pam.c
+index a9e2036..66351db 100644
+--- a/pam.c
++++ b/pam.c
+@@ -300,7 +300,7 @@ pamauth(const char *user, const char *myname, int interactive, int nopass, int p
+ 	if (ret == PAM_NEW_AUTHTOK_REQD)
+ 		ret = pam_chauthtok(pamh, PAM_CHANGE_EXPIRED_AUTHTOK);
+ 
+-	/* account not vaild or changing the auth token failed */
++	/* account not valid or changing the auth token failed */
+ 	if (ret != PAM_SUCCESS) {
+ 		pamcleanup(ret, sess, cred);
+ 		syslog(LOG_AUTHPRIV | LOG_NOTICE, "failed auth for %s", myname);
+diff --git a/timestamp.c b/timestamp.c
+index bca260d..06b3772 100644
+--- a/timestamp.c
++++ b/timestamp.c
+@@ -146,7 +146,7 @@ proc_info(pid_t pid, int *ttynr, unsigned long long *starttime)
+ 
+ 	/* Get the 7th field, 5 fields after the last ')',
+ 	 * (2th field) because the 5th field 'comm' can include
+-	 * spaces and closing paranthesis too.
++	 * spaces and closing parenthesis too.
+ 	 * See https://www.sudo.ws/alerts/linux_tty.html
+ 	 */
+ 	if ((p = strrchr(buf, ')')) == NULL)

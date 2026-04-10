@@ -17,21 +17,24 @@ replaces=('doas')
 install=opendoas.install
 source=(
     "${pkgname}::git+https://github.com/Duncaen/OpenDoas.git#tag=v${pkgver}"
-    "change-PATH.patch"
+    "119.patch"
     "rowhammer.patch"
     "retry.patch"
-    "arg-handling.patch"
     "post-release-v6.8.2.patch"
+    "Fix-typos-in-comments.patch"
+    "configure-Correct-value-assignment-to-GIDMAX.patch"
     "doas.pam"
 )
 backup=('etc/pam.d/doas')
 sha256sums=('43b4c2de1aaa31aac1d322b98883334b864c606783c4dfb3ddbfa0d88af9332b'
-            'd1784db14976a9988666d27c96cd3ab09f91c3435eb06efd01374712982ff8f8'
+            '7f8658288498883161e14227d88f2ac5faf0b0667de4fca64f640a22a616bd77'
             '80c9ebdb373c552730e13f6c562820a80540a96f0471f2c96170f69fba052d0a'
             'cae34e452f63dec782fe2e0a3b2ca73045a7a7f21468e7dd1ea84a11296ce8c2'
-            '3e86c2601377aa0ffdf132365838caa4bdcb4c6e6b6ffddb2070e43157337b5e'
             'dab653136a5adb37991b215963157588a14e16be8aa32d33c37590e86c763477'
-            'a03a55748416eaf4a4bf529933a8eb8acccc5d644d8f296143f76ad7c5a7bdf7')
+            '5c031ce7f8658ade92ee2a5d4d883ad22bf922e66a051b44c1594a9c18bc6d90'
+            '3e86c2601377aa0ffdf132365838caa4bdcb4c6e6b6ffddb2070e43157337b5e'
+            'a03a55748416eaf4a4bf529933a8eb8acccc5d644d8f296143f76ad7c5a7bdf7'
+)
 
 pkgver() {
   cd "$pkgname"
@@ -41,8 +44,8 @@ pkgver() {
 prepare() {
   cd "$pkgname"
   
-  # Alpine PATH patch
-  patch -Np1 -i ../change-PATH.patch
+  # GitHub PR #119: Add --default-path option to configure
+  patch -Np1 -i ../119.patch
   
   # GitHub PR #124: Rowhammer resistance
   patch -Np1 -i ../rowhammer.patch
@@ -50,16 +53,22 @@ prepare() {
   # GitHub PR #123: Retry 3 times
   patch -Np1 -i ../retry.patch
   
-  # GitHub PR #130: Argument handling
-  patch -Np1 -i ../arg-handling.patch
-
   # Post-release 6.8.2 commits (HEAD)
   patch -Np1 -i ../post-release-v6.8.2.patch
+
+  # Fix typos in comments
+  patch -Np1 -i ../Fix-typos-in-comments.patch
+
+  # Correct GID_MAX assignment in configure
+  patch -Np1 -i ../configure-Correct-value-assignment-to-GIDMAX.patch
 }
 
 build() {
   cd "$pkgname"
-  ./configure --prefix=/usr --with-timestamp
+  ./configure \
+    --prefix=/usr \
+    --with-timestamp \
+    --default-path="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
   make
 }
 

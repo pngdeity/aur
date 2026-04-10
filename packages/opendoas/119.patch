@@ -1,0 +1,74 @@
+From 51ad1b765ee49cc94497bcf90c8d1ef0529dc6cc Mon Sep 17 00:00:00 2001
+From: Damon Harris <TheDcoder@protonmail.com>
+Date: Fri, 16 Jun 2023 02:43:32 +0530
+Subject: [PATCH] Add `DEFAULT_PATH`
+
+`DEFAULT_PATH` replaces `safepath` for setting the `PATH` variable in
+the executed process's environment.
+
+`DEFAULT_PATH` follows the de-facto standard of Linux distributions
+which place `/usr/local` directories before their non-local counterparts
+in $PATH.
+
+Unlike BSD, Linux distributions don't put packaged executables under
+`/usr/local`, instead it is used by the local user to place their own
+executables, potentially to replace system executables.
+---
+ configure | 7 +++++++
+ doas.c    | 4 ++--
+ 2 files changed, 9 insertions(+), 2 deletions(-)
+
+diff --git a/configure b/configure
+index 1f92f01..b0b0392 100755
+--- a/configure
++++ b/configure
+@@ -30,6 +30,8 @@ usage: configure [options]
+ 
+   --uid-max=NUM          set UID_MAX (default 65535)
+   --gid-max=NUM          set GID_MAX (default 65535)
++  
++  --default-path=PATH    set default PATH for executed environment
+ 
+   --help, -h             display this help and exit
+ EOF
+@@ -40,6 +42,7 @@ EOF
+ WITHOUT_TIMESTAMP=yes
+ UID_MAX=65535
+ GID_MAX=65535
++DEFAULT_PATH="/usr/local/bin:/usr/local/sbin:/bin:/sbin:/usr/bin:/usr/sbin"
+ 
+ for x; do
+ 	opt=${x%%=*}
+@@ -64,6 +67,7 @@ for x; do
+ 	--without-timestamp) WITHOUT_TIMESTAMP=yes ;;
+ 	--uid-max) UID_MAX=$var ;;
+ 	--gid-max) UID_MAX=$var ;;
++	--default-path) DEFAULT_PATH=$var ;;
+ 	--help|-h) usage ;;
+ 	*) die "Error: unknown option $opt" ;;
+ 	esac
+@@ -104,6 +108,9 @@ fi
+ 
+ OS_CFLAGS="-D__${OS}__"
+ 
++printf 'Setting DEFAULT_PATH\t\t\t%s.\n' "$DEFAULT_PATH" >&2
++printf '#define DEFAULT_PATH "%s"\n' "$DEFAULT_PATH" >>$CONFIG_H
++
+ case "$OS" in
+ 	linux)
+ 		printf 'Setting UID_MAX\t\t\t\t%d.\n' "$UID_MAX" >&2
+diff --git a/doas.c b/doas.c
+index ac3a42a..d15d32c 100644
+--- a/doas.c
++++ b/doas.c
+@@ -397,8 +397,8 @@ main(int argc, char **argv)
+ 		err(1, "initgroups");
+ 	if (setresuid(target, target, target) != 0)
+ 		err(1, "setresuid");
+-	if (setenv("PATH", safepath, 1) == -1)
+-		err(1, "failed to set PATH '%s'", safepath);
++	if (setenv("PATH", DEFAULT_PATH, 1) == -1)
++		err(1, "failed to set PATH '%s'", DEFAULT_PATH);
+ #endif
+ 
+ 	if (getcwd(cwdpath, sizeof(cwdpath)) == NULL)

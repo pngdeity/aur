@@ -1,0 +1,19 @@
+# Maintainer: pngdeity <email@example.com>
+# Contributor: 
+# https://github.com/aarchetype/bash-completion/tree/2d7a7f0415158f0e5733bb259c36550fa673c3c2
+
+pkgname=doas-bash-completion
+pkgver=1.0.0
+pkgrel=1
+pkgdesc="Bash completion for opendoas"
+arch=('any')
+url="https://github.com/"
+license=('GPL2.0')
+depends=('bash-completion')
+source=("doas.bash")
+sha256sums=('')
+
+package() {
+  install -Dm644 "doas.bash" \
+    "$pkgdir/usr/share/bash-completion/completions/doas"
+}
