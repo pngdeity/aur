@@ -1,5 +1,0 @@
-[yay]
-source = "github"
-github = "Jguer/yay"
-use_latest_tag = true
-prefix = "v"
