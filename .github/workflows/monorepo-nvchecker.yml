@@ -1,0 +1,79 @@
+name: Monorepo nvchecker
+on:
+  schedule:
+    - cron: '0 */12 * * *'
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    outputs:
+      chunks_json: ${{ steps.get-updates.outputs.chunks_json }}
+      has_updates: ${{ steps.get-updates.outputs.has_updates }}
+      version: ${{ steps.get-updates.outputs.version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Install dependencies
+        run: pip install nvchecker jq
+
+      - id: get-updates
+        name: Consolidate and Run nvchecker
+        run: |
+          # Sanity Check: Ensure the master config exists and isn't empty
+          if [ ! -s .nvchecker.toml ] || ! grep -q "^\[" .nvchecker.toml; then
+            echo "::error::Master configuration .nvchecker.toml is missing or empty! Aborting."
+            exit 1
+          fi
+
+          echo "[__config__]" > master.toml
+          echo "oldver = 'oldver.json'" >> master.toml
+          
+          find . -maxdepth 2 -name ".nvchecker.toml" -not -path "./.nvchecker.toml" | while read -r config; do
+            echo "" >> master.toml
+            grep -v "^\[__config__\]" "$config" >> master.toml
+          done
+
+          if [ ! -f oldver.json ]; then echo "{}" > oldver.json; fi
+
+          nvchecker -c master.toml --logger json | tee results.json
+          
+          UPDATED_NAMES=$(jq -r 'select(.event=="updated") | .name' results.json | jq -R . | jq -s -c .)
+          
+          if [ "$UPDATED_NAMES" != "[]" ]; then
+            # Chunk into an array of objects for matrix.include
+            CHUNKS_JSON=$(echo "$UPDATED_NAMES" | jq -c '[_n_] as $n | [range(0; length; $n) as $i | {index: ($i/$n), list: .[$i:$i+$n]}]' --argjson n 50)
+            VERSION=$(jq -r 'select(.event=="updated") | .version' results.json | head -n 1)
+            
+            echo "chunks_json=$CHUNKS_JSON" >> $GITHUB_OUTPUT
+            echo "has_updates=true" >> $GITHUB_OUTPUT
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+            
+            nvtake -c master.toml --all
+            
+            git config --local user.email "action@github.com"
+            git config --local user.name "GitHub Action"
+            git add oldver.json
+            git commit -m "chore: update tracked versions"
+            git push
+          else
+            echo "chunks_json=[]" >> $GITHUB_OUTPUT
+            echo "has_updates=false" >> $GITHUB_OUTPUT
+          fi
+
+  release:
+    needs: check
+    if: needs.check.outputs.has_updates == 'true'
+    uses: ./.github/workflows/nightly-release.yml
+    with:
+      version: ${{ needs.check.outputs.version }}
+      chunks_json: ${{ needs.check.outputs.chunks_json }}
+    secrets: inherit
