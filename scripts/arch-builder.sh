@@ -14,6 +14,19 @@ if [[ -z "$PKG_DIR" || -z "$NEW_VER" ]]; then
 fi
 
 echo "==> Building package in: $PKG_DIR"
+
+# 0. Local Repository Setup (Circular Dependency Resolver)
+LOCAL_REPO_DIR="/tmp/local-repo"
+if [ ! -d "$LOCAL_REPO_DIR" ]; then
+    echo "  -> Initializing local repository for dependency resolution..."
+    mkdir -p "$LOCAL_REPO_DIR"
+    
+    # Add to pacman.conf if not already there. We use sudo since pacman.conf is root-owned.
+    if ! grep -q "\[local-nightly\]" /etc/pacman.conf; then
+        echo -e "\n[local-nightly]\nSigLevel = Optional TrustAll\nServer = file://$LOCAL_REPO_DIR" | sudo tee -a /etc/pacman.conf > /dev/null
+    fi
+fi
+
 cd "$PKG_DIR"
 
 # 1. Versioning Management (Point 4 & 2)
