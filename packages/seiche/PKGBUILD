@@ -1,0 +1,93 @@
+# Maintainer: pngdeity <pngdeity@tutanota.com>
+
+pkgname=seiche
+# _pkgname=seiche Needed for packages that build off the same source, but from
+# different times or with different update frequency
+pkgver=1.0.1
+pkgrel=1
+epoch=1
+pkgdesc="Application for rendering and analyzing acoustical properties of 3D spaces"
+arch=(x86_64)
+url="https://github.com/seicheacoustics/seiche"
+_githubname="seicheacoustics/seiche"
+license=(MIT)
+depends=(
+    qt6-base
+)
+makedepends=(
+  git
+  cmake>=3.16
+  ninja
+  gcc
+)
+optdepends=(
+  'package: Reason'
+)
+checkdepends=(
+  vim
+)
+provides=("$_pkgname")
+conflicts=("$_pkgname")
+source=("$_pkgname-src::git+$url.git#tag=v${pkgver}")
+sha256sums=('SKIP')
+backup=(
+    # config file paths
+)
+
+prepare() {
+  cd "$_pkgname-src"
+  # TODO This should ideally happen during CI/CD
+  # before the Arch Build System-specific steps start i.e. makepkg
+  # Generate formatted changelog from GitHub Release Notes
+  # Should also generate and output nothing if there are no release notes
+  # See man 5 PKGBUILD for more info
+  # Note that the GItHub API currently has two versions
+  curl -sH "X-GitHub-Api-Version: 2026-03-10" \
+    "https://api.github.com/repos/$_githubname/releases/tags/$_tag" | \
+    jq -r '.body // "No release notes available for this nightly build."' | \
+    sed -E -e 's|@([a-zA-Z0-9-]+)|[@\1](https://github.com/\1)|g' \
+           -e 's|https://github.com/[^/ ]+/[^/ ]+/pull/([0-9]+)|[#\1](&)|g' \
+    > "../$pkgname.changelog"
+}
+
+build() {
+  cd "$_pkgname-src"
+  local CMAKE_EXTRA_ARGS=()
+  if [[ -n "${QT_PREFIX_PATH}" ]]; then
+    CMAKE_EXTRA_ARGS+=(-DCMAKE_PREFIX_PATH="${QT_PREFIX_PATH}")
+  fi
+  # REPO_ROOT = Current directory, so $_pkgname-src/?
+  #
+  cmake -S "${REPO_ROOT}" -B "${REPO_ROOT}/${BUILD_DIR}" \
+    -DCMAKE_BUILD_TYPE=Release \
+    -G Ninja \
+    "${CMAKE_EXTRA_ARGS[@]}"
+  cmake --build "${REPO_ROOT}/${BUILD_DIR}" --config Release
+}
+
+check() {
+  cd "$_pkgname-src"
+  # TODO
+  # See https://wiki.archlinux.org/title/CMake_package_guidelines#Template
+}
+
+package() {
+  cd "$_pkgname-src"
+
+  # If upstream supports `cmake --install`, prefer it. If not, install manually.
+  # Try install step first, but don't assume it exists in CMakeLists.txt
+  if cmake --install build --prefix /usr --destdir "${pkgdir}" 2>/dev/null; then
+    :
+  else
+    # Install binary (release script expected build/Seiche)
+    install -Dm755 "build/Seiche" "${pkgdir}/usr/bin/Seiche"
+  fi
+
+  # Install materials directory in a standard location
+  install -d "${pkgdir}/usr/share/seiche"
+  cp -a "materials" "${pkgdir}/usr/share/seiche/materials"
+
+  install -vDm644 "../$pkgname.changelog" "$pkgdir/usr/share/doc/$pkgname/$pkgname.changelog"
+  install -vDm644 -t "$pkgdir/usr/share/doc/$pkgname" README.md
+  install -vDm644 -t "$pkgdir/usr/share/licenses/$pkgname" LICENSE
+}

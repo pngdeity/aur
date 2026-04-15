@@ -1,0 +1,4 @@
+[seiche]
+source = "github"
+github = "SeicheAcoustics/Seiche"
+use_latest_release = true
