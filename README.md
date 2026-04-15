@@ -1,10 +1,10 @@
-# My's Arch Linux Repository (AUR)
+# pngdeity's Arch Linux User Repository (AUR)
 
 This repository contains Arch Linux package sources for packages I maintain, co-maintain, or host modified versions of.
 
 ## Automated Updates & CI/CD
 
-This repository utilizes a sophisticated CI/CD pipeline powered by GitHub Actions:
+This repository utilizes a CI/CD pipeline powered by GitHub Actions:
 
 - **Upstream Monitoring:** `nvchecker` tracks upstream releases for all packages.
 - **Automated Builds:** Packages are automatically built in an isolated Arch Linux chroot environment upon upstream updates.
@@ -26,7 +26,7 @@ Then add the following repository configuration to your `/etc/pacman.conf`:
 ```ini
 [my_private_repo]
 SigLevel = Optional TrustAll
-Server = https://arch.alerque.com/x86_64
+Server = https://aur.pngdeity.ru/x86_64
 ```
 
 ## Repository Structure
