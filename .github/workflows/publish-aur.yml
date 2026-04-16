@@ -1,0 +1,46 @@
+name: Publish to AUR
+
+on:
+  workflow_run:
+    workflows: ["Build"]
+    types:
+      - completed
+    branches:
+      - main
+      - "feat/aur-publishing"
+      - "release/**"
+
+jobs:
+  publish:
+    # Only run when the upstream build succeeded
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    container: archlinux:latest
+
+    steps:
+      - name: Install dependencies
+        run: pacman -Syu --noconfirm git openssh base-devel rsync
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure build user
+        run: |
+          useradd -m builder
+          echo "builder ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
+          chown -R builder:builder .
+
+      - name: Make scripts executable
+        run: chmod +x scripts/*.sh
+
+      - name: Publish each package to the AUR
+        env:
+          AUR_SSH_PRIVATE_KEY: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
+        run: |
+          for PKG_DIR in packages/*/; do
+            if [[ -f "$PKG_DIR/PKGBUILD" ]]; then
+              echo "==> Publishing $PKG_DIR"
+              sudo -u builder -E env AUR_SSH_PRIVATE_KEY="$AUR_SSH_PRIVATE_KEY" \
+                ./scripts/publish-aur.sh "$PKG_DIR"
+            fi
+          done
