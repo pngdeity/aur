@@ -1,0 +1,103 @@
+name: Release
+on:
+  workflow_call:
+    inputs:
+      version:
+        required: true
+        type: string
+      chunks_json:
+        required: true
+        type: string # JSON array of objects: [{"index": 0, "list": [...]}, ...]
+
+jobs:
+  # Matrix-based orchestration calling the executor
+  run-builds:
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJson(inputs.chunks_json) }}
+    uses: ./.github/workflows/build.yml
+    with:
+      version: ${{ inputs.version }}
+      package_list: ${{ toJson(matrix.list) }}
+      chunk_index: ${{ matrix.index }}
+    secrets: inherit
+
+  # Final collection and professional repository publishing
+  publish:
+    needs: run-builds
+    runs-on: ubuntu-latest
+    # Using Arch container for native repo-add tool
+    container: archlinux:latest
+    steps:
+      - name: Install dependencies
+        run: |
+          pacman -Syu --noconfirm pacman-contrib rsync openssh nodejs gnupg findutils
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v8
+        with:
+          path: final-dist
+          pattern: packages-batch-*
+          merge-multiple: true
+
+      - name: Configure SSH and GPG
+        env:
+          SSH_KEY: ${{ secrets.REPO_SSH_PRIVATE_KEY }}
+          HOST: ${{ secrets.REPO_HOST }}
+          GPG_KEY: ${{ secrets.REPO_GPG_KEY }}
+        run: |
+          # Configure SSH for automated transport
+          mkdir -p ~/.ssh
+          echo "$SSH_KEY" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H "$HOST" >> ~/.ssh/known_hosts
+          
+          # Configure GPG for database signing
+          if [ -n "$GPG_KEY" ]; then
+            echo "$GPG_KEY" | gpg --import
+          fi
+
+      - name: Sync Existing Repository and Prune
+        env:
+          HOST: ${{ secrets.REPO_HOST }}
+          USER: ${{ secrets.REPO_USER }}
+        run: |
+          mkdir -p repo-root/x86_64/
+          # Pull existing repository to manage retention
+          rsync -avz -e "ssh" "$USER@$HOST:/var/www/html/repo/nightly/" repo-root/ || echo "First run or failed to fetch remote repo."
+          
+          # Automated Retention & Pruning: Delete packages older than 7 days
+          find repo-root/x86_64/ -name "*.pkg.tar.zst" -type f -mtime +7 -delete
+
+      - name: Add New Packages and Generate Database
+        env:
+          GPG_KEY: ${{ secrets.REPO_GPG_KEY }}
+        run: |
+          # Populate with all newly built packages
+          cp final-dist/*.pkg.tar.zst repo-root/x86_64/
+          
+          cd repo-root/x86_64/
+          # Remove old database to ensure pruned packages are fully removed
+          rm -f nightly.db.tar.gz nightly.db nightly.files.tar.gz nightly.files
+          
+          # Generate the mandatory pacman repository database and sign it if a key is provided
+          # Note: We must avoid using the glob if no packages are found, though final-dist should have some.
+          if ls *.pkg.tar.zst >/dev/null 2>&1; then
+            if [ -n "$GPG_KEY" ]; then
+              repo-add --sign nightly.db.tar.gz *.pkg.tar.zst
+            else
+              repo-add nightly.db.tar.gz *.pkg.tar.zst
+            fi
+          else
+            echo "No packages found to add to repository."
+          fi
+          cd ../..
+
+      - name: Upload to External Apache Host
+        env:
+          HOST: ${{ secrets.REPO_HOST }}
+          USER: ${{ secrets.REPO_USER }}
+        run: |
+          # Atomic sync of the repository structure to the web root with deletion of pruned packages
+          rsync -avz --delete -e "ssh" repo-root/ "$USER@$HOST:/var/www/html/repo/nightly/"
