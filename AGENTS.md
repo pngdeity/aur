@@ -45,6 +45,11 @@ The following articles provide the standard for specific package types and quali
 - **Prefix Handling**: Use `prefix = "v"` for repositories that use "v1.2.3" tag formats to ensure internal version strings remain clean (e.g., "1.2.3").
 - **State Persistence**: Never manually edit `oldver.json`. Let the `Discovery` workflow manage state via `nvtake`.
 
+### Separation of Concerns in Automation
+- **Modular Hooks**: Package-specific logic (e.g., patching, code transformations) MUST be isolated in an `./update.sh` script within the package directory.
+- **Orchestration**: `scripts/sync-package.sh` is the only script permitted to modify `PKGBUILD` metadata (version/rel/hashes). It executes `./update.sh` as a hook during the synchronization phase.
+- **Validation**: Metadata integrity is enforced by `scripts/check-metadata.sh` in the CI pipeline. Never bypass this check to fix build failures.
+
 ## 3. Mandatory Verification Workflow
 
 Before proposing or pushing a change to any package, an agent MUST perform:
