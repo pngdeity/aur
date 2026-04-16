@@ -2,3 +2,9 @@
 source = "github"
 github = "google-gemini/gemini-cli"
 use_latest_release = true
+
+[gemini-cli-arch]
+source = "git"
+git = "https://gitlab.archlinux.org/archlinux/packaging/packages/gemini-cli.git"
+branch = "main"
+use_commit = true
