@@ -9,9 +9,8 @@ pkgdesc="Jules, the asynchronous coding agent from Google, in the terminal."
 arch=(any)
 url="https://jules.google"
 license=('custom:Proprietary')
-depends=('nodejs' 'npm')
+depends=('nodejs')
 makedepends=('npm')
-optdepends=()
 source=(
   "https://registry.npmjs.org/${_npmscope}/${_npmname}/-/${_npmname}-${pkgver}.tgz"
 )
@@ -20,13 +19,18 @@ sha256sums=('84d85b13777236e4815b787910f4b74d1959cad3b3bf722f2b6306f3786a0f75')
 
 package() {
   cd "$srcdir"
-  npm install -g --prefix "$pkgdir/usr" "${_npmname}-${pkgver}.tgz"
+  npm install -g --prefix "$pkgdir/usr" --cache "$srcdir/npm-cache" "${_npmname}-${pkgver}.tgz"
 
-  # Fix permissions and remove build artifacts if any
   find "$pkgdir/usr" -type d -exec chmod 755 {} +
   
-  # Remove references to pkgdir in the installed files
-  find "$pkgdir" -type f -name "package.json" -exec sed -i "s|$pkgdir||g" {} +
+  find "$pkgdir" -type f -name "package.json" -exec sed -i \
+    -e "s|$pkgdir||g" \
+    -e '/"_[a-z0-9]*":/d' \
+    {} +
+
+  local _libdir="usr/lib/node_modules/${_npmscope}/${_npmname}"
+  find "$pkgdir/$_libdir" -maxdepth 1 -iname "LICENSE*" -exec \
+    install -vDm644 "{}" "$pkgdir/usr/share/licenses/$pkgname/LICENSE" \;
 }
 
 # vim:set ts=2 sw=2 et:
