@@ -10,6 +10,9 @@ on:
       - "feat/aur-publishing"
       - "release/**"
 
+permissions:
+  contents: read
+
 jobs:
   publish:
     # Only run when the upstream build succeeded

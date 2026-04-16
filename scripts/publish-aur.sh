@@ -69,8 +69,16 @@ chmod 700 "$SSH_DIR"
 printf '%s\n' "${AUR_SSH_PRIVATE_KEY}" > "$SSH_DIR/aur_key"
 chmod 600 "$SSH_DIR/aur_key"
 
-# Add AUR host key without interactive prompting
-ssh-keyscan -H "$AUR_HOST" >> "$SSH_DIR/known_hosts" 2>/dev/null
+# Add and verify the AUR host key against its known RSA fingerprint.
+# Fingerprint sourced from: https://wiki.archlinux.org/title/AUR_submission_guidelines
+# SHA256:48HcEYPGDPsEOJhFtFHmwDxWz2jdXNMbMnHqKh8IKWI  aur.archlinux.org (RSA)
+AUR_EXPECTED_FP="SHA256:48HcEYPGDPsEOJhFtFHmwDxWz2jdXNMbMnHqKh8IKWI"
+ssh-keyscan -H "$AUR_HOST" 2>/dev/null > "$SSH_DIR/known_hosts"
+ACTUAL_FP=$(ssh-keygen -lf "$SSH_DIR/known_hosts" | grep RSA | awk '{print $2}')
+if [[ "$ACTUAL_FP" != "$AUR_EXPECTED_FP" ]]; then
+    echo "::error::AUR host key fingerprint mismatch! Expected $AUR_EXPECTED_FP, got $ACTUAL_FP"
+    exit 1
+fi
 
 SSH_CMD="ssh -i $SSH_DIR/aur_key -o UserKnownHostsFile=$SSH_DIR/known_hosts -o StrictHostKeyChecking=yes"
 
