@@ -15,7 +15,7 @@ depends=(
 )
 makedepends=(
   git
-  cmake>=3.16
+  'cmake>=3.16'
   ninja
   gcc
   jq
@@ -48,6 +48,7 @@ build() {
 }
 
 check() {
+  :
   # Optional: cmake --build build --target test
 }
 

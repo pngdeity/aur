@@ -1,0 +1,12 @@
+pkgbase = gemini-bash-completion
+	pkgdesc = Bash completion for gemini-cli
+	pkgver = 1.0.0
+	pkgrel = 1
+	url = https://github.com/google-gemini/gemini-cli
+	arch = any
+	license = Apache-2.0
+	depends = bash-completion
+	source = gemini.bash
+	sha256sums = bd104ed519381a4bc797f32c4e0a0c9c3baea972babda8312d8900ef6399fa59
+
+pkgname = gemini-bash-completion

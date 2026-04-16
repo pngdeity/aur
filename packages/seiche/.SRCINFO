@@ -1,0 +1,21 @@
+pkgbase = seiche
+	pkgdesc = Application for rendering and analyzing acoustical properties of 3D spaces
+	pkgver = 1.0.1
+	pkgrel = 1
+	epoch = 1
+	url = https://github.com/seicheacoustics/seiche
+	arch = x86_64
+	license = MIT
+	makedepends = git
+	makedepends = cmake>=3.16
+	makedepends = ninja
+	makedepends = gcc
+	makedepends = jq
+	depends = qt6-base
+	optdepends = qt6-svg: for SVG icon support
+	provides = seiche
+	conflicts = seiche
+	source = seiche-src::git+https://github.com/seicheacoustics/seiche.git#tag=v1.0.1
+	sha256sums = SKIP
+
+pkgname = seiche

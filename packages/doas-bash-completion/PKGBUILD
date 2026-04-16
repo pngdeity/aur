@@ -10,7 +10,7 @@ url="https://github.com/aarchetype/bash-completion"
 license=('GPL-2.0-only')
 depends=('bash-completion')
 source=("doas.bash")
-sha256sums=('SKIP')
+sha256sums=('1eab87bdb9d1671b9be72528ade4e05a69a1f748eac353731ab95f1b096c6d1e')
 
 package() {
   install -Dm644 "doas.bash" \

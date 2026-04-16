@@ -1,0 +1,12 @@
+pkgbase = doas-bash-completion
+	pkgdesc = Bash completion for opendoas
+	pkgver = 1.0.0
+	pkgrel = 1
+	url = https://github.com/aarchetype/bash-completion
+	arch = any
+	license = GPL-2.0-only
+	depends = bash-completion
+	source = doas.bash
+	sha256sums = 1eab87bdb9d1671b9be72528ade4e05a69a1f748eac353731ab95f1b096c6d1e
+
+pkgname = doas-bash-completion

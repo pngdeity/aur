@@ -1,4 +1,5 @@
-# Maintainer: Coraline Shuryn <coraline.shuryn@gmail.com>
+# Maintainer: pngdeity <pngdeity@tutanota.com>
+# Previous Maintainer: Coraline Shuryn <coraline.shuryn@gmail.com>
 pkgname=gemini-cli-git
 _pkgname=gemini-cli
 epoch=1

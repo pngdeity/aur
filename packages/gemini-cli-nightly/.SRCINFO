@@ -1,0 +1,30 @@
+pkgbase = gemini-cli-nightly
+	pkgdesc = AI agent bringing Gemini to your terminal (nightly version)
+	pkgver = 0.39.0.nightly.20260409.615e07834
+	pkgrel = 1
+	epoch = 1
+	url = https://github.com/google-gemini/gemini-cli
+	arch = x86_64
+	license = Apache-2.0
+	checkdepends = vim
+	makedepends = git
+	makedepends = jq
+	makedepends = node-gyp
+	makedepends = npm
+	makedepends = python
+	depends = glib2
+	depends = glibc
+	depends = libgcc
+	depends = libsecret
+	depends = libstdc++
+	depends = nodejs
+	optdepends = ripgrep: file content search
+	optdepends = wl-clipboard: clipboard image pasting on Wayland
+	optdepends = xclip: clipboard image pasting on X11
+	optdepends = xdg-utils: opening URLs in default browser
+	provides = gemini-cli
+	conflicts = gemini-cli
+	source = gemini-cli-src::git+https://github.com/google-gemini/gemini-cli.git#tag=v0.39.0-nightly.20260409.615e07834
+	sha256sums = 9e42d2f31630f11081d987d35a6a4cff62a61fd2673c274e2ae7edb7b662268d
+
+pkgname = gemini-cli-nightly

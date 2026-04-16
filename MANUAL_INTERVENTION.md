@@ -1,15 +1,18 @@
 # Repository Manager's Manual Intervention Guide
 
-This guide outlines the specific steps you must take when the automated pipeline requires human intervention.
+This guide outlines the specific steps required when the automated pipeline fails or when manual package maintenance is necessary.
 
-## 1. **Infrastructure & Secrets Setup**
-When setting up a new repository or updating access:
+---
 
-### **Generating Rclone Secrets**
-1.  On a local machine with `rclone` installed, run `rclone config` to set up your Google Drive remote (name it `gdrive`).
-2.  Locate your `rclone.conf` (usually `~/.config/rclone/rclone.conf`).
-3.  Base64-encode the file: `base64 -w 0 ~/.config/rclone/rclone.conf | xsel -b`.
-4.  Add the result to your GitHub Repository Secrets as `RCLONE_CONFIG_BASE64`.
+## 1. **Automated Maintenance with `sync-package.sh`**
+The primary tool for updating a package is `bash scripts/sync-package.sh <pkgname> <version>`. 
+
+This script automates:
+1.  **Version Update**: Updates `pkgver` and resets `pkgrel` to `1` in the `PKGBUILD`.
+2.  **Changelog Generation**: Automatically fetches GitHub release notes if `_githubname` is defined in the `PKGBUILD`.
+3.  **Checksum Updates**: Runs `updpkgsums` to refresh the `sha256sums` array.
+
+**Action**: Use this script whenever possible before resorting to manual edits.
 
 ---
 
@@ -17,78 +20,72 @@ When setting up a new repository or updating access:
 To add a new package to the repository:
 
 ### **Standard Package (AUR/GitHub/NPM)**
-1.  Create a new folder: `mkdir -p packages/new-pkg`.
-2.  Place a valid `PKGBUILD` and any required files (e.g., `.install`) in that folder.
-3.  Add the package to `nvchecker.toml`:
-    ```toml
-    [new-pkg]
-    source = "github"
-    github = "user/repo"
-    use_latest_tag = true
+1.  **Directory Structure**: Create a new folder in `packages/`.
+2.  **PKGBUILD**: Place a valid `PKGBUILD`. Ensure the first line is exactly:
+    ```bash
+    # Maintainer: pngdeity <pngdeity@tutanota.com>
     ```
-4.  Initialize the version in `nvc_versions.json`:
-    ```json
-    "new-pkg": "0.0.1"
+3.  **Version Tracking**: Initialize the package version in `oldver.json`.
+4.  **Metadata**: Generate the mandatory `.SRCINFO` file:
+    ```bash
+    makepkg --printsrcinfo > .SRCINFO
     ```
-5.  Commit and push: `git add . && git commit -m "feat: add new-pkg" && git push`.
+5.  **Automation**: Add the package to `.nvchecker.toml` in the root and in the package's subdirectory.
 
-### **Custom Patched Package (e.g., ranger-doas)**
+### **Custom Patched Package**
 Follow the steps above, then:
-1.  Create an `update.sh` in `packages/new-pkg/`.
-2.  Define the `sed` or `patch` logic in the script (it will receive the new version as `$1`).
-3.  Test it locally before pushing: `cd packages/new-pkg && ./update.sh <version>`.
+1.  **Update Script**: Create an `update.sh` in the package directory to handle complex patching or `sed` logic.
+2.  **Logic**: Ensure it accepts the new version as `$1` and produces the necessary patches/changes.
 
 ---
 
 ## 3. **Handling Automation Failures (CI Broken)**
-When a GitHub Action fails (Red X):
+When a GitHub Action fails:
 
-### **Diagnosing the Failure**
-1.  Open the GitHub Actions log for the failed run.
-2.  **Case A: Patch Failed (`patch -Np1 -i ...` returned 1)**
-    *   The upstream code has changed significantly.
-    *   Manually clone the upstream repo at the new version.
-    *   Attempt to apply the patch: `patch -p1 < your-patch.patch`.
-    *   Fix the rejects (`.rej` files) and generate a new patch: `git diff > new-patch.patch`.
-    *   Update the file in your repository and push.
-3.  **Case B: Checksum Failed (`sha256sums` mismatch)**
-    *   The upstream author may have re-rolled the release.
-    *   Go to the package directory and run `updpkgsums`.
-    *   Commit the updated `PKGBUILD`.
-4.  **Case C: Missing Dependency**
-    *   Update the `depends` or `makedepends` array in the `PKGBUILD`.
+### **Case A: Patch Failed**
+*   **Cause**: The upstream source code changed significantly, and the existing patch no longer applies cleanly.
+*   **Resolution**: 
+    1.  Manually clone the upstream repo at the target version.
+    2.  Attempt to apply the patch: `patch -p1 < your-patch.patch`.
+    3.  Resolve rejects (`.rej` files), delete them, and generate a new patch: `git diff > new-patch.patch`.
+    4.  Update the `PKGBUILD` and refresh checksums.
+
+### **Case B: Checksum Failed**
+*   **Cause**: Upstream re-rolled the release or the download was corrupted.
+*   **Resolution**: Run `updpkgsums` in the package directory and verify the file content.
 
 ---
 
-## 4. **Maintaining OpenDoas Patches**
-The `opendoas` package requires proactive curation:
+## 4. **Maintaining opendoas Patches**
+The `opendoas` package is heavily patched and requires proactive curation:
 
 ### **Updating Candidate Patches**
 If a GitHub PR is updated:
-1.  Navigate to `packages/opendoas/`.
-2.  Re-download the patch: `curl -L -O https://github.com/Duncaen/OpenDoas/pull/<PR_ID>.patch`.
-3.  Run `updpkgsums` and push.
+1.  Re-download the patch to `packages/opendoas/`.
+2.  Run `updpkgsums` and update `.SRCINFO`.
 
-### **New Official Release (e.g., v6.9.0)**
-1.  **Delete the old snapshot patch**: `rm packages/opendoas/post-release-v6.8.2.patch`.
-2.  **Verify Candidate Patches**: Check the `v6.9.0` source to see if `retry.patch` or others were merged.
-3.  **Update `PKGBUILD`**: Remove merged patches from the `source` array and `prepare()` function.
-4.  **Update `nvc_versions.json`**: Update the `opendoas` version manually if needed.
+### **New Official Release**
+1.  **Cleanup**: Delete the old snapshot patch (e.g., `post-release-v6.8.2.patch`).
+2.  **Audit**: Check the new source to see if existing candidate patches (e.g., `retry.patch`) were merged upstream.
+3.  **Refactor**: Remove merged patches from the `PKGBUILD`'s `source` array and `prepare()` function.
 
 ---
 
-## 5. **Security & GPG Signing (Optional)**
-If you decide to enable package signing:
-1.  Generate a GPG key locally: `gpg --full-generate-key`.
-2.  Export the private key: `gpg --export-secret-keys --armor YOUR_KEY_ID`.
-3.  Store it in GitHub Secrets as `GPG_PRIVATE_KEY`.
-4.  Modify `repo-master.yml` to run `repo-add --sign` (ensure `makepkg.conf` in the chroot is also configured for signing).
+## 5. **Security & GPG Signing**
+The repository uses `repo-add --sign` to ensure users can verify the integrity of the package database.
+
+### **Setup Instructions**
+1.  **Generate Key**: `gpg --full-generate-key` (Use RSA/RSA, 4096 bit, no expiry).
+2.  **Export Private Key**: `gpg --export-secret-keys --armor <KEY_ID>`.
+3.  **GitHub Secrets**: Add the exported key to a secret named `REPO_GPG_KEY`.
+4.  **Verification**: The `release.yml` workflow will automatically import this key and sign the database (`nightly.db`) during the publishing phase.
 
 ---
 
 ## **Final Verification Checklist**
 Before pushing any manual change:
 - [ ] Does the `PKGBUILD` pass `namcap`?
-- [ ] Does `updpkgsums` run without errors?
-- [ ] Are all variables in the `PKGBUILD` properly quoted?
-- [ ] Did you remember to reset `pkgrel` to `1` for new versions?
+- [ ] Does it contain the mandatory Maintainer flag?
+- [ ] Is the `.SRCINFO` file updated (`makepkg --printsrcinfo > .SRCINFO`)?
+- [ ] Did you reset `pkgrel` to `1` for new versions?
+- [ ] Are all variables properly quoted in the `PKGBUILD`?

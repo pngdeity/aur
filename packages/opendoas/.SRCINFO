@@ -1,0 +1,32 @@
+pkgbase = opendoas
+	pkgdesc = Run commands as super user or another user (patched version)
+	pkgver = 6.8.2
+	pkgrel = 1
+	url = https://github.com/Duncaen/OpenDoas
+	install = opendoas.install
+	arch = x86_64
+	license = custom:ISC
+	makedepends = git
+	depends = pam
+	provides = doas
+	conflicts = doas
+	replaces = doas
+	backup = etc/pam.d/doas
+	source = opendoas::git+https://github.com/Duncaen/OpenDoas.git#tag=v6.8.2
+	source = 119.patch
+	source = rowhammer.patch
+	source = retry.patch
+	source = post-release-v6.8.2.patch
+	source = Fix-typos-in-comments.patch
+	source = configure-Correct-value-assignment-to-GIDMAX.patch
+	source = doas.pam
+	sha256sums = 43b4c2de1aaa31aac1d322b98883334b864c606783c4dfb3ddbfa0d88af9332b
+	sha256sums = 7f8658288498883161e14227d88f2ac5faf0b0667de4fca64f640a22a616bd77
+	sha256sums = 80c9ebdb373c552730e13f6c562820a80540a96f0471f2c96170f69fba052d0a
+	sha256sums = cae34e452f63dec782fe2e0a3b2ca73045a7a7f21468e7dd1ea84a11296ce8c2
+	sha256sums = dab653136a5adb37991b215963157588a14e16be8aa32d33c37590e86c763477
+	sha256sums = 5c031ce7f8658ade92ee2a5d4d883ad22bf922e66a051b44c1594a9c18bc6d90
+	sha256sums = 3e86c2601377aa0ffdf132365838caa4bdcb4c6e6b6ffddb2070e43157337b5e
+	sha256sums = a03a55748416eaf4a4bf529933a8eb8acccc5d644d8f296143f76ad7c5a7bdf7
+
+pkgname = opendoas

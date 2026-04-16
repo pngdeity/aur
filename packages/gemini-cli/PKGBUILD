@@ -1,5 +1,5 @@
-# Maintainer: Carl Smedstad <carsme@archlinux.org>
-# Maintainer: pngdeity <email@example.com>
+# Maintainer: pngdeity <pngdeity@tutanota.com>
+# Previous Maintainer: Carl Smedstad <carsme@archlinux.org>
 # Contributor: huyz
 
 pkgname=gemini-cli

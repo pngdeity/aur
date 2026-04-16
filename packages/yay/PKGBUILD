@@ -1,5 +1,5 @@
-# Maintainer: Jguer <pkgbuilds at jguer.space>
 # Maintainer: pngdeity <pngdeity@tutanota.com>
+# Previous Maintainer: Jguer <pkgbuilds at jguer.space>
 pkgname=yay
 pkgver=12.5.7
 pkgrel=1

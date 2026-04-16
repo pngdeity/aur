@@ -1,4 +1,5 @@
-# Maintainer:  Vitalii Kuzhdin <vitaliikuzhdin@gmail.com>
+# Maintainer: pngdeity <pngdeity@tutanota.com>
+# Previous Maintainer: Vitalii Kuzhdin <vitaliikuzhdin@gmail.com>
 
 _name="sysrescueusbwriter"
 pkgname="systemrescue-usbwriter"
