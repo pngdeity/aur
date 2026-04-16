@@ -68,6 +68,7 @@ prepare() {
 
 build() {
   cd "${pkgname%-doas}-${pkgver}"
+  export SOURCE_DATE_EPOCH=${SOURCE_DATE_EPOCH:-$(date +%s)}
   python -m build -wn
 }
 
@@ -82,6 +83,7 @@ check() {
 package() {
   cd "${pkgname%-doas}-${pkgver}"
   python -m installer -d "$pkgdir" dist/*.whl
+  install -vDm644 LICENSE -t "$pkgdir/usr/share/licenses/$pkgname"
 }
 
 # vim: ts=2 sw=2 et:
