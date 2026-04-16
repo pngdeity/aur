@@ -54,5 +54,5 @@ package() {
   install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
 
   # Disable auto-update: gemini-cli is managed by pacman, not npm
-  install -Dm644 "$srcdir/disable-auto-update.json" "$pkgdir/etc/gemini-cli/settings.json"
+  install -vDm644 "$srcdir/disable-auto-update.json" "$pkgdir/etc/gemini-cli/settings.json"
 }
