@@ -40,6 +40,7 @@ prepare() {
 
 build() {
   # Standard Arch Linux CMake build pattern
+  export SOURCE_DATE_EPOCH=${SOURCE_DATE_EPOCH:-$(date +%s)}
   cmake -B build -S "$_pkgname-src" \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_INSTALL_PREFIX=/usr \
