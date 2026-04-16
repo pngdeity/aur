@@ -30,6 +30,12 @@ if [[ -x "./update.sh" ]]; then
     ./update.sh "${NEW_VER}"
 fi
 
+# 1.6. Shared Asset Synchronization (Centralization path)
+if grep -q "^_use_common_gemini_settings=true" PKGBUILD; then
+    echo "  -> Syncing shared gemini-cli settings from common/"
+    cp "${SCRIPT_DIR}/../common/gemini-cli-settings.json" "settings.json"
+fi
+
 # 2. Intelligent Changelog Automation (DRY path)
 GITHUB_REPO=$(grep -oP '(?<=^_githubname=).+' PKGBUILD | tr -d '"' | tr -d "'" || echo "")
 

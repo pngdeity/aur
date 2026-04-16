@@ -26,8 +26,8 @@ pkgbase = gemini-cli-preview
 	conflicts = gemini-cli
 	backup = etc/gemini-cli/settings.json
 	source = gemini-cli-src::git+https://github.com/google-gemini/gemini-cli.git#tag=v0.38.0
-	source = disable-auto-update.json
-	sha256sums = 26de551adcdbc0af72b2be9810ed1ed41d6c30d8626439498bb73c37213fab45
+	source = settings.json
+	sha256sums = fa8cfc74a5af04fce0d0d150e1015ade98abf908b73be6379c0b0a0cbfbedbc0
 	sha256sums = 6a813a4a219dc135b96f50290e3b4e785577f9d9cd6174039eeb3d4618cfd180
 
 pkgname = gemini-cli-preview

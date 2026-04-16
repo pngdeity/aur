@@ -17,7 +17,7 @@ pkgbase = gemini-cli-git
 	replaces = google-gemini-cli-git
 	backup = etc/gemini-cli/settings.json
 	source = gemini-cli::git+https://github.com/google-gemini/gemini-cli.git
-	source = disable-auto-update.json
+	source = settings.json
 	sha256sums = SKIP
 	sha256sums = 6a813a4a219dc135b96f50290e3b4e785577f9d9cd6174039eeb3d4618cfd180
 

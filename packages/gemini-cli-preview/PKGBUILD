@@ -1,5 +1,8 @@
 # Maintainer: pngdeity <pngdeity@tutanota.com>
 
+# Use shared asset automation (see scripts/sync-package.sh)
+_use_common_gemini_settings=true
+
 pkgname=gemini-cli-preview
 _pkgname=gemini-cli
 pkgver=0.38.0
@@ -39,8 +42,8 @@ _githubname="google-gemini/gemini-cli"
 _tag="v$pkgver"
 backup=('etc/gemini-cli/settings.json')
 source=("$_pkgname-src::git+$url.git#tag=$_tag"
-        'disable-auto-update.json')
-sha256sums=('26de551adcdbc0af72b2be9810ed1ed41d6c30d8626439498bb73c37213fab45'
+        'settings.json')
+sha256sums=('fa8cfc74a5af04fce0d0d150e1015ade98abf908b73be6379c0b0a0cbfbedbc0'
             '6a813a4a219dc135b96f50290e3b4e785577f9d9cd6174039eeb3d4618cfd180')
 
 prepare() {
@@ -84,5 +87,5 @@ package() {
   install -vDm644 -t "$pkgdir/usr/share/licenses/$pkgname" LICENSE
 
   # Disable auto-update: gemini-cli is managed by pacman, not npm
-  install -vDm644 "$srcdir/disable-auto-update.json" "$pkgdir/etc/gemini-cli/settings.json"
+  install -vDm644 "$srcdir/settings.json" "$pkgdir/etc/gemini-cli/settings.json"
 }
