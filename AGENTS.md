@@ -50,6 +50,11 @@ The following articles provide the standard for specific package types and quali
 - **Orchestration**: `scripts/sync-package.sh` is the only script permitted to modify `PKGBUILD` metadata (version/rel/hashes). It executes `./update.sh` as a hook during the synchronization phase.
 - **Validation**: Metadata integrity is enforced by `scripts/check-metadata.sh` in the CI pipeline. Never bypass this check to fix build failures.
 
+### Hierarchical Policies (AGENTS.md)
+- **New Packages**: Upon creation of a new subdirectory in `packages/`, you MUST create a local `AGENTS.md` file.
+- **Reference Mandate**: The local `AGENTS.md` MUST include a strict instruction to reference the upstream source repository for all build, testing, and structural information.
+- **Tribal Knowledge**: The file MUST document package-specific "tribal knowledge," including functional limitations (e.g., backgrounding support), specialized build flags (e.g., CMake types), and environment isolation rules.
+
 ## 3. Mandatory Verification Workflow
 
 Before proposing or pushing a change to any package, an agent MUST perform:
