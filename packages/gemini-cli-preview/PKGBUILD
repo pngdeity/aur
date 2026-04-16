@@ -36,6 +36,7 @@ checkdepends=(
 )
 provides=("$_pkgname")
 conflicts=("$_pkgname")
+_githubname="google-gemini/gemini-cli"
 _tag="v$pkgver-preview.$_previewversion"
 source=("$_pkgname-src::git+$url.git#tag=$_tag")
 sha256sums=('26de551adcdbc0af72b2be9810ed1ed41d6c30d8626439498bb73c37213fab45')
@@ -43,15 +44,6 @@ sha256sums=('26de551adcdbc0af72b2be9810ed1ed41d6c30d8626439498bb73c37213fab45')
 prepare() {
   cd "$_pkgname-src"
   npm clean-install --ignore-scripts
-
-  # Generate formatted changelog from GitHub Release Notes
-  echo "  -> Generating changelog for $_tag..."
-  curl -sH "X-GitHub-Api-Version: 2022-11-28" \
-    "https://api.github.com/repos/google-gemini/gemini-cli/releases/tags/$_tag" | \
-    jq -r '.body // "No release notes available for this preview build."' | \
-    sed -E -e 's|@([a-zA-Z0-9-]+)|[@\1](https://github.com/\1)|g' \
-           -e 's|https://github.com/[^/ ]+/[^/ ]+/pull/([0-9]+)|[#\1](&)|g' \
-    > "../$pkgname.changelog"
 }
 
 build() {
@@ -86,7 +78,6 @@ package() {
   # Remove node-gyp build artifacts
   rm -vr "$pkgdir/usr/lib/node_modules/@google/gemini-cli/node_modules/keytar/build/Release/obj.target"
 
-  install -vDm644 "../$pkgname.changelog" "$pkgdir/usr/share/doc/$pkgname/$pkgname.changelog"
   install -vDm644 -t "$pkgdir/usr/share/doc/$pkgname" README.md
   install -vDm644 -t "$pkgdir/usr/share/licenses/$pkgname" LICENSE
 }

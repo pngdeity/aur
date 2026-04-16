@@ -1,0 +1,4 @@
+Get the CI/CD system to check for new versions of stuff like the LICENSE,
+INSTRUCTIONS.md (for seiche), etc. This should be fairly simple to do as you
+have quite a few things to do before updating the package, including hash
+updates, changelog generation, version updates.

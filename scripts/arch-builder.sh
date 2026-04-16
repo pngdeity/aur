@@ -29,38 +29,22 @@ fi
 
 cd "$PKG_DIR"
 
-# 1. Versioning Management (Point 4 & 2)
-# Respect VCS packages by skipping manual injection if pkgver() exists.
-if grep -q "pkgver()" PKGBUILD; then
-    echo "  -> VCS/pkgver() function detected. Skipping manual version injection."
-else
-    # Extract existing version to propagate it to all helper variables
-    OLD_VER=$(grep "^pkgver=" PKGBUILD | cut -d= -f2 | tr -d "'\" ")
-    if [[ -n "$OLD_VER" ]]; then
-      echo "  -> Injecting version $NEW_VER (Replacing $OLD_VER)"
-      sed -i "s/\b$OLD_VER\b/$NEW_VER/g" PKGBUILD
-    fi
-fi
-
-# 2. PGP Key Management (Point 3)
+# 1. PGP Key Management
 # Automatically import keys defined in the PKGBUILD
+# This remains in the builder as keys are environment-specific (keyring)
 KEYS=$(grep -oP 'validpgpkeys=\(\K[^)]+' PKGBUILD | tr -d "'\"" || true)
 for KEY in $KEYS; do
     echo "  -> Importing PGP Key: $KEY"
     gpg --recv-keys "$KEY" || echo "    ! Warning: Failed to fetch PGP key $KEY"
 done
 
-# 3. Integrity Check
-# Let the Arch Build System update the hashes for the new version/commit
-echo "  -> Updating checksums..."
-updpkgsums
-
-# 4. Build
-# Delegate compilation and dependency resolution to makepkg
+# 2. Build
+# Delegate compilation and dependency resolution to makepkg.
+# We assume PKGBUILD has already been synchronized (versioned/hashed) by sync-package.sh.
 echo "  -> Starting makepkg..."
 makepkg --syncdeps --noconfirm --noprogressbar --needed
 
-# 5. Move artifacts to a central location
+# 3. Move artifacts to a central location
 mkdir -p ../dist
 cp *.pkg.tar.zst ../dist/ 2>/dev/null || true
 

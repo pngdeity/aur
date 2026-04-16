@@ -7,26 +7,25 @@ on:
 jobs:
   check:
     runs-on: ubuntu-latest
+    container: archlinux:latest
     outputs:
       chunks_json: ${{ steps.get-updates.outputs.chunks_json }}
       has_updates: ${{ steps.get-updates.outputs.has_updates }}
       version: ${{ steps.get-updates.outputs.version }}
     steps:
+      - name: Install dependencies
+        run: |
+          pacman -Syu --noconfirm nvchecker pacman-contrib jq git curl
+
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.x'
-
-      - name: Install dependencies
-        run: pip install nvchecker jq
-
       - id: get-updates
-        name: Consolidate and Run nvchecker
+        name: Consolidate, Run nvchecker, and Sync
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           # Sanity Check: Ensure the master config exists and isn't empty
           if [ ! -s .nvchecker.toml ] || ! grep -q "^\[" .nvchecker.toml; then
@@ -46,6 +45,14 @@ jobs:
 
           nvchecker -c master.toml --logger json | tee results.json
           
+          # Run intelligent synchronization for each updated package
+          jq -c 'select(.event=="updated")' results.json | while read -r update; do
+            NAME=$(echo "$update" | jq -r '.name')
+            VER=$(echo "$update" | jq -r '.version')
+            # The sync script handles versioning, hashes, and changelogs
+            bash scripts/sync-package.sh "$NAME" "$VER"
+          done
+
           UPDATED_NAMES=$(jq -r 'select(.event=="updated") | .name' results.json | jq -R . | jq -s -c .)
           
           if [ "$UPDATED_NAMES" != "[]" ]; then
@@ -59,10 +66,11 @@ jobs:
             
             nvtake -c master.toml --all
             
+            git config --global --add safe.directory "$GITHUB_WORKSPACE"
             git config --local user.email "action@github.com"
             git config --local user.name "GitHub Action"
-            git add oldver.json
-            git commit -m "chore: update tracked versions"
+            git add oldver.json packages/
+            git commit -m "chore: automated upstream update [skip ci]"
             git push
           else
             echo "chunks_json=[]" >> $GITHUB_OUTPUT

@@ -35,21 +35,14 @@ checkdepends=(
 )
 provides=("$_pkgname")
 conflicts=("$_pkgname")
-source=("$_pkgname-src::git+$url.git#tag=v${pkgver//.nightly/-nightly}")
+_githubname="google-gemini/gemini-cli"
+_tag="v${pkgver//.nightly/-nightly}"
+source=("$_pkgname-src::git+$url.git#tag=$_tag")
 sha256sums=('9e42d2f31630f11081d987d35a6a4cff62a61fd2673c274e2ae7edb7b662268d')
 
 prepare() {
   cd "$_pkgname-src"
   npm clean-install --ignore-scripts
-  # TODO This should ideally happen during CI/CD
-  # Generate formatted changelog from GitHub Release Notes
-  local _tag="v${pkgver//.nightly/-nightly}"
-  curl -sH "X-GitHub-Api-Version: 2026-03-10" \
-    "https://api.github.com/repos/google-gemini/gemini-cli/releases/tags/$_tag" | \
-    jq -r '.body // "No release notes available for this nightly build."' | \
-    sed -E -e 's|@([a-zA-Z0-9-]+)|[@\1](https://github.com/\1)|g' \
-           -e 's|https://github.com/[^/ ]+/[^/ ]+/pull/([0-9]+)|[#\1](&)|g' \
-    > "../$pkgname.changelog"
 }
 
 build() {
@@ -84,7 +77,6 @@ package() {
     google-$_pkgname-$_pkgver.tgz
   # Remove node-gyp build artifacts
   rm -vr "$pkgdir/usr/lib/node_modules/@google/gemini-cli/node_modules/keytar/build/Release/obj.target"
-  install -vDm644 "../$pkgname.changelog" "$pkgdir/usr/share/doc/$pkgname/$pkgname.changelog"
   install -vDm644 -t "$pkgdir/usr/share/doc/$pkgname" README.md
   install -vDm644 -t "$pkgdir/usr/share/licenses/$pkgname" LICENSE
 }

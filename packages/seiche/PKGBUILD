@@ -36,16 +36,6 @@ backup=(
 
 prepare() {
   cd "$_pkgname-src"
-  
-  # Fetch release notes for the changelog.
-  # Using the GitHub API as a seasoned DevOps engineer to automate changelogs.
-  echo "Fetching release notes for v$pkgver..."
-  curl -sH "X-GitHub-Api-Version: 2026-03-10" \
-    "https://api.github.com/repos/$_githubname/releases/tags/v$pkgver" | \
-    jq -r '.body // "No release notes available for this version."' | \
-    sed -E -e 's|@([a-zA-Z0-9-]+)|[@\1](https://github.com/\1)|g' \
-           -e 's|https://github.com/[^/ ]+/[^/ ]+/pull/([0-9]+)|[#\1](&)|g' \
-    > "../$pkgname.changelog"
 }
 
 build() {
@@ -59,7 +49,6 @@ build() {
 
 check() {
   # Optional: cmake --build build --target test
-  :
 }
 
 package() {
@@ -73,7 +62,6 @@ package() {
   fi
 
   # Install docs and licenses
-  install -vDm644 "$srcdir/$pkgname.changelog" "$pkgdir/usr/share/doc/$pkgname/$pkgname.changelog"
   install -vDm644 -t "$pkgdir/usr/share/doc/$pkgname" "$_pkgname-src/README.md"
   install -vDm644 -t "$pkgdir/usr/share/licenses/$pkgname" "$_pkgname-src/LICENSE"
 }
