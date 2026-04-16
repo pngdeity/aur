@@ -51,4 +51,8 @@ fi
 echo "  -> Updating checksums"
 updpkgsums
 
+# 4. Metadata Update
+echo "  -> Regenerating .SRCINFO"
+makepkg --printsrcinfo > .SRCINFO
+
 echo "==> Synchronization complete for ${PKG_NAME}"

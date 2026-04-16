@@ -23,7 +23,16 @@ jobs:
       - name: Bootstrap Environment
         run: |
           chmod -R a+rw .
-          chmod +x scripts/arch-builder.sh
+          chmod +x scripts/*.sh
+
+      - name: Validate Metadata
+        run: |
+          PACKAGES=$(echo '${{ inputs.package_list }}' | jq -r '.[]')
+          for PKG in $PACKAGES; do
+            if [ -d "$PKG" ]; then
+              ./scripts/check-metadata.sh "$PKG"
+            fi
+          done
 
       - name: Build Batch
         run: |

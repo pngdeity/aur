@@ -40,6 +40,11 @@ The following articles provide the standard for specific package types and quali
 - **Maintainer Identity**: Every package must use: `# Maintainer: pngdeity <pngdeity@tutanota.com>`.
 - **Reproducibility**: Use `local _build_date=$(date --utc --date="@${SOURCE_DATE_EPOCH:-$(date +%s)}" +"%Y-%m-%d")` for any time-sensitive build metadata.
 
+### Upstream Discovery (nvchecker)
+- **Local Configs**: Each package MUST have a local `.nvchecker.toml` defining its upstream source (e.g., `source = "github"`, `github = "user/repo"`).
+- **Prefix Handling**: Use `prefix = "v"` for repositories that use "v1.2.3" tag formats to ensure internal version strings remain clean (e.g., "1.2.3").
+- **State Persistence**: Never manually edit `oldver.json`. Let the `Discovery` workflow manage state via `nvtake`.
+
 ## 3. Mandatory Verification Workflow
 
 Before proposing or pushing a change to any package, an agent MUST perform:
