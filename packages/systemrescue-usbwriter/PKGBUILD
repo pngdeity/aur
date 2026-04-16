@@ -40,11 +40,12 @@ build() {
   patch -Np1 -i "${srcdir}/${pkgname}_no_appimage.patch"
 
   cd "AppDirSrc/usr/bin"
-  local build_date="$(date --utc --date="@${SOURCE_DATE_EPOCH:-$(date +%s)}" +"%Y-%m-%d")"
+  # Ensure reproducible builds
+  local _build_date=$(date --utc --date="@${SOURCE_DATE_EPOCH:-$(date +%s)}" +"%Y-%m-%d")
 
   sed -e 's/${APPDIR}//g' \
       -e 's|$("${BINDIR}/cat" "/usr/share/versions/sysrescueusbwriter")|'"${pkgver}|g" \
-      -e 's|$("${BINDIR}/cat" "/usr/share/versions/sysrescueusbwriter-builddate")|'"${build_date}|g" \
+      -e 's|$("${BINDIR}/cat" "/usr/share/versions/sysrescueusbwriter-builddate")|'"${_build_date}|g" \
       -e 's@$("${BINDIR}/cat" "/usr/share/versions/syslinux")@$(pacman -Q syslinux | sed -e "s#syslinux \\(.*\\)#\\1#")@g' \
       -i "${_name}"
       # -e '1i#!/bin/bash' \

@@ -1,7 +1,8 @@
+# Maintainer: pngdeity <pngdeity@tutanota.com>
+
 _npmscope=@google
 _npmname=jules
-_npmver=0.1.42
-pkgname=jules-tools # All lowercase
+pkgname=jules-tools
 pkgver=0.1.42
 pkgrel=1
 pkgdesc="Jules, the asynchronous coding agent from Google, in the terminal."

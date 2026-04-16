@@ -1,9 +1,8 @@
-# Maintainer: pngdeity <email@example.com>
+# Maintainer: pngdeity <pngdeity@tutanota.com>
 
 pkgname=gemini-cli-preview
 _pkgname=gemini-cli
 pkgver=0.38.0
-_previewversion=0
 pkgrel=1
 epoch=1
 pkgdesc="Open-source AI agent that brings the power of Gemini directly into your terminal (preview version)"
@@ -37,7 +36,7 @@ checkdepends=(
 provides=("$_pkgname")
 conflicts=("$_pkgname")
 _githubname="google-gemini/gemini-cli"
-_tag="v$pkgver-preview.$_previewversion"
+_tag="v$pkgver"
 source=("$_pkgname-src::git+$url.git#tag=$_tag")
 sha256sums=('26de551adcdbc0af72b2be9810ed1ed41d6c30d8626439498bb73c37213fab45')
 
