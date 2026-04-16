@@ -1,5 +1,5 @@
 *.md
 !README.md
-!ioc-github-actions.md
-!AGENTS.md
 !MANUAL_INTERVENTION.md
+!AGENTS.md
+!**/AGENTS.md
