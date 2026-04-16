@@ -24,6 +24,12 @@ echo "  -> Updating versions in PKGBUILD"
 sed -i "s/^pkgver=.*/pkgver=${NEW_VER}/" PKGBUILD
 sed -i "s/^pkgrel=.*/pkgrel=1/" PKGBUILD
 
+# 1.5. Package-Specific Transformation (Specialized path)
+if [[ -x "./update.sh" ]]; then
+    echo "  -> Running package-specific transformation script"
+    ./update.sh "${NEW_VER}"
+fi
+
 # 2. Intelligent Changelog Automation (DRY path)
 GITHUB_REPO=$(grep -oP '(?<=^_githubname=).+' PKGBUILD | tr -d '"' | tr -d "'" || echo "")
 

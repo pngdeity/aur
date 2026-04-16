@@ -1,10 +1,16 @@
 #!/bin/bash
 set -e
 
-# This script is called by the master CI when a new version is detected.
-# The current directory will be packages/ranger-doas/
+# This script is called by scripts/sync-package.sh during the sync phase.
+# It handles the package-specific transformation of upstream ranger
+# into the patched ranger-doas variant.
+
+# NOTE: The current transformation is naive and simply replaces 'sudo' with 'doas'.
+# This does NOT account for the fact that doas lacks a '-b' (background) flag.
+# Commands relying on backgrounding via sudo may fail or hang in this version.
+
 UPSTREAM_URL="https://github.com/ranger/ranger.git"
-LATEST_VER=$1 # nvchecker will pass the new version as the first argument
+LATEST_VER=$1 # sync-package.sh will pass the new version as the first argument
 
 echo "Updating ranger-doas to version $LATEST_VER..."
 
@@ -19,15 +25,9 @@ find . -type f \( -name "README.md" -o -name "*.pod" -o -name "*.conf" -o -name 
     -exec sed -i 's/sudo/doas/g' {} +
 
 # 2. Generate the new patch
+# Responsibility for PKGBUILD metadata and checksums is delegated to sync-package.sh
 git diff > "../doas-substitution.patch"
 cd ..
-
-# 3. Update PKGBUILD
-sed -i "s/^pkgver=.*/pkgver=$LATEST_VER/" PKGBUILD
-sed -i "s/^pkgrel=.*/pkgrel=1/" PKGBUILD
-
-# 4. Update Checksums (requires devtools)
-updpkgsums
 
 # Cleanup
 rm -rf ranger-update
