@@ -22,7 +22,10 @@ pkgbase = gemini-cli
 	optdepends = wl-clipboard: clipboard image pasting on Wayland
 	optdepends = xclip: clipboard image pasting on X11
 	optdepends = xdg-utils: opening URLs in default browser
+	backup = etc/gemini-cli/settings.json
 	source = gemini-cli-src::git+https://github.com/google-gemini/gemini-cli.git#tag=v0.36.0
+	source = disable-auto-update.json
 	sha256sums = a7b86e0b402904dbfa8c0518f1262da54cfbcc9ecb035775285f615f850ebfaf
+	sha256sums = 6a813a4a219dc135b96f50290e3b4e785577f9d9cd6174039eeb3d4618cfd180
 
 pkgname = gemini-cli

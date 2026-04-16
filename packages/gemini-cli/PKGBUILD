@@ -35,8 +35,11 @@ optdepends=(
 checkdepends=(
   'vim'
 )
-source=("$pkgname-src::git+$url.git#tag=v$pkgver")
-sha256sums=('a7b86e0b402904dbfa8c0518f1262da54cfbcc9ecb035775285f615f850ebfaf')
+backup=('etc/gemini-cli/settings.json')
+source=("$pkgname-src::git+$url.git#tag=v$pkgver"
+        'disable-auto-update.json')
+sha256sums=('a7b86e0b402904dbfa8c0518f1262da54cfbcc9ecb035775285f615f850ebfaf'
+            '6a813a4a219dc135b96f50290e3b4e785577f9d9cd6174039eeb3d4618cfd180')
 
 prepare() {
   cd "$pkgname-src"
@@ -77,4 +80,7 @@ package() {
 
   install -vDm644 -t "$pkgdir/usr/share/doc/$pkgname" README.md
   install -vDm644 -t "$pkgdir/usr/share/licenses/$pkgname" LICENSE
+
+  # Disable auto-update: gemini-cli is managed by pacman, not npm
+  install -vDm644 "$srcdir/disable-auto-update.json" "$pkgdir/etc/gemini-cli/settings.json"
 }

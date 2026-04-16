@@ -37,8 +37,11 @@ provides=("$_pkgname")
 conflicts=("$_pkgname")
 _githubname="google-gemini/gemini-cli"
 _tag="v$pkgver"
-source=("$_pkgname-src::git+$url.git#tag=$_tag")
-sha256sums=('26de551adcdbc0af72b2be9810ed1ed41d6c30d8626439498bb73c37213fab45')
+backup=('etc/gemini-cli/settings.json')
+source=("$_pkgname-src::git+$url.git#tag=$_tag"
+        'disable-auto-update.json')
+sha256sums=('26de551adcdbc0af72b2be9810ed1ed41d6c30d8626439498bb73c37213fab45'
+            '6a813a4a219dc135b96f50290e3b4e785577f9d9cd6174039eeb3d4618cfd180')
 
 prepare() {
   cd "$_pkgname-src"
@@ -79,4 +82,7 @@ package() {
 
   install -vDm644 -t "$pkgdir/usr/share/doc/$pkgname" README.md
   install -vDm644 -t "$pkgdir/usr/share/licenses/$pkgname" LICENSE
+
+  # Disable auto-update: gemini-cli is managed by pacman, not npm
+  install -vDm644 "$srcdir/disable-auto-update.json" "$pkgdir/etc/gemini-cli/settings.json"
 }
