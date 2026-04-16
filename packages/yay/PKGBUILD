@@ -32,6 +32,11 @@ build() {
   make VERSION=$pkgver DESTDIR="$pkgdir" PREFIX="/usr" build
 }
 
+check() {
+  cd "$srcdir/$pkgname-$pkgver"
+  make test
+}
+
 package() {
   cd "$srcdir/$pkgname-$pkgver"
   make VERSION=$pkgver DESTDIR="$pkgdir" PREFIX="/usr" install

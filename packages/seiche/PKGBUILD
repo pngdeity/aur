@@ -49,8 +49,7 @@ build() {
 }
 
 check() {
-  :
-  # Optional: cmake --build build --target test
+  ctest --test-dir build --output-on-failure
 }
 
 package() {
