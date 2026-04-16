@@ -1,45 +1,38 @@
-# doas(1) completion                                       -*- shell-script -*-
+# doas(1) completion (Standard 2.16+)
 
-_comp_cmd_doas()
-{
+_comp_cmd_doas() {
     local cur prev words cword split
-    _init_completion -s || return
+    _comp_initialize -n : || return
 
+    # Skip options and identify the command offset
     local i
-
     for ((i = 1; i <= cword; i++)); do
         if [[ ${words[i]} != -* ]]; then
-            local PATH=$PATH:/sbin:/usr/sbin:/usr/local/sbin
-            local root_command=${words[i]}
-            _command_offset $i
+            # We found a command, offset to complete it
+            _comp_command_offset "$i"
             return
         fi
-        [[ ${words[i]} == -@(!(-*)[uCLs]) ]] &&
-            ((i++))
+        # Skip options that take an argument
+        [[ ${words[i]} == -@(!(-*)[uCLs]) ]] && ((i++))
     done
 
+    # Handle completion for doas-specific options
     case "$prev" in
         -!(-*)u)
-            COMPREPLY=($(compgen -u -- "$cur"))
-            return
-            ;;
+            _comp_compgen -u -- "$cur"
+            return ;;
         -!(-*)C)
             _filedir
-            return
-            ;;
+            return ;;
         -!(-*)[Ls])
-            return
-            ;;
+            return ;;
     esac
 
-    $split && return
-
-    if [[ $cur == -* ]]; then
-        COMPREPLY=($(compgen -W '$(_parse_usage "$1")' -- "$cur"))
-        [[ ${COMPREPLY-} == *= ]] && compopt -o nospace
+    # Dynamic flag completion via --help parsing
+    if [[ "$cur" == -* ]]; then
+        _comp_compgen_help
         return
     fi
-} &&
-    complete -F _comp_cmd_doas doas
+}
 
-# ex: filetype=sh
+complete -F _comp_cmd_doas doas
