@@ -1,5 +1,8 @@
 # Maintainer: pngdeity <pngdeity@tutanota.com>
 
+# Use shared asset automation (see scripts/sync-package.sh)
+_use_common_gemini_settings=true
+
 pkgname=gemini-cli-nightly
 changelog=gemini-cli-nightly.changelog
 _upstream_arch_repo="archlinux/packaging/packages/gemini-cli"
@@ -40,8 +43,11 @@ conflicts=("$_pkgname")
 _githubname="google-gemini/gemini-cli"
 _tag="v${pkgver//.nightly/-nightly}"
 _tag="${_tag%.*}.g${_tag##*.}"
-source=("$_pkgname-src::git+$url.git#tag=$_tag")
-sha256sums=('9e42d2f31630f11081d987d35a6a4cff62a61fd2673c274e2ae7edb7b662268d')
+backup=('etc/gemini-cli/settings.json')
+source=("$_pkgname-src::git+$url.git#tag=$_tag"
+        'settings.json')
+sha256sums=('9e42d2f31630f11081d987d35a6a4cff62a61fd2673c274e2ae7edb7b662268d'
+            '6a813a4a219dc135b96f50290e3b4e785577f9d9cd6174039eeb3d4618cfd180')
 
 pkgver() {
   cd "$_pkgname-src"
@@ -87,4 +93,7 @@ package() {
   rm -vr "$pkgdir/usr/lib/node_modules/@google/gemini-cli/node_modules/keytar/build/Release/obj.target"
   install -vDm644 -t "$pkgdir/usr/share/doc/$pkgname" README.md
   install -vDm644 -t "$pkgdir/usr/share/licenses/$pkgname" LICENSE
+
+  # Disable auto-update: gemini-cli is managed by pacman, not npm
+  install -vDm644 "$srcdir/settings.json" "$pkgdir/etc/gemini-cli/settings.json"
 }

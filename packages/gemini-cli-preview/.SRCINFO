@@ -25,7 +25,10 @@ pkgbase = gemini-cli-preview
 	optdepends = xdg-utils: opening URLs in default browser
 	provides = gemini-cli
 	conflicts = gemini-cli
-	source = gemini-cli-src::git+https://github.com/google-gemini/gemini-cli.git#tag=v0.38.0
+	backup = etc/gemini-cli/settings.json
+	source = gemini-cli-src::git+https://github.com/google-gemini/gemini-cli.git#tag=v0.38.0-preview.0
+	source = settings.json
 	sha256sums = fa8cfc74a5af04fce0d0d150e1015ade98abf908b73be6379c0b0a0cbfbedbc0
+	sha256sums = 6a813a4a219dc135b96f50290e3b4e785577f9d9cd6174039eeb3d4618cfd180
 
 pkgname = gemini-cli-preview

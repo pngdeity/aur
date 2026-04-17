@@ -1,5 +1,8 @@
 # Maintainer: pngdeity <pngdeity@tutanota.com>
 # Previous Maintainer: Coraline Shuryn <coraline.shuryn@gmail.com>
+# Use shared asset automation (see scripts/sync-package.sh)
+_use_common_gemini_settings=true
+
 pkgname=gemini-cli-git
 _upstream_arch_repo="archlinux/packaging/packages/gemini-cli"
 _pkgname=gemini-cli
@@ -15,8 +18,11 @@ makedepends=('git' 'npm')
 provides=("google-gemini-cli" "gemini-cli")
 conflicts=("google-gemini-cli" "gemini-cli" "google-gemini-cli-git")
 replaces=("google-gemini-cli-git")
-source=("$_pkgname::git+$url.git")
-sha256sums=('SKIP')
+backup=('etc/gemini-cli/settings.json')
+source=("$_pkgname::git+$url.git"
+        'settings.json')
+sha256sums=('SKIP'
+            '6a813a4a219dc135b96f50290e3b4e785577f9d9cd6174039eeb3d4618cfd180')
 
 pkgver() {
   cd "$_pkgname"
@@ -50,4 +56,7 @@ package() {
     {} +
 
   install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+
+  # Disable auto-update: gemini-cli is managed by pacman, not npm
+  install -vDm644 "$srcdir/settings.json" "$pkgdir/etc/gemini-cli/settings.json"
 }
