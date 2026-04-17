@@ -5,3 +5,8 @@ use_latest_release = true
 # Match nightly releases if they have a specific pattern, 
 # otherwise this will track stable releases which might not be intended for a 'nightly' package.
 # If there are no nightly tags, we might need a different approach.
+[gemini-cli-arch]
+source = "git"
+git = "https://gitlab.archlinux.org/archlinux/packaging/packages/gemini-cli.git"
+branch = "main"
+use_commit = true

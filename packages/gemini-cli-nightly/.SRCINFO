@@ -1,9 +1,10 @@
 pkgbase = gemini-cli-nightly
 	pkgdesc = AI agent bringing Gemini to your terminal (nightly version)
 	pkgver = 0.39.0.nightly.20260409.615e07834
-	pkgrel = 1
+	pkgrel = 2
 	epoch = 1
 	url = https://github.com/google-gemini/gemini-cli
+	changelog = gemini-cli-nightly.changelog
 	arch = x86_64
 	license = Apache-2.0
 	checkdepends = vim

@@ -1,7 +1,7 @@
 pkgbase = opendoas
 	pkgdesc = Run commands as super user or another user (patched version)
 	pkgver = 6.8.2
-	pkgrel = 1
+	pkgrel = 2
 	url = https://github.com/Duncaen/OpenDoas
 	install = opendoas.install
 	arch = x86_64

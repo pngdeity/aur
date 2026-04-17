@@ -3,8 +3,9 @@
 # Contributor: Earnest
 
 pkgname=opendoas
+_upstream_arch_repo="archlinux/packaging/packages/opendoas"
 pkgver=6.8.2
-pkgrel=1
+pkgrel=2
 pkgdesc='Run commands as super user or another user (patched version)'
 url='https://github.com/Duncaen/OpenDoas'
 license=(custom:ISC)
@@ -33,8 +34,7 @@ sha256sums=('43b4c2de1aaa31aac1d322b98883334b864c606783c4dfb3ddbfa0d88af9332b'
             'dab653136a5adb37991b215963157588a14e16be8aa32d33c37590e86c763477'
             '5c031ce7f8658ade92ee2a5d4d883ad22bf922e66a051b44c1594a9c18bc6d90'
             '3e86c2601377aa0ffdf132365838caa4bdcb4c6e6b6ffddb2070e43157337b5e'
-            'a03a55748416eaf4a4bf529933a8eb8acccc5d644d8f296143f76ad7c5a7bdf7'
-)
+            'a03a55748416eaf4a4bf529933a8eb8acccc5d644d8f296143f76ad7c5a7bdf7')
 
 pkgver() {
   cd "$pkgname"

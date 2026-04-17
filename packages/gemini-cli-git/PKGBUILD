@@ -1,10 +1,11 @@
 # Maintainer: pngdeity <pngdeity@tutanota.com>
 # Previous Maintainer: Coraline Shuryn <coraline.shuryn@gmail.com>
 pkgname=gemini-cli-git
+_upstream_arch_repo="archlinux/packaging/packages/gemini-cli"
 _pkgname=gemini-cli
 epoch=1
 pkgver=r3249.gc0b766ad7
-pkgrel=1
+pkgrel=2
 pkgdesc="An open-source AI agent that brings the power of Gemini directly into your terminal (git version)"
 arch=('any')
 url="https://github.com/google-gemini/gemini-cli"

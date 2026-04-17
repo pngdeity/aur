@@ -3,3 +3,8 @@ source = "github"
 github = "ranger/ranger"
 use_latest_tag = true
 prefix = "v"
+[ranger-arch]
+source = "git"
+git = "https://gitlab.archlinux.org/archlinux/packaging/packages/ranger.git"
+branch = "main"
+use_commit = true

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # scripts/sync-package.sh
-# Orchestrates package synchronization: versioning, changelogs, and hashes.
+# Orchestrates package synchronization: versioning, changelogs, hashes, and upstream merges.
 
 set -euo pipefail
 
@@ -22,6 +22,54 @@ fi
 
 cd "${PKG_DIR}"
 
+# --- Helper: Identity Protection ---
+# Snapshots critical identity variables to preserve them across upstream merges
+snapshot_identity() {
+    grep -E '^(pkgname|pkgver|pkgrel|provides|conflicts|replaces|source)=' PKGBUILD > .identity.tmp
+    # Handle pkgver() function if it exists
+    if grep -q "^pkgver()" PKGBUILD; then
+        sed -n '/^pkgver()/,/^}/p' PKGBUILD > .pkgver_func.tmp
+    fi
+}
+
+restore_identity() {
+    # Restore simple variables
+    while IFS= read -r line; do
+        var_name=$(echo "$line" | cut -d= -f1)
+        # Use a delimiter that won't appear in the line for sed
+        sed -i "s|^${var_name}=.*|$line|" PKGBUILD
+    done < .identity.tmp
+    
+    # Restore pkgver() function
+    if [[ -f .pkgver_func.tmp ]]; then
+        # Remove any existing pkgver() or static pkgver that might have been merged
+        sed -i '/^pkgver()/,/^}/d' PKGBUILD
+        # Insert the function after the maintainer header or at top
+        cat .pkgver_func.tmp >> PKGBUILD.new_func
+        cat PKGBUILD >> PKGBUILD.new_func
+        mv PKGBUILD.new_func PKGBUILD
+        rm .pkgver_func.tmp
+    fi
+    rm .identity.tmp
+}
+
+# --- Helper: Asset Discovery ---
+fetch_upstream_assets() {
+    local upstream_content="$1"
+    local base_url="$2"
+    echo "  -> Scanning for missing upstream assets..."
+    
+    # Extract files from source array that are not URLs
+    local assets=$(echo "$upstream_content" | sed -n '/^source=(/,/)/p' | grep -v '=(' | grep -v ')' | tr -d '"' | tr -d "'" | xargs -n1 echo | grep -v '://' | cut -d: -f1 || true)
+    
+    for asset in $assets; do
+        if [[ ! -f "$asset" ]]; then
+            echo "    -> Downloading missing asset: $asset"
+            curl -sL "${base_url}/${asset}" -o "$asset"
+        fi
+    done
+}
+
 CURRENT_VER=$(grep -oP '^pkgver=\K.*' PKGBUILD || echo "")
 CURRENT_REL=$(grep -oP '^pkgrel=\K.*' PKGBUILD || echo "1")
 
@@ -32,18 +80,28 @@ AUR_PKG=$(grep -E '^_upstream_aur_pkg=' PKGBUILD | cut -d= -f2 | tr -d '"' | tr 
 
 if [[ -n "$ARCH_REPO" ]]; then
     echo "  -> Checking official Arch upstream ($ARCH_REPO)"
-    UPSTREAM_URL="https://gitlab.archlinux.org/${ARCH_REPO}/-/raw/main/PKGBUILD"
+    BASE_URL="https://gitlab.archlinux.org/${ARCH_REPO}/-/raw/main"
+    UPSTREAM_URL="${BASE_URL}/PKGBUILD"
 elif [[ -n "$AUR_PKG" ]]; then
     echo "  -> Checking AUR upstream ($AUR_PKG)"
-    UPSTREAM_URL="https://aur.archlinux.org/cgit/aur.git/plain/PKGBUILD?h=${AUR_PKG}"
+    BASE_URL="https://aur.archlinux.org/cgit/aur.git/plain"
+    UPSTREAM_URL="${BASE_URL}/PKGBUILD?h=${AUR_PKG}"
 fi
 
 if [[ -n "${UPSTREAM_URL:-}" ]]; then
     if curl -sL "$UPSTREAM_URL" -o PKGBUILD.new && grep -q "pkgname=" PKGBUILD.new; then
         if [[ -f .PKGBUILD.upstream ]]; then
             if ! cmp -s .PKGBUILD.upstream PKGBUILD.new; then
-                echo "  -> Upstream PKGBUILD changed, attempting merge..."
-                git merge-file PKGBUILD .PKGBUILD.upstream PKGBUILD.new || echo "  -> Merge conflicts detected in PKGBUILD! Please resolve manually."
+                echo "  -> Upstream PKGBUILD changed, attempting hybrid merge..."
+                
+                # Download new assets referenced in upstream
+                fetch_upstream_assets "$(cat PKGBUILD.new)" "$BASE_URL"
+                
+                # Perform protected merge
+                snapshot_identity
+                git merge-file PKGBUILD .PKGBUILD.upstream PKGBUILD.new || echo "  -> Merge conflicts detected! Please resolve manually."
+                restore_identity
+                
                 mv PKGBUILD.new .PKGBUILD.upstream
                 UPSTREAM_CHANGED=true
             else
@@ -52,6 +110,7 @@ if [[ -n "${UPSTREAM_URL:-}" ]]; then
             fi
         else
             echo "  -> Initial upstream tracking setup."
+            fetch_upstream_assets "$(cat PKGBUILD.new)" "$BASE_URL"
             mv PKGBUILD.new .PKGBUILD.upstream
             UPSTREAM_CHANGED=true
         fi
@@ -69,6 +128,7 @@ if [[ "$PKG_NAME_RAW" == "$PKG_NAME" ]] && [[ "$CURRENT_VER" != "$NEW_VER" ]]; t
     sed -i "s/^pkgrel=.*/pkgrel=1/" PKGBUILD
 # If the trigger was an upstream config change (or we just found one), bump pkgrel
 elif [[ "$UPSTREAM_CHANGED" == "true" ]]; then
+    # Only bump if software version didn't just change
     NEW_REL=$((CURRENT_REL + 1))
     sed -i "s/^pkgrel=.*/pkgrel=${NEW_REL}/" PKGBUILD
 fi
@@ -77,6 +137,12 @@ fi
 if [[ -x "./update.sh" ]]; then
     echo "  -> Running package-specific transformation script"
     ./update.sh "${NEW_VER}"
+fi
+
+# 1.6. Shared Asset Synchronization (Centralization path)
+if grep -q "^_use_common_gemini_settings=true" PKGBUILD; then
+    echo "  -> Syncing shared gemini-cli settings from common/"
+    cp "${SCRIPT_DIR}/../common/gemini-cli-settings.json" "settings.json"
 fi
 
 # 2. Intelligent Changelog Automation (DRY path)

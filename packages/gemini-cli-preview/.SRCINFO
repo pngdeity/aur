@@ -1,9 +1,10 @@
 pkgbase = gemini-cli-preview
 	pkgdesc = Open-source AI agent that brings the power of Gemini directly into your terminal (preview version)
 	pkgver = 0.38.0
-	pkgrel = 1
+	pkgrel = 2
 	epoch = 1
 	url = https://github.com/google-gemini/gemini-cli
+	changelog = gemini-cli-preview.changelog
 	arch = x86_64
 	license = Apache-2.0
 	checkdepends = vim
@@ -25,6 +26,6 @@ pkgbase = gemini-cli-preview
 	provides = gemini-cli
 	conflicts = gemini-cli
 	source = gemini-cli-src::git+https://github.com/google-gemini/gemini-cli.git#tag=v0.38.0
-	sha256sums = 26de551adcdbc0af72b2be9810ed1ed41d6c30d8626439498bb73c37213fab45
+	sha256sums = fa8cfc74a5af04fce0d0d150e1015ade98abf908b73be6379c0b0a0cbfbedbc0
 
 pkgname = gemini-cli-preview

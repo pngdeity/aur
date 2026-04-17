@@ -6,3 +6,8 @@ use_latest_release = true
 # without complex regex if they are both 'releases'. 
 # However, if 'preview' tags are used, we can track them.
 # For now, keep it consistent with the monorepo discovery tier.
+[gemini-cli-arch]
+source = "git"
+git = "https://gitlab.archlinux.org/archlinux/packaging/packages/gemini-cli.git"
+branch = "main"
+use_commit = true
