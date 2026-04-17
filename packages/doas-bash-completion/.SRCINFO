@@ -7,6 +7,6 @@ pkgbase = doas-bash-completion
 	license = GPL-2.0-only
 	depends = bash-completion
 	source = doas.bash
-	sha256sums = 1eab87bdb9d1671b9be72528ade4e05a69a1f748eac353731ab95f1b096c6d1e
+	sha256sums = f0468b61107b9ac9400def64b03b7588da784c7a3b1db6bd75ae14a36f356f27
 
 pkgname = doas-bash-completion

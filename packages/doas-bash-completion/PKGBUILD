@@ -1,9 +1,7 @@
 # Maintainer: pngdeity <pngdeity@tutanota.com>
 # Contributor: Finlay Davidson <finlay.davidson@coderclass.nl>
 
-_pkgname=doas-bash-completion
-_githubname="aarchetype/bash-completion"
-pkgname=$_pkgname
+pkgname=doas-bash-completion
 pkgver=1.0.0
 pkgrel=1
 pkgdesc="Bash completion for opendoas"
@@ -12,7 +10,7 @@ url="https://github.com/aarchetype/bash-completion"
 license=('GPL-2.0-only')
 depends=('bash-completion')
 source=("doas.bash")
-sha256sums=('1eab87bdb9d1671b9be72528ade4e05a69a1f748eac353731ab95f1b096c6d1e')
+sha256sums=('f0468b61107b9ac9400def64b03b7588da784c7a3b1db6bd75ae14a36f356f27')
 
 package() {
   install -Dm644 "doas.bash" \

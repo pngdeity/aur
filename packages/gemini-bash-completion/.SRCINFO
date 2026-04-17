@@ -7,6 +7,6 @@ pkgbase = gemini-bash-completion
 	license = Apache-2.0
 	depends = bash-completion
 	source = gemini.bash
-	sha256sums = bd104ed519381a4bc797f32c4e0a0c9c3baea972babda8312d8900ef6399fa59
+	sha256sums = e7990fafa0f4dbff1971d6d68a0b07b051d16846351b114fa05077e9a78d2fb5
 
 pkgname = gemini-bash-completion
