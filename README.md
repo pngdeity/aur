@@ -1,3 +1,5 @@
+[//]: # (This file is subordinate to AGENTS.md for all automated packaging and engineering workflows.)
+
 # pngdeity's Arch Linux User Repository (AUR)
 
 This repository contains Arch Linux package sources for packages I maintain, co-maintain, or host modified versions of.
