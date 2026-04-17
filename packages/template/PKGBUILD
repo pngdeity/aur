@@ -1,0 +1,45 @@
+# Maintainer: <Your Name> <your@email.com>
+# This reference file demonstrates the integration of custom lifecycle variables 
+# and the implementation of idempotent transformation hooks.
+
+_pkgname=software-name  # The canonical software name, isolated from package variants
+pkgname=${_pkgname}-variant
+pkgver=1.0.0
+pkgrel=1
+pkgdesc="Reference implementation of a repository-specific PKGBUILD"
+arch=('any')
+url="https://github.com/example/${_pkgname}"
+license=('GPL-3.0-only')
+
+# UPSTREAM TRACKING: Defines the source of truth for automated version discovery.
+_upstream_aur_pkg="${_pkgname}" 
+
+# METADATA AUTOMATION: Used for automated changelog and release note extraction.
+_githubname="example/${_pkgname}"
+
+depends=('bash')
+makedepends=('git')
+
+# Declared sources must include both remote assets and local configuration files.
+source=("${_pkgname}-${pkgver}.tar.gz::${url}/archive/v${pkgver}.tar.gz")
+sha256sums=('REPLACE_ME_DURING_SYNC')
+
+prepare() {
+  cd "${_pkgname}-${pkgver}"
+  
+  # PATCH MANAGEMENT: Apply local security and feature patches here.
+  # Structural cleanups or logic transformations must be offloaded to update.sh.
+}
+
+build() {
+  # Build procedures should align with official Arch Linux packaging guidelines.
+  echo "Building ${_pkgname}..."
+}
+
+package() {
+  cd "${_pkgname}-${pkgver}"
+  # Licenses must be installed to the package-specific license directory.
+  install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}
+
+# Variable definitions and philosophical requirements are detailed in REFERENCE.md.
