@@ -1,7 +1,9 @@
 # Maintainer: pngdeity <pngdeity@tutanota.com>
 # Contributor: Finlay Davidson <finlay.davidson@coderclass.nl>
 
-pkgname=doas-bash-completion
+_pkgname=doas-bash-completion
+_githubname="aarchetype/bash-completion"
+pkgname=$_pkgname
 pkgver=1.0.0
 pkgrel=1
 pkgdesc="Bash completion for opendoas"

@@ -1,0 +1,13 @@
+pkgbase = software-name-variant
+	pkgdesc = Reference implementation of a repository-specific PKGBUILD
+	pkgver = 1.0.0
+	pkgrel = 1
+	url = https://github.com/example/software-name
+	arch = any
+	license = GPL-3.0-only
+	makedepends = git
+	depends = bash
+	source = software-name-1.0.0.tar.gz::https://github.com/example/software-name/archive/v1.0.0.tar.gz
+	sha256sums = REPLACE_ME_DURING_SYNC
+
+pkgname = software-name-variant

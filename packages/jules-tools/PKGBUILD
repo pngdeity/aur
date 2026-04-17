@@ -2,6 +2,7 @@
 
 _npmscope=@google
 _npmname=jules
+_pkgname=$_npmname
 pkgname=jules-tools
 pkgver=0.1.42
 pkgrel=1

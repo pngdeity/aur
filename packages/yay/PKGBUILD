@@ -1,6 +1,8 @@
 # Maintainer: pngdeity <pngdeity@tutanota.com>
 # Previous Maintainer: Jguer <pkgbuilds at jguer.space>
-pkgname=yay
+_pkgname=yay
+_githubname="Jguer/yay"
+pkgname=$_pkgname
 pkgver=12.5.7
 pkgrel=1
 pkgdesc="Yet another yogurt. Pacman wrapper and AUR helper written in go."

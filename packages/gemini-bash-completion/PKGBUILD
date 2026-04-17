@@ -1,5 +1,8 @@
 # Maintainer: pngdeity <pngdeity@tutanota.com>
-pkgname=gemini-bash-completion
+
+_pkgname=gemini-bash-completion
+_githubname="google-gemini/gemini-cli"
+pkgname=$_pkgname
 pkgver=1.0.0
 pkgrel=1
 pkgdesc="Bash completion for gemini-cli"

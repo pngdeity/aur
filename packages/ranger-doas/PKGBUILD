@@ -6,6 +6,8 @@
 
 pkgname=ranger-doas
 _upstream_arch_repo="archlinux/packaging/packages/ranger"
+_githubname="ranger/ranger"
+_pkgname=ranger
 pkgver=1.9.4
 pkgrel=2
 pkgdesc='Simple, vim-like file manager, patched to use doas instead of sudo'

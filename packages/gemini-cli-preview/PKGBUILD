@@ -85,6 +85,11 @@ package() {
   # Remove node-gyp build artifacts
   rm -vr "$pkgdir/usr/lib/node_modules/@google/gemini-cli/node_modules/keytar/build/Release/obj.target"
 
+  find "$pkgdir" -type f -name "package.json" -exec sed -i \
+    -e "s|$pkgdir||g" \
+    -e '/"_[a-z0-9]*":/d' \
+    {} +
+
   install -vDm644 -t "$pkgdir/usr/share/doc/$pkgname" README.md
   install -vDm644 -t "$pkgdir/usr/share/licenses/$pkgname" LICENSE
 

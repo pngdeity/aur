@@ -2,7 +2,8 @@
 # Previous Maintainer: Vitalii Kuzhdin <vitaliikuzhdin@gmail.com>
 
 _name="sysrescueusbwriter"
-pkgname="systemrescue-usbwriter"
+_pkgname="systemrescue-usbwriter"
+pkgname=$_pkgname
 pkgver=1.1.0
 pkgrel=1
 pkgdesc="Tool to write SystemRescue to a USB memory stick"

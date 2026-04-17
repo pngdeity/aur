@@ -4,6 +4,8 @@
 
 pkgname=opendoas
 _upstream_arch_repo="archlinux/packaging/packages/opendoas"
+_githubname="Duncaen/OpenDoas"
+_pkgname=opendoas
 pkgver=6.8.2
 pkgrel=2
 pkgdesc='Run commands as super user or another user (patched version)'
