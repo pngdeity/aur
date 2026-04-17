@@ -38,7 +38,7 @@ checkdepends=(
 provides=("$_pkgname")
 conflicts=("$_pkgname")
 _githubname="google-gemini/gemini-cli"
-_tag="v$pkgver"
+_tag="v$pkgver-preview.0"
 source=("$_pkgname-src::git+$url.git#tag=$_tag")
 sha256sums=('fa8cfc74a5af04fce0d0d150e1015ade98abf908b73be6379c0b0a0cbfbedbc0')
 
