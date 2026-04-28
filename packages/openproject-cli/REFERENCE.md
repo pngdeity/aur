@@ -1,8 +1,8 @@
 # REFERENCE.md - Repository-Specific PKGBUILD Extensions
 
-This document defines the custom variables and architectural requirements for package build files within this repository. These extensions allow for automated synchronization with upstream sources while preserving repository-specific identity and configurations. Not all variables are required for all situations, but when faced with an appropriate situation, these conventions should be used.
+This document defines the custom variables and architectural requirements for package build files within this repository. These extensions allow for automated synchronization with upstream sources while preserving repository-specific identity and configurations.
 
-## OPTIONS AND DIRECTIVES
+## OPTIONS AND DIRECTIVES (CUSTOM)
 
 The following variables are interpreted by the repository's orchestration layer (e.g., `sync-package.sh`) to manage the lifecycle of a package. These are NOT standard Arch Linux variables and are ignored by `makepkg`.
 

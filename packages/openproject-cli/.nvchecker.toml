@@ -1,0 +1,10 @@
+# UPSTREAM VERSION TRACKING
+# This configuration defines the discovery target for automated updates.
+
+[template-package]
+source = "github"
+github = "example/software-name"
+use_latest_tag = true
+prefix = "v"
+
+# Derived automatically via the Bootstrap Workflow (see root AGENTS.md).

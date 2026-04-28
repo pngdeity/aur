@@ -2,13 +2,13 @@
 # This reference file demonstrates the integration of custom lifecycle variables 
 # and the implementation of idempotent transformation hooks.
 
-_pkgname=software-name  # The canonical software name, isolated from package variants
+_pkgname=opencode-cli  # The canonical software name, isolated from package variants
 pkgname=${_pkgname}-variant
 pkgver=1.0.0
 pkgrel=1
 pkgdesc="Reference implementation of a repository-specific PKGBUILD"
 arch=('any')
-url="https://github.com/example/${_pkgname}"
+url="https://github.com/opf/${_pkgname}"
 license=('SPDX-Identifier')
 
 # UPSTREAM TRACKING: Defines the source of truth for automated version discovery.
@@ -21,7 +21,7 @@ depends=(
   
 )
 makedepends=(
-    
+   # Go toolchain 
 )
 
 # Declared sources must include both remote assets and local configuration files.
