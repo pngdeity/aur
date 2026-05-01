@@ -1,0 +1,73 @@
+# Maintainer: pngdeity <pngdeity@tutanota.com>
+pkgname='opencode-git'
+changelog=opencode-git.changelog
+_githubname='anomalyco/opencode'
+pkgver=1.14.30
+pkgrel=1
+pkgdesc='The AI coding agent built for the terminal.'
+url="https://github.com/${_githubname}"
+arch=('aarch64' 'x86_64')
+license=('MIT')
+provides=('opencode')
+conflicts=('opencode' 'opencode-bin' 'opencode-git')
+depends=('fzf' 'git' 'ripgrep')
+makedepends=('bun>=1.3.13' 'git')
+options=('!debug' '!strip')
+source=(
+  "${pkgname%%-git}::git+${url}.git"
+  'models.dev-api.json::https://models.dev/api.json'
+)
+sha256sums=('SKIP'
+            'a93b1d2c9903c430faf0f335aa2222612c40400ef6a5d000977dea480d043af1')
+
+_target_arch() {
+  case "${CARCH}" in
+    'x86_64')
+      printf 'x64\n'
+      ;;
+    'aarch64')
+      printf 'arm64\n'
+      ;;
+    *)
+      printf 'Unsupported architecture: %s\n' "${CARCH}" >&2
+      return 1
+      ;;
+  esac
+}
+
+pkgver() {
+  cd "${pkgname%%-git}"
+  local version tag base rev hash
+
+  version=$(sed -n 's/^[[:space:]]*"version": "\([^"]*\)",$/\1/p' packages/opencode/package.json | head -n1)
+  tag="v${version}"
+  base=$(git merge-base HEAD "${tag}")
+  rev=$(git rev-list --count "${base}..HEAD")
+  hash=$(git rev-parse --short=7 HEAD)
+
+  printf '%s.r%s.g%s\n' "${version}" "${rev}" "${hash}"
+}
+
+prepare() {
+  cd "${pkgname%%-git}"
+  bun install --frozen-lockfile
+}
+
+build() {
+  cd "${pkgname%%-git}"
+  MODELS_DEV_API_JSON="${srcdir}/models.dev-api.json" \
+    bun run --cwd packages/opencode build --single --skip-install
+}
+
+package() {
+  local target
+
+  cd "${pkgname%%-git}"
+  target="$(_target_arch)"
+
+  install -Dm755 \
+    "packages/opencode/dist/opencode-linux-${target}/bin/opencode" \
+    "${pkgdir}/usr/bin/opencode"
+  install -Dm644 LICENSE "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
+}
+
