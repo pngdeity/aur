@@ -32,7 +32,7 @@ cd "$PKG_DIR"
 # 1. PGP Key Management
 # Automatically import keys defined in the PKGBUILD
 # This remains in the builder as keys are environment-specific (keyring)
-KEYS=$(grep -oP 'validpgpkeys=\(\K[^)]+' PKGBUILD | tr -d "'\"" || true)
+KEYS=$(makepkg --printsrcinfo | grep -oP '^\s*validpgpkeys = \K.*' || true)
 for KEY in $KEYS; do
     echo "  -> Importing PGP Key: $KEY"
     gpg --recv-keys "$KEY" || echo "    ! Warning: Failed to fetch PGP key $KEY"

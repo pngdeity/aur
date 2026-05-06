@@ -57,7 +57,7 @@ jobs:
           
           if [ "$UPDATED_NAMES" != "[]" ]; then
             # Chunk into an array of objects for matrix.include
-            CHUNKS_JSON=$(echo "$UPDATED_NAMES" | jq -c '[_n_] as $n | [range(0; length; $n) as $i | {index: ($i/$n), list: .[$i:$i+$n]}]' --argjson n 50)
+            CHUNKS_JSON=$(echo "$UPDATED_NAMES" | jq -c '[range(0; length; $n) as $i | {index: ($i/$n), list: .[$i:$i+$n]}]' --argjson n 50)
             VERSION=$(jq -r 'select(.event=="updated") | .version' results.json | head -n 1)
             
             echo "chunks_json=$CHUNKS_JSON" >> $GITHUB_OUTPUT

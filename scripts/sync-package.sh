@@ -99,7 +99,11 @@ if [[ -n "${UPSTREAM_URL:-}" ]]; then
                 
                 # Perform protected merge
                 snapshot_identity
-                git merge-file PKGBUILD .PKGBUILD.upstream PKGBUILD.new || echo "  -> Merge conflicts detected! Please resolve manually."
+                if ! git merge-file PKGBUILD .PKGBUILD.upstream PKGBUILD.new; then
+                    echo "  -> Merge conflicts detected! Please resolve manually."
+                    restore_identity
+                    exit 1
+                fi
                 restore_identity
                 
                 mv PKGBUILD.new .PKGBUILD.upstream
