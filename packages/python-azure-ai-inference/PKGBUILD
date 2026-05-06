@@ -30,6 +30,9 @@ build() {
   python -m build --wheel --no-isolation
 }
 
+# Tests ignored, as the internal devtools_testutils package is not supposed to be released/published
+# (see https://bugs.freebsd.org/bugzilla/show_bug.cgi?id=261305) and azure-sdk-for-python relies on it.
+
 package() {
   cd "${_pkgname}-${pkgver}"
   python -m installer --destdir="$pkgdir" dist/*.whl

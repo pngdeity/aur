@@ -35,5 +35,3 @@ package() {
   install -Dm644 "$srcdir/$_srcdir/_internal/apm_cli-${pkgver}.dist-info/licenses/LICENSE" \
     "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
 }
-
-# Variable definitions and philosophical requirements are detailed in REFERENCE.md.

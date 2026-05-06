@@ -7,4 +7,4 @@ github = "example/software-name"
 use_latest_tag = true
 prefix = "v"
 
-# Derived automatically via the Bootstrap Workflow (see root AGENTS.md).
+# Derived via the Bootstrap Workflow (see root AGENTS.md for documentation requirements).

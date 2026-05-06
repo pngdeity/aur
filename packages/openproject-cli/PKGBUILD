@@ -45,5 +45,3 @@ package() {
   # Licenses must be installed to the package-specific license directory.
   install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
 }
-
-# Variable definitions and philosophical requirements are detailed in REFERENCE.md.
