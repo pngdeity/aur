@@ -62,11 +62,23 @@ All contributions to the `packages/` directory must adhere to the following cano
 #### 6. Search & Discovery
 - **Apropos**: If no specific manual is found, search via `apropos <keyword>`.
 
+### Source Authority Hierarchy
+
+When sources contradict, the following ranking governs. Higher numbers outrank lower numbers.
+
+1. **Man Pages ("The Laws")** — `PKGBUILD(5)`, `makepkg(8)`, etc. Define canonical tool behavior, format, and constraints. Highest authority.
+2. **Upstream Build Documentation** — The project's own README, build files (`CMakeLists.txt`, `Makefile`, `Cargo.toml`), and release notes. Authoritative for *how* the software builds, subject to man page constraints.
+3. **Official Arch GitLab PKGBUILDs** — Maintained by Arch Linux packagers. Authoritative for distro conventions, but may contain environment-specific paths that require stripping during hybrid import.
+4. **Observable Build Behavior** — What actually compiles and passes `check()` in a clean chroot (`pkgctl build`). Empirical truth carries weight.
+5. **Repo-Level Conventions** — This `AGENTS.md`, `docs/`, and `scripts/`. Define how *this* repository operates.
+6. **`namcap`** — Static analysis. A consultant, not a judge: catch objective errors but defer to higher-ranked sources on runtime dependencies and build logic.
+7. **Arch Wiki Articles** — User-generated community guides. Valuable for established best practices, but are **advisory, not authoritative**. May be outdated. Consult them, verify against higher-ranked sources.
+
 ### Arch Linux Wiki Guides
 The following articles provide the standard for specific package types and quality controls:
 - **[Creating packages](https://wiki.archlinux.org/title/Creating_packages)**: The foundation for all new package development.
 - **[VCS package guidelines](https://wiki.archlinux.org/title/VCS_package_guidelines)**: Mandatory for `*-git` packages (e.g., `gemini-cli-git`).
-- **[Patching packages](https://wiki.archlinux.org/title/Patching_packages)**: Critical for `opendoas` and `ranger-doas` maintenance.
+- **[Patching packages](https://wiki.archlinux.org/title/Patching_packages)**: Critical when a package carries out-of-tree `.patch` files.
 - **[.SRCINFO Wiki](https://wiki.archlinux.org/title/.SRCINFO)**: Guidelines for metadata generation.
 - **[namcap](https://wiki.archlinux.org/title/namcap)**: Tool for `PKGBUILD` and package linting.
 - **[Arch User Repository](https://wiki.archlinux.org/title/Arch_User_Repository)**: Standards for AUR compatibility.
@@ -75,28 +87,67 @@ The following articles provide the standard for specific package types and quali
 - **[Building in a clean chroot](https://wiki.archlinux.org/title/DeveloperWiki:Building_in_a_clean_chroot)**: The standard for environment isolation.
 - **[Reproducible Builds](https://wiki.archlinux.org/title/Reproducible_Builds)**: Mandatory use of `SOURCE_DATE_EPOCH` for consistency.
 
-> **Note on Research Depth:** The articles cited above are the most relevant for this repository. However, completeness is achieved by following internal hyperlinks within these articles to related sub-topics (e.g., specific language guidelines like Node.js or CMake) as needed for the task at hand.
+> **Language & Framework Guidelines**: The articles above cover general packaging practice. For language-specific and framework-specific standards (Node.js, Python, CMake, etc.), consult [`docs/LANGUAGE-PACKAGING-GUIDELINES.md`](docs/LANGUAGE-PACKAGING-GUIDELINES.md) — a complete catalog of all 35 [Arch package guidelines](https://wiki.archlinux.org/title/Category:Arch_package_guidelines) indexed by `makedepends` key and package type.
+>
+> **General Packaging Reference**: For articles covering PKGBUILD authoring, build verification, AUR interaction, and repository management, consult [`docs/WIKI-REFERENCE.md`](docs/WIKI-REFERENCE.md) — a structured catalog sourced from [Category:Package development](https://wiki.archlinux.org/title/Category:Package_development) and [Category:Package management](https://wiki.archlinux.org/title/Category:Package_management).
+>
+> All wiki articles are tier 7 (advisory) in the [source authority hierarchy](#source-authority-hierarchy). Report discrepancies per the [escalation protocol](#conflict-resolution--escalation).
 
-### Conflict Resolution & Behavioral Guidance
-- **Source Discrepancies**: If a man page (the "Laws") and an Arch Wiki Article seem to have conflicting information, you MUST note the discrepancy to the user.
-- **Reporting Requirements**: Your report must include:
-    1.  The specific man page and the Arch Wiki article involved.
-    2.  The exact location/section of the contradicting information in each source.
-    3.  A technical analysis of *why* the information is contradictory, supported by references (e.g., version changes, upstream bug reports, or environment-specific defaults).
+### `docs/` Directory Reference
+
+All files in `docs/` are part of the project's context. Consult any file relevant to the current task.
+
+| File | Purpose |
+|------|---------|
+| [ABS-FUNDAMENTALS.md](docs/ABS-FUNDAMENTALS.md) | Core ABS concepts: PKGBUILD lifecycle, makepkg, AUR structure |
+| [BUILD-SYSTEM-ARCHITECTURE.md](docs/BUILD-SYSTEM-ARCHITECTURE.md) | Hybrid merge pattern, identity protection, idempotent hooks |
+| [PKGBUILD-CUSTOM-VARIABLES-REFERENCE.md](docs/PKGBUILD-CUSTOM-VARIABLES-REFERENCE.md) | Repository-specific PKGBUILD variables (`_upstream_*`, `_githubname`, `_tag`) |
+| [TESTING_ARCHITECTURE_PLAN.md](docs/TESTING_ARCHITECTURE_PLAN.md) | **Proposed** — refactoring Bash scripts into Python |
+| [LANGUAGE-PACKAGING-GUIDELINES.md](docs/LANGUAGE-PACKAGING-GUIDELINES.md) | Catalog of 35 language/framework Arch Wiki guidelines indexed by `makedepends` |
+| [WIKI-REFERENCE.md](docs/WIKI-REFERENCE.md) | Catalog of 17 general Arch Wiki articles organized by task domain |
+| [TODO.md](docs/TODO.md) | Outstanding architectural and documentation work items |
+
+### Package Context Discovery
+
+Before modifying any package in `packages/`:
+1. Open the `PKGBUILD` and scan `makedepends` against [`docs/LANGUAGE-PACKAGING-GUIDELINES.md`](docs/LANGUAGE-PACKAGING-GUIDELINES.md) — every matching entry has specific packaging standards.
+2. Scan `pkgname` against both catalogs for package-type triggers (`-git` suffix, setuid binaries, etc.).
+3. If a package-local `AGENTS.md` exists, read it — its exceptions take precedence over general guidelines.
+4. For task-specific guidance (PKGBUILD authoring, build verification, AUR, repo management), consult [`docs/WIKI-REFERENCE.md`](docs/WIKI-REFERENCE.md) by task domain.
+
+### Agent Skills
+
+Multi-step workflows are packaged as Agent Skills in `.agents/skills/`. The agent router auto-loads
+these when a matching task is detected via the skill's `description` field.
+
+| Skill | Description |
+|-------|-------------|
+| `pkg-update` | Update a package to a new upstream version (sync, verify, acknowledge) |
+| `pkg-bootstrap` | Initialize a new package (skeleton, bootstrap, nvchecker, discovery) |
+| `pkg-patch-recovery` | Recover from patch failures and checksum mismatches |
+
+### Conflict Resolution & Escalation
+
+If any two sources in the hierarchy above contradict:
+- The **higher-ranked** source governs implementation.
+- You **MUST** note the discrepancy to the user. The report must include:
+    1. Identification of both conflicting sources (with exact location/section).
+    2. The specific contradictory claim from each source.
+    3. A technical analysis of *why* the information conflicts (e.g., version drift, upstream API changes, environment-specific defaults, or stale wiki content).
+- Do not silently choose one source over another.
 
 ## 2. Project-Specific Mandates
 
 ### Upstream Discovery & Sovereignty
 - **Authority Priority**: When seeking upstream packaging logic, your search order MUST be: 1. Official Arch GitLab (`archlinux/packaging/packages/`), 2. The AUR (`aur.archlinux.org`), 3. Upstream source repository.
-- **Official GitLab Nuance**: While the Official GitLab is the most authoritative source, you MUST acknowledge that its `PKGBUILD`s may contain environment-specific configurations (e.g., internal build server paths) that require stripping during a Hybrid Import.
+- **Official GitLab Nuance**: Official GitLab PKGBUILDs are the **first place to look** (tier 3 in the hierarchy), but may contain environment-specific paths (e.g., internal build server paths) that require stripping during a Hybrid Import.
 - **AUR Preference**: If a package is explicitly labeled as an AUR variant (e.g., in its name or `_upstream_aur_pkg`), prioritize the AUR source over the Official GitLab to preserve community-driven AUR optimizations.
 
 ### Standard Operating Routine: The Maintenance Pulse
-To maintain a proactive (not reactive) repository, you MUST follow this routine without awaiting specific user direction:
-1.  **Monitor**: Periodically run `nvchecker -c .nvchecker.toml` to identify upstream version drifts.
-2.  **Evaluate**: Compare `nvchecker` output against `oldver.json`. Every detected delta constitutes a MANDATORY task to initiate the `sync-package.sh` workflow.
-3.  **Acknowledge (The nvtake Guard)**: Upon a successful sync and commit, you MUST run `nvtake <pkgname>` to synchronize the internal state. Since `nvtake` may lack a local manual, refer strictly to the [Debian Manual](https://manpages.debian.org/testing/python3-nvchecker/nvtake.1) and NEVER hallucinate flags.
-4.  **Synchronize**: Ensure that every `PKGBUILD` update is accompanied by a `.SRCINFO` regeneration in the same commit.
+
+To maintain a proactive (not reactive) repository, you MUST periodically run `nvchecker -c .nvchecker.toml`
+to identify upstream version drifts. Every detected delta must be resolved via the `pkg-update` skill,
+which handles the full sync → verify → acknowledge cycle.
 
 ### Event-Driven Publishing (Platform Abstraction)
 - **Infrastructure Abstraction**: You are responsible for the **Source of Truth** (the Git repository). The actual deployment, database signing, and artifact hosting are handled by an external, event-driven infrastructure.
@@ -119,12 +170,10 @@ To maintain a proactive (not reactive) repository, you MUST follow this routine 
 - **Reproducibility**: Use `local _build_date=$(date --utc --date="@${SOURCE_DATE_EPOCH:-$(date +%s)}" +"%Y-%m-%d")` for any time-sensitive build metadata.
 
 ### New Package Initialization (Bootstrap Workflow)
-When adding a new package to the `packages/` directory, use the following automated sequence to ensure consistency:
-1.  **Skeleton**: Create the package directory and a minimal `PKGBUILD` defining the upstream source variables (`_upstream_aur_pkg` or `_upstream_arch_repo`).
-2.  **Bootstrap**: Run `bash scripts/sync-package.sh <pkgname> <version>`. This fetches the upstream PKGBUILD, initializes the tracking state, and updates hashes.
-3.  **nvchecker Setup**: Within the package directory, run `pkgctl version setup`. This automatically generates a valid `.nvchecker.toml` from the PKGBUILD source array.
-4.  **Local AGENTS.md**: Create a local policy file referencing the upstream source and documenting package-specific tribal knowledge.
-5.  **Global Discovery**: Register the new package in the root `.nvchecker.toml`.
+
+To add a new package, activate the `pkg-bootstrap` skill. It handles skeleton creation,
+`sync-package.sh` bootstrapping, `pkgctl version setup`, conditional local `AGENTS.md`
+creation, and `.nvchecker.toml` registration.
 
 ### Hybrid Import & Cleanup SOP
 If an upstream `PKGBUILD` requires "cleanup" (formatting, logic improvements, or custom patches), you MUST NOT perform these edits manually in the `PKGBUILD`. Instead, use the **Idempotent Transformation** pattern:
@@ -139,9 +188,10 @@ If an upstream `PKGBUILD` requires "cleanup" (formatting, logic improvements, or
 - **Validation**: Use `sogrep` and `checkpkg` to identify the blast radius of a dependency change, but do not attempt a coordinated release autonomously.
 
 ### Hierarchical Policies (AGENTS.md)
-- **New Packages**: Upon creation of a new subdirectory in `packages/`, you MUST create a local `AGENTS.md` file.
-- **Reference Mandate**: The local `AGENTS.md` MUST include a strict instruction to reference the upstream source repository for all build, testing, and structural information.
-- **Tribal Knowledge**: The file MUST document package-specific "tribal knowledge," including functional limitations (e.g., backgrounding support), specialized build flags (e.g., CMake types), and environment isolation rules.
+- **Exception-Based Documentation**: Package-local `AGENTS.md` files are strictly **OPTIONAL**. They should only exist if a package requires specialized guidance that cannot be captured by standard Arch Linux packaging standards or static analysis tools.
+- **Self-Healing Documentation**: All documentation in this repository is **SELF-HEALING**. Every agent or maintainer interacting with the codebase MUST verify that the documentation relevant to their task remains accurate. If an inconsistency, omission, or outdated instruction is discovered, it MUST be corrected immediately as part of the current task.
+- **Strict Scope**: The file MUST be scoped entirely to exceptions relevant only to the package it applies to: functional limitations, non-obvious workarounds, edge-case patches, or environment isolation anomalies.
+- **No Boilerplate**: Local files MUST NOT contain boilerplate headers, Upstream URLs, or Build System definitions if that data is already present or implied by the `PKGBUILD`.
 
 ## 3. Mandatory Verification Workflow
 
@@ -152,21 +202,23 @@ Before proposing or pushing a change to any package, an agent MUST perform:
 4. **Clean Build**: Verify the build in a clean environment (locally via `pkgctl build` or via CI trigger).
 5. Security/Quality: Use `pkgctl diff` to compare against current repository state where applicable.
 
+Each workflow skill (`pkg-update`, `pkg-bootstrap`, `pkg-patch-recovery`) includes an
+adapted verification sequence for its task type. The canonical steps are defined here;
+the skills adapt them as needed (e.g., `pkg-bootstrap` omits `pkgctl diff` on first
+build, `pkg-patch-recovery` omits the sync step).
+
 ## 3.1. Pragmatic Diagnostic & Self-Correction Loop
 
 To ensure high-fidelity results while avoiding common agent failure modes (like "tool-tyranny" or hallucinated success), the following patterns MUST be employed:
 
 1.  **Surgical Root Cause Analysis**: If a build or synchronization fails, the agent MUST NOT guess. Use `grep` or `awk` to locate the *first* fatal error in the logs (e.g., `ld: error:`, `npm ERR!`, `CMake Error`) to identify the actual breakage before proposing a fix.
 2.  **Deterministic Idempotency**: All transformation logic in `update.sh` MUST be idempotent. Ensure that `sed` or `patch` operations produce the same state regardless of execution count. Never inject non-deterministic data (like raw `date` or `hostname`) unless gated by `SOURCE_DATE_EPOCH`.
-3.  **Validation vs. Tribal Knowledge**: Treat `namcap` as a consultant, not a judge. Use it to catch objective errors (bad permissions, missing licenses), but prioritize "Tribal Knowledge" in the local `AGENTS.md` for runtime dependencies or environmental requirements that static analysis may misidentify as "unnecessary."
+3.  **Validation vs. Package-Specific Requirements**: Treat `namcap` as a consultant, not a judge. Use it to catch objective errors (bad permissions, missing licenses), but prioritize package-specific requirements in the local `AGENTS.md` (if it exists) for runtime dependencies or environmental requirements that static analysis may misidentify as "unnecessary."
 4.  **Payload Sanity Check**: Before finalizing an update, perform a "sanity check" on the package payload using `pkgctl diff --list`. Verify that the primary binary, license file, and directory structure remain consistent; any disappearance of `/usr/bin/` targets or a payload size deviation of >10% MUST be investigated as a potential regression.
 
 ### Troubleshooting & Manual Intervention
 If the automated pipeline fails, follow these specific recovery patterns:
-- **Patch Failures**: If an upstream source change breaks an existing patch:
-    1.  Clone upstream at the target version and attempt a manual `patch -p1`.
-    2.  Resolve rejects (`.rej`), delete them, and generate a fresh patch via `git diff`.
-    3.  Update the `PKGBUILD` and refresh checksums.
+- **Patch Failures**: Activate the `pkg-patch-recovery` skill for deterministic recovery across clone → resolve → regenerate → verify.
 - **Checksum Failures**: If `updpkgsums` fails due to a re-rolled upstream release, verify the file content before committing the new hashes.
 - **Security & GPG**: The repository uses `repo-add --sign`. For manual key setup:
     1.  Generate an RSA 4096-bit key (no expiry).
@@ -175,5 +227,4 @@ If the automated pipeline fails, follow these specific recovery patterns:
 
 ## 4. Future Mandates & Technical Debt
 
-- [ ] **TODO: Package Decommissioning SOP**: Define a standard process for removing packages from the repository, including AUR dropping and discovery cleanup. (Due: Indeterminate)
-- [ ] **TODO: Edge-Case Recovery Logic**: Define deterministic recovery paths for hybrid merge failures and 404 upstream assets. (Due: Upon `scripts/` directory refactor)
+For outstanding work items, see [`docs/TODO.md`](docs/TODO.md).

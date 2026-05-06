@@ -1,0 +1,43 @@
+---
+name: pkg-bootstrap
+description: Initialize a new Arch Linux package in the repository. Use when adding a new package, creating a PKGBUILD from scratch, bootstrapping from an upstream AUR or Arch GitLab source, or setting up a package for the first time — even if the user doesn't explicitly mention "bootstrap" or "PKGBUILD."
+allowed-tools: bash
+compatibility: Requires bash, pkgctl, and makepkg. Designed for the pngdeity aur repository.
+---
+
+## Package Bootstrap Workflow
+
+When adding a new package to `packages/`:
+
+1. Create the package directory and a minimal `PKGBUILD` defining the upstream source variable:
+   - `_upstream_aur_pkg` for AUR packages
+   - `_upstream_arch_repo` for official Arch GitLab packages
+
+2. Run the bootstrap:
+   ```bash
+   bash scripts/sync-package.sh <pkgname> <version>
+   ```
+   This fetches the upstream PKGBUILD, initializes tracking state, and updates hashes.
+
+3. Set up version checking from within the package directory:
+   ```bash
+   pkgctl version setup
+   ```
+   This generates a valid `.nvchecker.toml` from the PKGBUILD source array.
+
+4. Create a package-local `AGENTS.md` ONLY if the package has non-standard build requirements, undocumented quirks, or specific environmental constraints. Otherwise skip this step. The file must follow the Hierarchical Policies in the root `AGENTS.md`.
+
+5. Register the package in the root `.nvchecker.toml` for global version monitoring.
+
+6. Run the full verification sequence:
+   ```bash
+   namcap PKGBUILD
+   makepkg --printsrcinfo > .SRCINFO
+   pkgctl build
+   pkgctl diff --list
+   ```
+
+## Gotchas
+
+- The `sync-package.sh` script expects the upstream source variable to be set correctly. If the upstream package uses a non-standard name, verify the variable before bootstrapping.
+- `pkgctl version setup` must be run inside the package directory. The `.nvchecker.toml` it generates is package-specific.
