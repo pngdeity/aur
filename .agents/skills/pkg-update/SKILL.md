@@ -50,4 +50,4 @@ When updating a package to a new upstream version:
 
 - `pkgctl build` may require a pre-configured chroot. If missing, set up with `mkarchroot`.
 - If `updpkgsums` fails due to a re-rolled upstream tarball, verify the file content before accepting new hashes.
-- If the `sync-package.sh` merge produces conflicts, see the project root `AGENTS.md` Troubleshooting section.
+- If the `sync-package.sh` merge produces conflicts, manual intervention is required. Hybrid merge conflict recovery is not yet automated (see `docs/TODO.md`).

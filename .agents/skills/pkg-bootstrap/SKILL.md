@@ -9,11 +9,12 @@ compatibility: Requires bash, pkgctl, and makepkg. Designed for the pngdeity aur
 
 When adding a new package to `packages/`:
 
-1. Create the package directory and a minimal `PKGBUILD` defining the upstream source variable:
+1. Create the package directory and a minimal `PKGBUILD`. For packages that mirror an existing Arch or AUR package, define the upstream source variable:
    - `_upstream_aur_pkg` for AUR packages
    - `_upstream_arch_repo` for official Arch GitLab packages
+   If the package is entirely custom and does not mirror any upstream PKGBUILD, omit the `_upstream_*` variables and define a standard `source` array directly. In this case, skip step 2 and proceed to step 3.
 
-2. Run the bootstrap:
+2. For mirrored packages, run the bootstrap script. Look up the upstream version from the source repository (AUR web interface, Arch GitLab tags, or release page) before running:
    ```bash
    bash scripts/sync-package.sh <pkgname> <version>
    ```

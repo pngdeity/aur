@@ -38,6 +38,10 @@ Managing the custom package repository where compiled artifacts are deployed.
 - **Responsibilities**: Database management via `repo-add`, package signing.
 - **Tools**: `repo-add(8)`, `repo-remove(8)`.
 
+> **Repository Context**: In this repository, Phase 3 is fully abstracted by CI/CD infrastructure. Pushing verified commits via `git push` triggers automated `repo-add --sign` and artifact hosting. Do not attempt manual database management or signing.
+
 ### Phase 4: AUR Publication (Community Stage)
 Publishing raw scaffolding files to the AUR.
 - **Responsibilities**: Git operations on `aur.archlinux.org` endpoints, ensuring metadata parity.
+
+> **Repository Context**: In this repository, AUR publication is handled by external infrastructure. The local maintainer's publishing interface is `git push`; do not attempt direct Git operations on `aur.archlinux.org` endpoints.

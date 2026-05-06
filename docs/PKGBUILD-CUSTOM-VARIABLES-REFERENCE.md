@@ -26,6 +26,12 @@ The following variables are interpreted by the orchestration layer to manage aut
 :   Defines the tag pattern used by the upstream repository (e.g., `v${pkgver}`). If omitted, the orchestration layer defaults to `v$pkgver`.
 :   **Typical Usage**: Used when an upstream source uses non-standard tag formats (e.g., tags without a 'v' prefix or nightly-specific tags).
 
+### Asset Synchronization
+
+**_use_common_gemini_settings** (boolean)
+:   Activates the Centralized Asset Management pattern for `gemini-cli` variant packages. When set to `true`, `scripts/sync-package.sh` automatically copies `common/gemini-cli-settings.json` into the package source directory during the synchronization phase before updating hashes and metadata.
+:   **Typical Usage**: Shared across all `gemini-cli` variants (`stable`, `-preview`, `-nightly`, `-git`) to eliminate duplication of the settings file.
+
 ### Context Preservation
 
 **_pkgname** (string)
