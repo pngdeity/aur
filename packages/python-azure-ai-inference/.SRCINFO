@@ -1,0 +1,19 @@
+pkgbase = python-azure-ai-inference
+	pkgdesc = Azure AI Inference client library for Python
+	pkgver = 1.0.0b9
+	pkgrel = 1
+	url = https://github.com/Azure/azure-sdk-for-python/tree/main/sdk/ai/azure-ai-inference
+	arch = any
+	license = MIT
+	makedepends = python-build
+	makedepends = python-installer
+	makedepends = python-setuptools
+	makedepends = python-wheel
+	depends = python
+	depends = python-isodate
+	depends = python-azure-core
+	depends = python-typing_extensions
+	source = python-azure-ai-inference-1.0.0b9.tar.gz::https://files.pythonhosted.org/packages/source/a/azure-ai-inference/azure_ai_inference-1.0.0b9.tar.gz
+	sha256sums = 1feb496bd84b01ee2691befc04358fa25d7c344d8288e99364438859ad7cd5a4
+
+pkgname = python-azure-ai-inference

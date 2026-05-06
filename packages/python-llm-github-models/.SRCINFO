@@ -1,0 +1,20 @@
+pkgbase = python-llm-github-models
+	pkgdesc = LLM plugin to access GitHub Models API
+	pkgver = 0.18.0
+	pkgrel = 1
+	url = https://github.com/tonybaloney/llm-github-models
+	changelog = python-llm-github-models.changelog
+	arch = any
+	license = Apache-2.0
+	makedepends = python-build
+	makedepends = python-installer
+	makedepends = python-setuptools
+	makedepends = python-wheel
+	depends = python
+	depends = python-aiohttp
+	depends = python-llm
+	depends = python-azure-ai-inference
+	source = python-llm-github-models-0.18.0.tar.gz::https://files.pythonhosted.org/packages/source/l/llm-github-models/llm_github_models-0.18.0.tar.gz
+	sha256sums = b778aa6fa43e53ecb3b868fcf9875bc0e760a774a1fad76ea907a269582a2043
+
+pkgname = python-llm-github-models

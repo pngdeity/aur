@@ -1,0 +1,15 @@
+pkgbase = apm
+	pkgdesc = Agent Package Manager by Microsoft
+	pkgver = 0.12.0
+	pkgrel = 1
+	url = https://github.com/microsoft/apm
+	changelog = apm.changelog
+	arch = x86_64
+	license = MIT
+	depends = glibc
+	depends = git
+	options = !strip
+	source = apm-0.12.0-x86_64.tar.gz::https://github.com/microsoft/apm/releases/download/v0.12.0/apm-linux-x86_64.tar.gz
+	sha256sums = d524019037baa35dc107be08287269b07ef4dd9182d76b86b37b535e337c1fe3
+
+pkgname = apm

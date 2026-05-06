@@ -4,3 +4,7 @@
 source = "git"
 git = "https://github.com/anomalyco/opencode.git"
 prefix = "v"
+
+[context7-cli]
+source = "npm"
+npm = "ctx7"

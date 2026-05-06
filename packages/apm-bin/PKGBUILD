@@ -1,0 +1,39 @@
+# Maintainer: pngdeity <pngdeity@tutanota.com>
+
+_pkgname=apm
+pkgname=$_pkgname
+pkgver=0.12.0
+pkgrel=1
+pkgdesc="Agent Package Manager by Microsoft"
+arch=('x86_64')
+url="https://github.com/microsoft/apm"
+license=('MIT')
+depends=('glibc' 'git')
+options=('!strip')
+changelog=apm.changelog
+
+# AUTOMATED METADATA
+_githubname="microsoft/apm"
+
+source=("${_pkgname}-${pkgver}-${CARCH}.tar.gz::${url}/releases/download/v${pkgver}/apm-linux-${CARCH}.tar.gz")
+sha256sums=('d524019037baa35dc107be08287269b07ef4dd9182d76b86b37b535e337c1fe3')
+
+package() {
+  local _srcdir="apm-linux-${CARCH}"
+
+  # Create directories
+  install -d "$pkgdir/usr/lib/$_pkgname"
+  install -d "$pkgdir/usr/bin"
+
+  # Install binary bundle
+  cp -a "$srcdir/$_srcdir/." "$pkgdir/usr/lib/$_pkgname/"
+
+  # Create symlink
+  ln -s "/usr/lib/$_pkgname/apm" "$pkgdir/usr/bin/apm"
+
+  # Install license (buried in _internal)
+  install -Dm644 "$srcdir/$_srcdir/_internal/apm_cli-${pkgver}.dist-info/licenses/LICENSE" \
+    "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}
+
+# Variable definitions and philosophical requirements are detailed in REFERENCE.md.

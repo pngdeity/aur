@@ -1,0 +1,4 @@
+[python-azure-core]
+source = "git"
+git = "https://github.com/Azure/azure-sdk-for-python.git"
+prefix = "v"

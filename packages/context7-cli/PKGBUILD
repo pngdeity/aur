@@ -1,0 +1,42 @@
+# Maintainer: pngdeity <pngdeity@tutanota.com>
+
+_npmname=ctx7
+pkgname=context7-cli
+changelog=context7-cli.changelog
+pkgver=0.4.0
+pkgrel=1
+pkgdesc="Context7 CLI - Manage AI coding skills and documentation context"
+arch=('any')
+url="https://context7.com"
+license=('MIT')
+depends=('nodejs')
+makedepends=('npm')
+options=('!strip')
+
+# UPSTREAM TRACKING
+_upstream_aur_pkg="" # Not on AUR yet
+
+# METADATA AUTOMATION
+_githubname="upstash/context7"
+_tag="ctx7@${pkgver}"
+
+source=("https://registry.npmjs.org/${_npmname}/-/${_npmname}-${pkgver}.tgz")
+sha256sums=('81def2a592797087de38bb83d4fed8024b927189636fede1bc75243d057b662d')
+
+package() {
+  npm install -g --user root --prefix "$pkgdir/usr" "$srcdir/${_npmname}-${pkgver}.tgz"
+
+  # Fix permissions
+  find "$pkgdir/usr" -type d -exec chmod 755 {} +
+
+  # Remove references to build directory
+  find "$pkgdir" -name package.json -print0 | xargs -0 sed -i "/_where/d"
+  find "$pkgdir" -name package.json -print0 | xargs -0 sed -i "/_args/d"
+  find "$pkgdir" -name package.json -print0 | xargs -0 sed -i "/_from/d"
+  find "$pkgdir" -name package.json -print0 | xargs -0 sed -i "/_id/d"
+  find "$pkgdir" -name package.json -print0 | xargs -0 sed -i "/_integrity/d"
+  find "$pkgdir" -name package.json -print0 | xargs -0 sed -i "/_resolved/d"
+
+  # Install license
+  install -Dm644 "$srcdir/package/LICENSE" "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}

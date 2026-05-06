@@ -1,0 +1,15 @@
+pkgbase = context7-cli
+	pkgdesc = Context7 CLI - Manage AI coding skills and documentation context
+	pkgver = 0.4.0
+	pkgrel = 1
+	url = https://context7.com
+	changelog = context7-cli.changelog
+	arch = any
+	license = MIT
+	makedepends = npm
+	depends = nodejs
+	options = !strip
+	source = https://registry.npmjs.org/ctx7/-/ctx7-0.4.0.tgz
+	sha256sums = 81def2a592797087de38bb83d4fed8024b927189636fede1bc75243d057b662d
+
+pkgname = context7-cli

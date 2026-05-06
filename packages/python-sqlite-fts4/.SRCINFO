@@ -1,0 +1,16 @@
+pkgbase = python-sqlite-fts4
+	pkgdesc = Custom Python functions for working with SQLite FTS4
+	pkgver = 1.0.3
+	pkgrel = 2
+	url = https://github.com/simonw/sqlite-fts4
+	arch = any
+	license = Apache-2.0
+	makedepends = python-build
+	makedepends = python-installer
+	makedepends = python-setuptools
+	makedepends = python-wheel
+	depends = python
+	source = python-sqlite-fts4-1.0.3.tar.gz::https://github.com/simonw/sqlite-fts4/archive/refs/tags/1.0.3.tar.gz
+	sha256sums = 6d2d227665e609cdb00e78323a4cd8c778143e07e8dc98453b8edd0a2e3c8ad8
+
+pkgname = python-sqlite-fts4

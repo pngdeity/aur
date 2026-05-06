@@ -1,0 +1,41 @@
+# Maintainer: pngdeity <pngdeity@tutanota.com>
+
+_pkgname=llm-github-models
+pkgname=python-llm-github-models
+changelog=python-llm-github-models.changelog
+pkgver=0.18.0
+pkgrel=1
+pkgdesc="LLM plugin to access GitHub Models API"
+arch=('any')
+url="https://github.com/tonybaloney/llm-github-models"
+license=('Apache-2.0')
+
+# AUTOMATED METADATA
+_githubname="tonybaloney/llm-github-models"
+
+depends=(
+  'python'
+  'python-aiohttp'
+  'python-llm'
+  'python-azure-ai-inference'
+)
+makedepends=(
+  'python-build'
+  'python-installer'
+  'python-setuptools'
+  'python-wheel'
+)
+
+source=("${pkgname}-${pkgver}.tar.gz::https://files.pythonhosted.org/packages/source/l/$_pkgname/${_pkgname//-/_}-$pkgver.tar.gz")
+sha256sums=('b778aa6fa43e53ecb3b868fcf9875bc0e760a774a1fad76ea907a269582a2043')
+
+build() {
+  cd "${_pkgname}-${pkgver}"
+  python -m build --wheel --no-isolation
+}
+
+package() {
+  cd "${_pkgname}-${pkgver}"
+  python -m installer --destdir="$pkgdir" dist/*.whl
+  # No LICENSE file explicitly packaged in sdist root, might be in dist-info
+}

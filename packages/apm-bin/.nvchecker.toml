@@ -1,0 +1,6 @@
+[apm]
+source = "github"
+github = "microsoft/apm"
+use_latest_tag = true
+prefix = "v"
+

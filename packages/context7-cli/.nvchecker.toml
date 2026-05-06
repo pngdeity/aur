@@ -1,0 +1,4 @@
+# UPSTREAM VERSION TRACKING
+[context7-cli]
+source = "npm"
+npm = "ctx7"

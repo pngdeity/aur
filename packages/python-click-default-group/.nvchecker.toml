@@ -1,0 +1,4 @@
+[python-click-default-group]
+source = "git"
+git = "https://github.com/click-contrib/click-default-group.git"
+prefix = "v"

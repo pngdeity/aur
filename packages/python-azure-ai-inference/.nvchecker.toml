@@ -1,0 +1,3 @@
+[python-azure-ai-inference]
+source = "pypi"
+pypi = "azure-ai-inference"
