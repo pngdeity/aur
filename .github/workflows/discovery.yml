@@ -53,7 +53,22 @@ jobs:
             bash scripts/sync-package.sh "$NAME" "$VER"
           done
 
+          # Filter out packages with PREREVIEW markers (build logic changed, needs human review)
           UPDATED_NAMES=$(jq -r 'select(.event=="updated") | .name' results.json | jq -R . | jq -s -c .)
+          BLOCKED_NAMES="[]"
+          if [ "$UPDATED_NAMES" != "[]" ]; then
+            BLOCKED=$(echo "$UPDATED_NAMES" | jq -r '.[]' | while read -r pkg; do
+              PKG_DIR=$(echo "$pkg" | sed 's/-arch$//;s/-aur$//')
+              if grep -q "^# PREREVIEW:" "packages/${PKG_DIR}/PKGBUILD" 2>/dev/null; then
+                echo "$pkg"
+              fi
+            done)
+            if [ -n "$BLOCKED" ]; then
+              BLOCKED_NAMES=$(echo "$BLOCKED" | jq -R . | jq -s -c .)
+              echo "::warning::Packages blocked from release (PREREVIEW markers present): ${BLOCKED_NAMES}"
+              UPDATED_NAMES=$(echo "$UPDATED_NAMES" | jq --argjson blocked "$BLOCKED_NAMES" '. - $blocked')
+            fi
+          fi
           
           if [ "$UPDATED_NAMES" != "[]" ]; then
             # Chunk into an array of objects for matrix.include

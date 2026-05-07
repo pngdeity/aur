@@ -1,5 +1,6 @@
 # Maintainer: pngdeity <pngdeity@tutanota.com>
 _upstream_aur_pkg="sqlite-utils"
+_demote_upstream_maintainer=true
 pkgname=sqlite-utils
 pkgver=3.39
 pkgrel=2

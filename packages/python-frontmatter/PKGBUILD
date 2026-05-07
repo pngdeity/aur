@@ -1,5 +1,6 @@
 # Maintainer: pngdeity <pngdeity@tutanota.com>
 _upstream_aur_pkg="python-frontmatter"
+_demote_upstream_maintainer=true
 # Contributor: Christian Krause ("wookietreiber") <christian.krause@mailbox.org>
 # shellcheck disable=2034
 # shellcheck disable=2148

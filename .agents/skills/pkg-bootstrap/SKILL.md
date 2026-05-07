@@ -9,16 +9,18 @@ compatibility: Requires bash, pkgctl, and makepkg. Designed for the pngdeity aur
 
 When adding a new package to `packages/`:
 
-1. Create the package directory and a minimal `PKGBUILD`. For packages that mirror an existing Arch or AUR package, define the upstream source variable:
+1. Create the package directory and a minimal `PKGBUILD`. For packages that mirror an existing Arch or AUR package, define the upstream source variable and the maintainer demotion flag:
    - `_upstream_aur_pkg` for AUR packages
    - `_upstream_arch_repo` for official Arch GitLab packages
+   - `_demote_upstream_maintainer=true` to automatically demote upstream maintainers to contributors
+   - For `gemini-cli` variants, add `_use_common_gemini_settings=true`
    If the package is entirely custom and does not mirror any upstream PKGBUILD, omit the `_upstream_*` variables and define a standard `source` array directly. In this case, skip step 2 and proceed to step 3.
 
 2. For mirrored packages, run the bootstrap script. Look up the upstream version from the source repository (AUR web interface, Arch GitLab tags, or release page) before running:
    ```bash
    bash scripts/sync-package.sh <pkgname> <version>
    ```
-   This fetches the upstream PKGBUILD, initializes tracking state, and updates hashes.
+   This fetches the upstream PKGBUILD, initializes tracking state, applies declarative identity rules (demotion, asset sync), and updates hashes. Only one invocation is needed.
 
 3. Set up version checking from within the package directory:
    ```bash

@@ -1,5 +1,6 @@
 # Maintainer: pngdeity <pngdeity@tutanota.com>
 _upstream_aur_pkg="python-pytest-recording"
+_demote_upstream_maintainer=true
 # Contributor: Gesh <gesh@gesh.uni.cx>
 # Contributor: Achmad Fathoni<fathoni.id(at)gmail.com>
 

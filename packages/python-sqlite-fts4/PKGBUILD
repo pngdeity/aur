@@ -1,5 +1,6 @@
 # Maintainer: pngdeity <pngdeity@tutanota.com>
 _upstream_aur_pkg="python-sqlite-fts4"
+_demote_upstream_maintainer=true
 # Contributor: Cameron Otsuka <cameron@otsuka.haus>
 # Contributor: Cameron Otsuka <cameron@otsuka.haus>
 # Contributor: NBonaparte <nbonaparte at protonmail.com>

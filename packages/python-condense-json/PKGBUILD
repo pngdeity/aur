@@ -1,5 +1,6 @@
 # Maintainer: pngdeity <pngdeity@tutanota.com>
 _upstream_aur_pkg="python-condense-json"
+_demote_upstream_maintainer=true
 # Contributor: Groctel <aur@taxorubio.com>
 # shellcheck disable=SC2034,SC2154,SC2164
 

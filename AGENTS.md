@@ -176,10 +176,15 @@ To add a new package, activate the `pkg-bootstrap` skill. It handles skeleton cr
 creation, and `.nvchecker.toml` registration.
 
 ### Hybrid Import & Cleanup SOP
-If an upstream `PKGBUILD` requires "cleanup" (formatting, logic improvements, or custom patches), you MUST NOT perform these edits manually in the `PKGBUILD`. Instead, use the **Idempotent Transformation** pattern:
-1.  **Isolate logic in `update.sh`**: Place all cleanup logic (e.g., `sed` replacements, variable reordering, or `patch` applications) into the package-local `./update.sh` script.
-2.  **Automated Execution**: The `scripts/sync-package.sh` tool automatically calls `./update.sh` after the upstream merge but before hash generation.
-3.  **Conflict Minimization**: By using a script to "fix" the upstream file after every merge, you ensure your improvements are preserved even when the upstream source changes, without causing permanent merge conflicts.
+If an upstream `PKGBUILD` requires "cleanup" (formatting, logic improvements, or PKGBUILD metadata patches), you MUST NOT perform these edits manually in the `PKGBUILD`. Instead, use one of two patterns depending on the change type:
+
+1.  **Declarative (preferred)**: For authorship demotion, set `_demote_upstream_maintainer=true` in the `PKGBUILD`. The sync script handles this centrally during both bootstrap and update. For asset synchronization across variants, use `_use_common_gemini_settings=true`.
+
+2.  **Imperative (`update.sh`)**: For genuinely unique per-package transformations that cannot be expressed declaratively (e.g., regenerating patches from upstream source, dynamic command extraction), place logic in a package-local `./update.sh` script. This script MUST be idempotent, MUST NOT modify PKGBUILD metadata (only source files), and runs with guaranteed preconditions: the PKGBUILD is finalized and all assets are present.
+
+Source-code `.patch` files applied during `prepare()` belong in the `source[]` array — they are standard Arch practice and are preserved across merges by identity protection, not by `update.sh`.
+
+3.  **Automated Execution**: The `scripts/sync-package.sh` tool runs `update.sh` (if executable) after the upstream merge and declarative rules but before hash generation.
 4.  **Verification**: After a transformation, run `namcap PKGBUILD` to verify that the cleanup has actually improved the package quality according to Arch standards.
 
 ### Dependency Management & Coordinated Rebuilds

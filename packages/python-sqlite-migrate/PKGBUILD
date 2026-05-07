@@ -1,5 +1,6 @@
 # Maintainer: pngdeity <pngdeity@tutanota.com>
 _upstream_aur_pkg="python-sqlite-migrate"
+_demote_upstream_maintainer=true
 # Contributor: Cameron Otsuka <cameron@otsuka.haus>
 # Contributor: Cameron Otsuka <cameron@otsuka.haus>
 pkgname="python-sqlite-migrate"

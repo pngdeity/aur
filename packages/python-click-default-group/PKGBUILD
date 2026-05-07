@@ -1,5 +1,6 @@
 # Maintainer: pngdeity <pngdeity@tutanota.com>
 _upstream_aur_pkg="python-click-default-group"
+_demote_upstream_maintainer=true
 # Contributor: Felix Yan <felixonmars@archlinux.org>
 
 pkgname=python-click-default-group

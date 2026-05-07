@@ -34,6 +34,15 @@ jobs:
             fi
           done
 
+      - name: Check PREREVIEW Markers
+        run: |
+          PACKAGES=$(echo '${{ inputs.package_list }}' | jq -r '.[]')
+          for PKG in $PACKAGES; do
+            if [ -d "$PKG" ] && grep -q "^# PREREVIEW:" "$PKG/PKGBUILD" 2>/dev/null; then
+              echo "::warning::$PKG has PREREVIEW marker — build logic changed upstream, human review required."
+            fi
+          done
+
       - name: Build Batch
         run: |
           PACKAGES=$(echo '${{ inputs.package_list }}' | jq -r '.[]')

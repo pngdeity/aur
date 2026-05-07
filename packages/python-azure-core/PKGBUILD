@@ -1,5 +1,6 @@
 # Maintainer: pngdeity <pngdeity@tutanota.com>
 _upstream_aur_pkg="python-azure-core"
+_demote_upstream_maintainer=true
 # Contributor: Daniel Peukert <daniel@peukert.cc>
 # Contributor: Michał Wojdyła < micwoj9292 at gmail dot com >
 # Contributor: Gerard Ribugent <ribugent <at> gmail <dot> com>

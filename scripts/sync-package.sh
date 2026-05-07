@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 # scripts/sync-package.sh
-# Orchestrates package synchronization: versioning, changelogs, hashes, and upstream merges.
+# Event-driven package synchronization.
+# Detects upstream changes, classifies them by concern, applies per-concern
+# strategies, and generates metadata. Supports bootstrap (first-run) and
+# update (recurring) paths.
 
 set -euo pipefail
 
@@ -70,6 +73,101 @@ fetch_upstream_assets() {
     done
 }
 
+# --- Helper: Concern Classification ---
+# Diffs old and new upstream PKGBUILDs, classifies each change by concern type
+# Outputs a JSON event report describing what changed and whether review is needed
+classify_upstream_changes() {
+    local old_file="$1"
+    local new_file="$2"
+
+    local diff_output
+    diff_output=$(diff "$old_file" "$new_file" 2>/dev/null || true)
+
+    if [[ -z "$diff_output" ]]; then
+        return 0
+    fi
+
+    local has_authorship=false
+    local has_identity=false
+    local has_version=false
+    local has_metadata=false
+    local has_depends=false
+    local has_makedepends=false
+    local has_checkdepends=false
+    local has_optdepends=false
+    local has_source=false
+    local has_build=false
+
+    # Classify changes by matching diff lines against concern patterns
+    echo "$diff_output" | grep -qE '^[<>].*# (Maintainer|Contributor):'  && has_authorship=true  || true
+    echo "$diff_output" | grep -qE '^[<>].*(pkgname=|provides=|conflicts=|replaces=)' && has_identity=true    || true
+    echo "$diff_output" | grep -qE '^[<>].*(pkgver=|pkgrel=|^pkgver\(\))'        && has_version=true     || true
+    echo "$diff_output" | grep -qE '^[<>].*(pkgdesc=|url=|license=|arch=|backup=|install=|options=)' && has_metadata=true || true
+    echo "$diff_output" | grep -qE '^[<>].*depends='                              && has_depends=true    || true
+    echo "$diff_output" | grep -qE '^[<>].*makedepends='                          && has_makedepends=true || true
+    echo "$diff_output" | grep -qE '^[<>].*checkdepends='                         && has_checkdepends=true || true
+    echo "$diff_output" | grep -qE '^[<>].*optdepends='                           && has_optdepends=true  || true
+    echo "$diff_output" | grep -qE '^[<>].*(source=|sha256sums=|sha512sums=|b2sums=)' && has_source=true  || true
+    echo "$diff_output" | grep -qE '^[<>].*(prepare\(\)|build\(\)|check\(\)|package\(\))' && has_build=true || true
+
+    local events=()
+    $has_authorship  && events+=('"AUTHORSHIP"')
+    $has_identity    && events+=('"IDENTITY"')
+    $has_version     && events+=('"VERSION"')
+    $has_metadata    && events+=('"METADATA"')
+    $has_depends     && events+=('"DEPENDS"')
+    $has_makedepends && events+=('"MAKEDEPENDS"')
+    $has_checkdepends && events+=('"CHECKDEPENDS"')
+    $has_optdepends  && events+=('"OPTDEPENDS"')
+    $has_source      && events+=('"SOURCES"')
+    $has_build       && events+=('"BUILD"')
+
+    if [[ ${#events[@]} -gt 0 ]]; then
+        local event_list
+        event_list=$(IFS=,; echo "${events[*]}")
+        local review_list="[]"
+        $has_build && review_list='["BUILD"]'
+        echo "  -> Upstream changes detected: [${event_list}]" >&2
+        echo "  -> Review required: ${review_list}" >&2
+        # Store for later use by PREREVIEW marker logic
+        printf '%s' "${event_list}" > .upstream_events.tmp
+        $has_build && printf '%s' "true" > .upstream_build_changed.tmp || printf '%s' "false" > .upstream_build_changed.tmp
+    fi
+}
+
+# --- Helper: Declarative Identity Rules ---
+# Reads declarative _-prefixed variables from PKGBUILD and applies them
+apply_declarative_rules() {
+    local pkgbuild_file="${1:-PKGBUILD}"
+
+    # Authorship: demote upstream maintainers to contributors
+    if grep -q "^_demote_upstream_maintainer=true" "$pkgbuild_file"; then
+        echo "  -> Applying maintainer demotion"
+        # Skip line 1 (our maintainer); convert all other Maintainers to Contributors
+        sed -i '2,$ s/^# Maintainer:/# Contributor:/g' "$pkgbuild_file"
+    fi
+}
+
+# --- Helper: PREREVIEW Marker ---
+# Inserts a PREREVIEW marker comment when upstream build logic changed
+# and the package has not opted into auto-merging build changes
+apply_prereview_marker() {
+    if [[ -f .upstream_build_changed.tmp ]] && [[ "$(cat .upstream_build_changed.tmp)" == "true" ]]; then
+        if ! grep -q "^_auto_merge_build=true" PKGBUILD; then
+            echo "  -> Build logic changed upstream (review required). Adding PREREVIEW marker."
+            local marker="# PREREVIEW: upstream build functions changed (${NEW_VER})"
+            local action="# Review the diff, verify build, then remove this marker to unblock release."
+            awk -v m="$marker" -v a="$action" \
+                '/^# Maintainer:/ { print; print m; print a; next } 1' \
+                PKGBUILD > PKGBUILD.prereview.tmp
+            mv PKGBUILD.prereview.tmp PKGBUILD
+        else
+            echo "  -> Build logic changed upstream. Auto-merging (_auto_merge_build=true)."
+        fi
+    fi
+    rm -f .upstream_build_changed.tmp .upstream_events.tmp
+}
+
 CURRENT_VER=$(grep -oP '^pkgver=\K.*' PKGBUILD || echo "")
 CURRENT_REL=$(grep -oP '^pkgrel=\K.*' PKGBUILD || echo "1")
 
@@ -92,11 +190,14 @@ if [[ -n "${UPSTREAM_URL:-}" ]]; then
     if curl -sL "$UPSTREAM_URL" -o PKGBUILD.new && grep -q "pkgname=" PKGBUILD.new; then
         if [[ -f .PKGBUILD.upstream ]]; then
             if ! cmp -s .PKGBUILD.upstream PKGBUILD.new; then
-                echo "  -> Upstream PKGBUILD changed, attempting hybrid merge..."
-                
+                echo "  -> Upstream PKGBUILD changed, classifying and merging..."
+
+                # Classify upstream changes before merge (produces event report to stderr)
+                classify_upstream_changes ".PKGBUILD.upstream" "PKGBUILD.new"
+
                 # Download new assets referenced in upstream
                 fetch_upstream_assets "$(cat PKGBUILD.new)" "$BASE_URL"
-                
+
                 # Perform protected merge
                 snapshot_identity
                 if ! git merge-file PKGBUILD .PKGBUILD.upstream PKGBUILD.new; then
@@ -105,7 +206,13 @@ if [[ -n "${UPSTREAM_URL:-}" ]]; then
                     exit 1
                 fi
                 restore_identity
-                
+
+                # Apply declarative identity rules (demotion) post-merge
+                apply_declarative_rules
+
+                # Add PREREVIEW marker if build logic changed without opt-in
+                apply_prereview_marker
+
                 mv PKGBUILD.new .PKGBUILD.upstream
                 UPSTREAM_CHANGED=true
             else
@@ -116,6 +223,10 @@ if [[ -n "${UPSTREAM_URL:-}" ]]; then
             echo "  -> Initial upstream tracking setup."
             fetch_upstream_assets "$(cat PKGBUILD.new)" "$BASE_URL"
             mv PKGBUILD.new .PKGBUILD.upstream
+
+            # Apply declarative identity rules (demotion) to local PKGBUILD
+            apply_declarative_rules
+
             UPSTREAM_CHANGED=true
         fi
     else

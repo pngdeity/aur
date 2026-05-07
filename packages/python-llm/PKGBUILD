@@ -1,5 +1,6 @@
 # Maintainer: pngdeity <pngdeity@tutanota.com>
 _upstream_aur_pkg="python-llm"
+_demote_upstream_maintainer=true
 # Contributor: Cameron Otsuka <cameron@otsuka.haus>
 # Contributor: Cameron Otsuka <cameron@otsuka.haus>
 # Contributor: Martin Harrigan <martinharrigan at gmail.com>
