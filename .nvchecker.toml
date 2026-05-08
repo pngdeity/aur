@@ -8,3 +8,13 @@ prefix = "v"
 [context7-cli]
 source = "npm"
 npm = "ctx7"
+
+[amass-bin]
+source = "git"
+git = "https://github.com/owasp-amass/amass.git"
+prefix = "v"
+
+[amass-git]
+source = "git"
+git = "https://github.com/owasp-amass/amass.git"
+prefix = "v"

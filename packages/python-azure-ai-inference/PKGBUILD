@@ -26,7 +26,7 @@ source=("${pkgname}-${pkgver}.tar.gz::https://files.pythonhosted.org/packages/so
 sha256sums=('1feb496bd84b01ee2691befc04358fa25d7c344d8288e99364438859ad7cd5a4')
 
 build() {
-  cd "${_pkgname}-${pkgver}"
+  cd "${_pkgname//-/_}-${pkgver}"
   python -m build --wheel --no-isolation
 }
 
@@ -34,6 +34,7 @@ build() {
 # (see https://bugs.freebsd.org/bugzilla/show_bug.cgi?id=261305) and azure-sdk-for-python relies on it.
 
 package() {
-  cd "${_pkgname}-${pkgver}"
+  cd "${_pkgname//-/_}-${pkgver}"
   python -m installer --destdir="$pkgdir" dist/*.whl
+  install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
 }

@@ -22,7 +22,6 @@ depends=(
   'python-frontmatter'
   'python-llm'
   'python-llm-github-models'
-  'python-tomli'
   'python-toml'
   'python-rich'
   'python-rich-click'
@@ -36,6 +35,7 @@ makedepends=(
   'python-installer'
   'python-setuptools'
   'python-wheel'
+  'python-pytest'
 )
 
 source=("${_pkgname}-${pkgver}.tar.gz::${url}/archive/v${pkgver}.tar.gz")
@@ -50,4 +50,9 @@ package() {
   cd "${_pkgname}-${pkgver}"
   python -m installer --destdir="$pkgdir" dist/*.whl
   install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}
+
+check() {
+  cd "${_pkgname}-${pkgver}"
+  python -m pytest
 }

@@ -74,6 +74,17 @@ When sources contradict, the following ranking governs. Higher numbers outrank l
 6. **`namcap`** — Static analysis. A consultant, not a judge: catch objective errors but defer to higher-ranked sources on runtime dependencies and build logic.
 7. **Arch Wiki Articles** — User-generated community guides. Valuable for established best practices, but are **advisory, not authoritative**. May be outdated. Consult them, verify against higher-ranked sources.
 
+### Reading & Executing from Manual Pages
+
+When consulting manual pages (Tier 1 Authority), you MUST understand the distinction between a manual page identifier and the actual command invocation.
+
+- **Understanding the Manual System:** If you are ever unsure how to search, format, or navigate manual pages, your first step MUST be to consult the manual page for the `man` command itself using `man 1 man`.
+- **Man Page Names vs. Executables:** The name of a manual page (e.g., `aur-chroot(1)`, `pkgctl-build(1)`) often represents a subcommand of a larger suite. It does **not** necessarily mean the executable is hyphenated. 
+- **The SYNOPSIS is Law:** To determine the correct executable usage, you MUST read the `SYNOPSIS` section of the specific manual page.
+  - *Incorrect Assumption:* Executing `aur-chroot` because the man page is `man 1 aur-chroot`.
+  - *Correct Execution:* Reading `man 1 aur-chroot`, observing the synopsis `aur chroot [options]`, and executing `aur chroot`.
+- **Validation:** If a command fails with `command not found`, verify the actual invocation syntax in the man page's `SYNOPSIS` before assuming the tool is uninstalled.
+
 ### Arch Linux Wiki Guides
 The following articles provide the standard for specific package types and quality controls:
 - **[Creating packages](https://wiki.archlinux.org/title/Creating_packages)**: The foundation for all new package development.
@@ -100,7 +111,8 @@ All files in `docs/` are part of the project's context. Consult any file relevan
 | File | Purpose |
 |------|---------|
 | [ABS-FUNDAMENTALS.md](docs/ABS-FUNDAMENTALS.md) | Core ABS concepts: PKGBUILD lifecycle, makepkg, AUR structure |
-| [BUILD-SYSTEM-ARCHITECTURE.md](docs/BUILD-SYSTEM-ARCHITECTURE.md) | Hybrid merge pattern, identity protection, idempotent hooks |
+| [AUTOMATED-SYSTEM-ARCHITECTURE.md](docs/AUTOMATED-SYSTEM-ARCHITECTURE.md) | Conceptual model: Lifecycle phases, concern taxonomy, review gates |
+| [AUTOMATED-SYSTEM-DESIGN-IMPLEMENTATION.md](docs/AUTOMATED-SYSTEM-DESIGN-IMPLEMENTATION.md) | Technical design: Engine logic, classification regex, CI/CD workflows |
 | [PKGBUILD-CUSTOM-VARIABLES-REFERENCE.md](docs/PKGBUILD-CUSTOM-VARIABLES-REFERENCE.md) | Repository-specific PKGBUILD variables (`_upstream_*`, `_githubname`, `_tag`) |
 | [TESTING_ARCHITECTURE_PLAN.md](docs/TESTING_ARCHITECTURE_PLAN.md) | **Proposed** — refactoring Bash scripts into Python |
 | [LANGUAGE-PACKAGING-GUIDELINES.md](docs/LANGUAGE-PACKAGING-GUIDELINES.md) | Catalog of 35 language/framework Arch Wiki guidelines indexed by `makedepends` |

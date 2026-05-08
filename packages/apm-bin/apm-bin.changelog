@@ -1,0 +1,5 @@
+2026-05-07 pngdeity <pngdeity@tutanota.com>
+	* 0.12.4-1:
+	Fixed:
+	- apm install now removes deployed files when a package is removed from apm.yml
+	- apm audit --ci no longer reports false drift on self-package primitives

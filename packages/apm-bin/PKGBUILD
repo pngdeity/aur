@@ -1,37 +1,48 @@
 # Maintainer: pngdeity <pngdeity@tutanota.com>
 
 _pkgname=apm
-pkgname=$_pkgname
-pkgver=0.12.0
+pkgname=${_pkgname}-bin
+pkgver=0.12.4
 pkgrel=1
 pkgdesc="Agent Package Manager by Microsoft"
-arch=('x86_64')
+arch=('x86_64' 'aarch64')
 url="https://github.com/microsoft/apm"
 license=('MIT')
-depends=('glibc' 'git')
+depends=('git')
+provides=("${_pkgname}=${pkgver}")
+conflicts=("${_pkgname}")
 options=('!strip')
-changelog=apm.changelog
+changelog=${pkgname}.changelog
 
 # AUTOMATED METADATA
 _githubname="microsoft/apm"
 
-source=("${_pkgname}-${pkgver}-${CARCH}.tar.gz::${url}/releases/download/v${pkgver}/apm-linux-${CARCH}.tar.gz")
-sha256sums=('d524019037baa35dc107be08287269b07ef4dd9182d76b86b37b535e337c1fe3')
+source_x86_64=("${_pkgname}-${pkgver}-x86_64.tar.gz::${url}/releases/download/v${pkgver}/apm-linux-x86_64.tar.gz")
+source_aarch64=("${_pkgname}-${pkgver}-aarch64.tar.gz::${url}/releases/download/v${pkgver}/apm-linux-arm64.tar.gz")
+source=("LICENSE::https://raw.githubusercontent.com/${_githubname}/v${pkgver}/LICENSE")
+sha256sums=('7df20dcdf9197e9945c14858d41c60f11b52b93e5b69e2b63416b874d598d322')
+sha256sums_x86_64=('a9be6afb9f33f63598d11a7de1029722fd2601aa2ecaebfe82f4903e12a23a52')
+sha256sums_aarch64=('4b64ff40b2b70ae3c97eb64a608cadcb06c4713cd878708c9685a12394278ca0')
 
 package() {
-  local _srcdir="apm-linux-${CARCH}"
+  local _extract_dir
+  if [[ "${CARCH}" == "aarch64" ]]; then
+    _extract_dir="apm-linux-arm64"
+  else
+    _extract_dir="apm-linux-x86_64"
+  fi
 
   # Create directories
   install -d "$pkgdir/usr/lib/$_pkgname"
   install -d "$pkgdir/usr/bin"
 
   # Install binary bundle
-  cp -a "$srcdir/$_srcdir/." "$pkgdir/usr/lib/$_pkgname/"
+  cp -a "$srcdir/$_extract_dir/." "$pkgdir/usr/lib/$_pkgname/"
+  chmod 755 "$pkgdir/usr/lib/$_pkgname/apm"
 
   # Create symlink
   ln -s "/usr/lib/$_pkgname/apm" "$pkgdir/usr/bin/apm"
 
-  # Install license (buried in _internal)
-  install -Dm644 "$srcdir/$_srcdir/_internal/apm_cli-${pkgver}.dist-info/licenses/LICENSE" \
-    "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+  # Install license
+  install -Dm644 "$srcdir/LICENSE" "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
 }
