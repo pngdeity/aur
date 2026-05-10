@@ -11,7 +11,6 @@ license=("Apache-2.0")
 depends=("python-sqlite-fts4" "python-click" "python-click-default-group" "python-tabulate" "python-dateutil" "python-pluggy")
 makedepends=("python-build" "python-installer" "python-setuptools")
 checkdepends=("python-pytest" "python-hypothesis")
-conflicts=("sqlite-utils")
 source=("https://pypi.io/packages/source/${pkgname::1}/${pkgname}/sqlite_utils-${pkgver}.tar.gz")
 sha256sums=('bfa2eac29b3e3eb5c9647283797527febcf4efd4a9bbb31d979a14a11ef9dbcd')
 

@@ -26,8 +26,6 @@ optdepends=(
 checkdepends=(
     # No standard test runner identified; normally would be gtest or similar
 )
-provides=("$_pkgname")
-conflicts=("$_pkgname")
 source=("$_pkgname-src::git+$url.git#tag=v${pkgver}")
 sha256sums=('SKIP')
 backup=(

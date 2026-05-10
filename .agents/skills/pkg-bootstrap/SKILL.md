@@ -13,7 +13,10 @@ When adding a new package to `packages/`:
    - `_upstream_aur_pkg` for AUR packages
    - `_upstream_arch_repo` for official Arch GitLab packages
    - `_demote_upstream_maintainer=true` to automatically demote upstream maintainers to contributors
+   - `_pkgname=<canonical-name>` to declare the canonical software name (set on ALL packages in a variant family, including the base). If the package is standalone with no variants, omit `_pkgname`.
    - For `gemini-cli` variants, add `_use_common_gemini_settings=true`
+   - `_deploy_aur=true` if this package should be published to the AUR by the CI/CD pipeline
+   - For CPU-optimization variants, set `_repo_subarch` (e.g., `"x86_64_v3"`) — mutually exclusive with `_deploy_aur`
    If the package is entirely custom and does not mirror any upstream PKGBUILD, omit the `_upstream_*` variables and define a standard `source` array directly. In this case, skip step 2 and proceed to step 3.
 
 2. For mirrored packages, run the bootstrap script. Look up the upstream version from the source repository (AUR web interface, Arch GitLab tags, or release page) before running:
