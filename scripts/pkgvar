@@ -1,0 +1,82 @@
+#!/usr/bin/env bash
+# scripts/pkgvar — Resolve PKGBUILD variables by sandboxed sourcing.
+#
+# Unlike grep-based extraction, this resolves ALL variables correctly:
+#   - Variable-based assignments (_pkgname=$_npmname)
+#   - Parameter expansion (_pkgname=${pkgname#python-})
+#   - Both standard (pkgdesc, provides) and custom (_pkgname, _githubname) vars
+#
+# Usage:
+#   pkgvar PKGBUILD var1 [var2...]         One value per line
+#   pkgvar PKGBUILD --json var1 [var2...]  JSON object
+set -euo pipefail
+
+usage() {
+    cat <<'EOF'
+Usage: pkgvar <pkgbuild> [--json] <var> [var...]
+
+Resolve variables from a PKGBUILD file by sourcing it in a sandboxed subshell.
+
+Options:
+  --json   Output as a JSON object (keys are variable names)
+EOF
+    exit 2
+}
+
+[[ $# -lt 2 ]] && usage
+
+PKGBUILD_FILE="$1"; shift
+
+if [[ ! -f "$PKGBUILD_FILE" ]]; then
+    echo "::error::pkgvar: file not found: $PKGBUILD_FILE" >&2
+    exit 1
+fi
+
+JSON_MODE=false
+[[ "${1:-}" == "--json" ]] && { JSON_MODE=true; shift; }
+[[ $# -lt 1 ]] && usage
+
+PKG_DIR="$(dirname "$(realpath "$PKGBUILD_FILE")")"
+PKG_FILE="$(basename "$PKGBUILD_FILE")"
+START_DIR="$PWD"
+
+# Core resolve function — one bash invocation per variable.
+# Positional arguments to the inner bash -c script:
+#   $1 = package directory (cd target)
+#   $2 = start directory (startdir)
+#   $3 = PKGBUILD filename to source
+#   $4 = variable name to extract (dereferenced via ${!4:-})
+resolve_one() {
+    bash -c '
+        cd "$1" 2>/dev/null || true
+        set +eu
+        srcdir="." pkgdir="./pkg" startdir="$2"
+        CARCH="x86_64" CHOST="x86_64-pc-linux-gnu"
+        curl()  { :; }; wget()   { :; }; aria2c() { :; }
+        git()   { :; }; gpg()    { :; }; gpg2()    { :; }
+        pip()   { :; }; pip3()   { :; }
+        source "$3" 2>/dev/null
+        printf "%s" "${!4:-}"
+    ' _ "$PKG_DIR" "$START_DIR" "$PKG_FILE" "$1" 2>/dev/null
+}
+
+if $JSON_MODE; then
+    first=true
+    printf "{"
+    for var in "$@"; do
+        val=$(resolve_one "$var")
+        # Minimal JSON escaping
+        val_escaped="${val//\\/\\\\}"
+        val_escaped="${val_escaped//\"/\\\"}"
+        val_escaped="${val_escaped//$'\n'/\\n}"
+        val_escaped="${val_escaped//$'\t'/\\t}"
+        $first && first=false || printf ","
+        printf '"%s":"%s"' "$var" "$val_escaped"
+    done
+    printf "}\n"
+else
+    for var in "$@"; do
+        resolve_one "$var"
+        printf "\n"
+    done
+fi

@@ -173,6 +173,9 @@ CURRENT_REL=$(grep -oP '^pkgrel=\K.*' PKGBUILD || echo "1")
 
 # 0. Upstream Merge Logic
 UPSTREAM_CHANGED=false
+# NOTE: These grep extractions work because _upstream_arch_repo and _upstream_aur_pkg
+# are always string literals. If any PKGBUILD uses variable references in these fields,
+# migrate to: $("$SCRIPT_DIR/pkgvar" PKGBUILD _upstream_arch_repo)
 ARCH_REPO=$(grep -E '^_upstream_arch_repo=' PKGBUILD | cut -d= -f2 | tr -d '"' | tr -d "'" || echo "")
 AUR_PKG=$(grep -E '^_upstream_aur_pkg=' PKGBUILD | cut -d= -f2 | tr -d '"' | tr -d "'" || echo "")
 
@@ -261,6 +264,9 @@ if grep -q "^_use_common_gemini_settings=true" PKGBUILD; then
 fi
 
 # 2. Intelligent Changelog Automation (DRY path)
+# NOTE: _githubname and _tag are always string literals today. If any PKGBUILD
+# uses variable references in these fields, migrate to:
+#   $("$SCRIPT_DIR/pkgvar" PKGBUILD --json _githubname _tag)
 GITHUB_REPO=$(grep -oP '(?<=^_githubname=).+' PKGBUILD | tr -d '"' | tr -d "'" || echo "")
 
 if [[ -n "${GITHUB_REPO}" ]]; then
@@ -290,5 +296,30 @@ updpkgsums
 # 4. Metadata Update
 echo "  -> Regenerating .SRCINFO"
 makepkg --printsrcinfo > .SRCINFO
+
+# 5. Variant pkgdesc Consistency Check
+# Warn if this package's pkgdesc differs from other variants sharing the same _pkgname
+_pkg_name_val=$("$SCRIPT_DIR/pkgvar" PKGBUILD _pkgname)
+if [[ -n "$_pkg_name_val" ]]; then
+    current_pkgdesc=$("$SCRIPT_DIR/pkgvar" PKGBUILD pkgdesc)
+    sibling_count=0
+    mismatch=false
+    for sibling in "${SCRIPT_DIR}/../packages"/*/PKGBUILD; do
+        sibling_dir=$(basename "$(dirname "$sibling")")
+        # Skip self
+        [[ "$sibling_dir" == "$PKG_NAME" ]] && continue
+        sibling_pkgname=$("$SCRIPT_DIR/pkgvar" "$sibling" _pkgname)
+        if [[ "$sibling_pkgname" == "$_pkg_name_val" ]]; then
+            sibling_count=$((sibling_count + 1))
+            sibling_pkgdesc=$("$SCRIPT_DIR/pkgvar" "$sibling" pkgdesc)
+            if [[ "$sibling_pkgdesc" != "$current_pkgdesc" ]]; then
+                mismatch=true
+            fi
+        fi
+    done
+    if [[ "$sibling_count" -gt 0 ]] && [[ "$mismatch" == "true" ]]; then
+        echo "::warning::pkgdesc differs from other ${_pkg_name_val} variants. Run \`scripts/check-pkgdesc-consistency.sh\` to see full details."
+    fi
+fi
 
 echo "==> Synchronization complete for ${PKG_NAME}"

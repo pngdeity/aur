@@ -53,6 +53,12 @@ jobs:
             bash scripts/sync-package.sh "$NAME" "$VER"
           done
 
+          # Validate pkgdesc consistency before committing (gate: blocks push of inconsistent state)
+          if ! bash scripts/check-pkgdesc-consistency.sh --ci; then
+            echo "::error::Aborting discovery pipeline — pkgdesc consistency violations found."
+            exit 1
+          fi
+
           # Filter out packages with PREREVIEW markers (build logic changed, needs human review)
           UPDATED_NAMES=$(jq -r 'select(.event=="updated") | .name' results.json | jq -R . | jq -s -c .)
           BLOCKED_NAMES="[]"

@@ -35,8 +35,10 @@ The following variables are interpreted by the orchestration layer to manage aut
 ### Context Preservation
 
 **_pkgname** (string)
-:   Stores the canonical name of the software, isolated from repository-specific suffixes like `-git`, `-nightly`, or `-preview`.
-:   **Typical Usage**: Essential for monorepo environments where multiple variants of the same software exist, allowing shared scripts to reference the base product correctly.
+:   Declares the canonical software name, isolated from repository-specific suffixes like `-git`, `-nightly`, or `-preview`. Serves as the authoritative discriminator for variant package groups — all packages sharing the same `_pkgname` value belong to the same variant family.
+:   **Rules**: (1) If `_pkgname` is present and equals `pkgname`, this is the **base package** of a variant family — its presence signals that variant siblings exist. (2) If `_pkgname` is present and differs from `pkgname`, this is a **variant sibling** of the base. (3) If `_pkgname` is absent, the package is **standalone** — no variant family is declared.
+:   **Constraint**: All packages sharing the same `_pkgname` value MUST use identical `pkgdesc` strings. Run `scripts/check-pkgdesc-consistency.sh` to validate.
+:   **Typical Usage**: Essential for monorepo environments where multiple variants of the same software exist, allowing shared scripts and CI checks to reference the base product and detect siblings correctly.
 
 ### AUR Deployment
 
@@ -60,6 +62,46 @@ The following variables are interpreted by the orchestration layer to manage aut
 **_auto_merge_build** (boolean)
 :   When `true`, `scripts/sync-package.sh` automatically accepts upstream build logic changes (C8 concern) without injecting a `# PREREVIEW:` marker. The default is to gate build changes for human review.
 :   **Typical Usage**: Set on packages where upstream build logic changes are explicitly trusted and do not require manual verification.
+
+---
+
+## Variable Extraction & Validation
+
+### `scripts/pkgvar` — Sandboxed Variable Resolution
+
+**Never** extract PKGBUILD variables with `grep`/`cut`/`tr` patterns. These cannot resolve variable references (`_pkgname=$_npmname`, `_pkgname=${pkgname#python-}`). Instead, use `scripts/pkgvar`, which sources the PKGBUILD in a sandboxed subshell and returns resolved values:
+
+```
+# Single variable
+scripts/pkgvar packages/gemini-cli/PKGBUILD _pkgname
+# → gemini-cli
+
+# Multiple variables as JSON
+scripts/pkgvar packages/gemini-cli-git/PKGBUILD --json _pkgname pkgdesc provides
+# → {"_pkgname":"gemini-cli","pkgdesc":"...","provides":"..."}
+
+# Boolean presence checks are still fine with grep
+grep -q "^_demote_upstream_maintainer=true" PKGBUILD
+```
+
+**Scope**: Resolves ALL variables — standard (`pkgdesc`, `provides`, `conflicts`) and custom (`_pkgname`, `_githubname`, `_tag`). Runs in a sandbox where `curl`, `wget`, `git`, `gpg`, `pip` are no-ops and `set -eu` is disabled.
+
+**Cost**: ~0.8ms per variable per PKGBUILD. Safe for CI and pre-commit hooks.
+
+**Remaining grep patterns**: Five extraction points in `sync-package.sh` (lines 176, 177, 264, 268, 273) and two in `aur-deploy.sh` (lines 96, 97) use `grep` for variables that are currently always string literals (`_upstream_arch_repo`, `_upstream_aur_pkg`, `_githubname`, `_tag`, `_github_api_version`, `pkgver`, `pkgrel`). These work correctly today but would silently fail if any PKGBUILD used variable references in those fields. Migration to `pkgvar` is tracked in `docs/TODO.md`.
+
+### pkgdesc Consistency Enforcement
+
+All packages sharing the same `_pkgname` MUST use identical `pkgdesc`. The enforcement topology has four layers:
+
+| Layer | Location | Behavior |
+|-------|----------|----------|
+| Pre-commit | `.pre-commit-config.yaml` | Blocks commit of inconsistent PKGBUILDs |
+| Sync warning | `sync-package.sh` §5 | Warns during automated discovery updates |
+| CI discovery gate | `.github/workflows/discovery.yml` | Aborts pipeline before `git push` |
+| CI build gate | `.github/workflows/build.yml` | Blocks build of inconsistent packages |
+
+To validate manually: `bash scripts/check-pkgdesc-consistency.sh [--ci]`.
 
 ---
 

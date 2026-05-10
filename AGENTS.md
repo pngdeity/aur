@@ -113,11 +113,11 @@ All files in `docs/` are part of the project's context. Consult any file relevan
 | [ABS-FUNDAMENTALS.md](docs/ABS-FUNDAMENTALS.md) | Core ABS concepts: PKGBUILD lifecycle, makepkg, AUR structure |
 | [AUTOMATED-SYSTEM-ARCHITECTURE.md](docs/AUTOMATED-SYSTEM-ARCHITECTURE.md) | Conceptual model: Lifecycle phases, concern taxonomy, review gates |
 | [AUTOMATED-SYSTEM-DESIGN-IMPLEMENTATION.md](docs/AUTOMATED-SYSTEM-DESIGN-IMPLEMENTATION.md) | Technical design: Engine logic, classification regex, CI/CD workflows |
-| [PKGBUILD-CUSTOM-VARIABLES-REFERENCE.md](docs/PKGBUILD-CUSTOM-VARIABLES-REFERENCE.md) | Repository-specific PKGBUILD variables (`_upstream_*`, `_githubname`, `_tag`) |
+| [PKGBUILD-CUSTOM-VARIABLES-REFERENCE.md](docs/PKGBUILD-CUSTOM-VARIABLES-REFERENCE.md) | Repository-specific PKGBUILD variables (`_upstream_*`, `_githubname`, `_tag`) and the `scripts/pkgvar` extraction utility |
 | [TESTING_ARCHITECTURE_PLAN.md](docs/TESTING_ARCHITECTURE_PLAN.md) | **Proposed** — refactoring Bash scripts into Python |
 | [LANGUAGE-PACKAGING-GUIDELINES.md](docs/LANGUAGE-PACKAGING-GUIDELINES.md) | Catalog of 35 language/framework Arch Wiki guidelines indexed by `makedepends` |
 | [WIKI-REFERENCE.md](docs/WIKI-REFERENCE.md) | Catalog of 17 general Arch Wiki articles organized by task domain |
-| [TODO.md](docs/TODO.md) | Outstanding architectural and documentation work items |
+| [TODO.md](docs/TODO.md) | Outstanding work items (architecture, skills, pkgvar migration, docs) |
 
 ### Package Context Discovery
 
@@ -167,16 +167,30 @@ This repository produces three types of deployable artifacts, each with a distin
 
 | Artifact | Produced By | Target | Responsibility |
 |----------|-------------|--------|----------------|
-| **AUR PKGBUILDs** | CI/CD pipeline (`sync-package.sh` processing step) | `aur.archlinux.org` — the Arch User Repository hosts these PKGBUILDs for end users and AUR helpers to download and build | **This repository** processes and pushes AUR-compatible PKGBUILDs to their respective AUR remotes |
+| **AUR PKGBUILDs** | CI/CD pipeline (`release.yml` → `scripts/aur-deploy.sh` → git push) | `aur.archlinux.org` — the Arch User Repository hosts these PKGBUILDs for end users and AUR helpers to download and build | **This repository** processes and pushes AUR-compatible PKGBUILDs to their respective AUR remotes |
 | **Binary packages** (`.pkg.tar.zst`) | `build.yml` → `arch-builder.sh` → `makepkg` | Apache host (`/var/www/html/repo/nightly/`) — serves a pacman-compatible repository database | **Release pipeline** (`release.yml`) handles database generation, signing, and `rsync` deployment |
 | **Builder image** | `builder-image.yml` → Docker build | `ghcr.io/<org>/<repo>/arch-builder` | **CI/CD pipeline** builds and pushes on Dockerfile changes |
 
 - **The Interface**: The primary publishing interface is the CI/CD pipeline. For binary packages and the builder image, the pipeline triggers automatically on discovery of upstream changes. For AUR PKGBUILDs, the pipeline processes repo-local PKGBUILDs into AUR-compatible output and pushes them to the AUR as a deployment step.
 - **Sovereignty**: Do not attempt to manage remote secrets, tokens, or runner configurations unless explicitly instructed. Focus on ensuring the local state and build output are correct.
 
+### AUR Deployment Gate
+
+- **_deploy_aur Flag**: Packages intended for AUR publication must set `_deploy_aur=true` in the PKGBUILD. The `release.yml` pipeline runs `scripts/aur-deploy.sh` for each flagged package after successful builds. The script processes the repo PKGBUILD (inlines `source` directives, strips repo-local `_`-prefixed variables and `# PREREVIEW:` markers, generates `.SRCINFO`) and pushes to `aur.archlinux.org`.
+- **Mutual Exclusion**: `_deploy_aur=true` and `_repo_subarch` are mutually exclusive. `aur-deploy.sh` hard-blocks this combination. Variant packages are build targets only — never AUR-deployed.
+
+### Variant Builds (Sub-Architecture Optimization)
+
+- **Naming Convention**: Variant packages use a suffix on the directory name matching the deployment sub-architecture (e.g., `packages/mypkg-v3/` for x86-64-v3 builds). The `pkgname` remains identical to the base package — differentiation is via an elevated `pkgrel` (ALHP pattern: base `pkgrel=1` → variant `pkgrel=1.1`). Pacman resolves the correct variant via repository priority in `pacman.conf`.
+- **Variable**: `_repo_subarch` defines the deployment sub-architecture (e.g., `x86_64_v3`) and controls CFLAGS injection in `arch-builder.sh` and artifact routing in `release.yml`.
+- **Thin PKGBUILDs**: Variant PKGBUILDs may use `source "../mypkg/PKGBUILD.common"` to share definitions with the base package. These are repo-local idioms that `aur-deploy.sh` inlines during AUR processing. Variant PKGBUILDs themselves are never AUR-deployed.
+- **Shared pkgdesc**: All packages sharing the same `_pkgname` value MUST use an identical `pkgdesc` string. This ensures consistent presentation across variant package listings (e.g., `gemini-cli`, `gemini-cli-git`, `gemini-cli-preview`, `gemini-cli-nightly`). The `_pkgname` variable is the authoritative discriminator for variant groups. Run `scripts/check-pkgdesc-consistency.sh` to validate. The convention: `_pkgname` present and equal to `pkgname` signals the base package (variants exist); `_pkgname` present and unequal signals a variant sibling; `_pkgname` absent signals a standalone package with no variants.
+
 ### Tool Supremacy & Precision
 - **Absolute Mandate**: You MUST NEVER bypass the official devtools/pkgctl ecosystem. Direct calls to `makepkg` or manual `sed` logic in `prepare()` are prohibited unless a corresponding `pkgctl` subcommand or `update.sh` hook is technically impossible.
 - **Help-First Protocol**: If a subcommand has not been used in the current session, run `pkgctl <subcommand> --help` to verify the exact syntax and available flags.
+- **PKGBUILD Variable Extraction**: When extracting values (standard or custom `_`-prefixed) from a `PKGBUILD`, use `scripts/pkgvar` — a sandboxed bash-source utility that resolves ALL variables correctly, including references like `_pkgname=$_npmname` and `${pkgname#python-}`. Do NOT use `grep`/`cut`/`tr` patterns for variable extraction; these fail on quoted values and cannot resolve variable references. Boolean presence checks (`grep -q "pattern"`) are acceptable where the exact resolved value is not needed. Run `scripts/pkgvar --help` for the full interface.
+- **pkgdesc Enforcement Topology** (4-layer): (1) Pre-commit hook (`.pre-commit-config.yaml`) blocks commits of inconsistent PKGBUILDs; (2) `sync-package.sh` §5 warns during automated sync; (3) CI `discovery.yml` gate aborts the pipeline before `git push`; (4) CI `build.yml` gate blocks build of inconsistent packages. All four call `scripts/check-pkgdesc-consistency.sh`.
 
 ### Semantic Commit Standards
 - **Format**: All commit messages MUST follow the `<type>: <scope>: <description>` convention.

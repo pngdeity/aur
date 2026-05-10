@@ -1,5 +1,5 @@
 pkgbase = gemini-cli-nightly
-	pkgdesc = AI agent bringing Gemini to your terminal (nightly version)
+	pkgdesc = Open-source AI agent that brings the power of Gemini directly into your terminal
 	pkgver = 0.39.0.nightly.20260409.615e07834
 	pkgrel = 2
 	epoch = 1

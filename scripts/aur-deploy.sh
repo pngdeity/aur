@@ -93,6 +93,8 @@ fi
 
 # --- Git Push ---
 AUR_REMOTE="ssh://aur@aur.archlinux.org/${PKG_NAME}.git"
+# NOTE: pkgver and pkgrel are always string literals in AUR output. Migration
+# to pkgvar is tracked in docs/TODO.md.
 PKGVER=$(grep -oP '^pkgver=\K.*' "$AUR_DIR/PKGBUILD" | tr -d "'" | head -1)
 PKGREL=$(grep -oP '^pkgrel=\K.*' "$AUR_DIR/PKGBUILD" | tr -d "'" | head -1)
 

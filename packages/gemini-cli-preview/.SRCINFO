@@ -1,5 +1,5 @@
 pkgbase = gemini-cli-preview
-	pkgdesc = Open-source AI agent that brings the power of Gemini directly into your terminal (preview version)
+	pkgdesc = Open-source AI agent that brings the power of Gemini directly into your terminal
 	pkgver = 0.38.0
 	pkgrel = 2
 	epoch = 1
