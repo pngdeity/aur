@@ -2,7 +2,7 @@
 
 **Date:** 2026-05-06
 **Status:** Implemented (commit `dc714e2`)
-**Reference:** [Conceptual Architecture](AUTOMATED-SYSTEM-ARCHITECTURE-CONCEPTUAL.md)
+**Reference:** [Conceptual Architecture](AUTOMATED-SYSTEM-ARCHITECTURE.md)
 
 This document provides the technical design and implementation details for the Automated Maintenance System. It maps the conceptual lifecycle stages to specific Bash scripts, regular expressions, and CI/CD workflows.
 
@@ -95,9 +95,8 @@ Runs inside a specialized Docker container (`ghcr.io/.../arch-builder`) and exec
 
 ### 4.3 Release Workflow (`release.yml`)
 
-1.  Downloads artifacts from `build.yml`.
-2.  Runs `repo-add --sign` to update the local database.
-3.  Uses `rsync` to mirror the repository to the distribution host.
+1.  **Binary pipeline** (`publish` job): Downloads artifacts from `build.yml`, prunes packages older than 7 days, runs `repo-add --sign` to regenerate the repository database, and uses `rsync` to synchronize to the distribution host.
+2.  **AUR pipeline** (`deploy-aur` job): Runs in parallel with `publish`, gated on build success (`needs: run-builds`). For each package with `_deploy_aur=true`, invokes `scripts/aur-deploy.sh` to process the repo PKGBUILD into AUR-compatible output and pushes it to `aur.archlinux.org`. Requires `AUR_SSH_PRIVATE_KEY` GitHub Secret.
 
 ---
 

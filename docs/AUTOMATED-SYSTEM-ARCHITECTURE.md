@@ -87,6 +87,7 @@ The system is configured through key-value pairs embedded in the build definitio
 |-----|------|--------|
 | `_demote_upstream_maintainer` | boolean | When true, all upstream authorship claims are reduced to contributor credits. The local maintainer retains primary authorship. Applied at both bootstrap and update. |
 | `_auto_merge_build` | boolean | When true, upstream changes to build logic (C8) are auto-adopted instead of gated for review. Default: false. |
+| `_deploy_aur` | boolean | When true, the package is opted into AUR publication. The CI/CD pipeline processes the PKGBUILD and pushes to `aur.archlinux.org` after successful builds. Mutually exclusive with `_repo_subarch`. |
 
 ### 3.2 Upstream Tracking
 
@@ -111,7 +112,13 @@ Exactly one of these must be set for a derivative package. A package with neithe
 | `_tag` | string | Tag pattern for matching upstream releases. Supports `${pkgver}` substitution. Default: `v${pkgver}`. |
 | `_pkgname` | string | Canonical software name, stripped of variant suffixes. Used to generate provides/conflicts for variant packages. |
 
-### 3.5 Proposed Extensions
+### 3.5 Variant Builds
+
+| Key | Type | Effect |
+|-----|------|--------|
+| `_repo_subarch` | string | Defines the deployment sub-architecture for variant packages (e.g., `x86_64_v3`, `x86_64_v4`). Controls CFLAGS injection in the build environment and artifact routing in the release pipeline. Mutually exclusive with `_deploy_aur`. |
+
+### 3.6 Proposed Extensions
 
 | Key | Type | Effect |
 |-----|------|--------|
@@ -393,7 +400,8 @@ The cache is invalidated when the newly fetched upstream definition differs from
 ### 9.3 Publication
 
 - **Trigger**: Invoked by discovery when unblocked updates exist.
-- **Action**: Collect all build artifacts, prune expired packages from the repository, add new packages, regenerate and sign the repository database, synchronize to the distribution host.
+- **Binary Publication**: Collect all build artifacts, prune expired packages from the repository, add new packages, regenerate and sign the repository database, synchronize to the distribution host.
+- **AUR Publication**: Runs in parallel with binary publication, gated on build success. For each package with `_deploy_aur=true`, invokes `scripts/aur-deploy.sh` to process the PKGBUILD into AUR-compatible output (inlines `source` directives, strips repo-local variables and markers, generates `.SRCINFO`) and pushes to `aur.archlinux.org`. Requires `AUR_SSH_PRIVATE_KEY` GitHub Secret.
 
 ### 9.4 CI States
 
@@ -461,9 +469,11 @@ The current implementation is in Bash and GitHub Actions YAML:
 | Discovery CI | `.github/workflows/discovery.yml` |
 | Build CI | `.github/workflows/build.yml` |
 | Publication CI | `.github/workflows/release.yml` |
+| AUR processing | `scripts/aur-deploy.sh` |
+| Signing, database management, metrics | Manual or scripted as needed |
 | Bootstrap workflow | `.agents/skills/pkg-bootstrap/SKILL.md` |
 | Update workflow | `.agents/skills/pkg-update/SKILL.md` |
-| Architecture documentation | `docs/BUILD-SYSTEM-ARCHITECTURE.md` |
+| Architecture documentation | `docs/AUTOMATED-SYSTEM-ARCHITECTURE.md` |
 | Configuration reference | `docs/PKGBUILD-CUSTOM-VARIABLES-REFERENCE.md` |
 
-For implementation-coupled architectural detail, see `handoff/AUTOMATED-SYSTEM-ARCHITECTURE.md`.
+For implementation-coupled architectural detail, see `handoffs/AUTOMATED-SYSTEM-ARCHITECTURE.md`.
