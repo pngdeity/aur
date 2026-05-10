@@ -44,4 +44,4 @@ Managing the custom package repository where compiled artifacts are deployed.
 Publishing raw scaffolding files to the AUR.
 - **Responsibilities**: Git operations on `aur.archlinux.org` endpoints, ensuring metadata parity.
 
-> **Repository Context**: In this repository, AUR publication is handled by external infrastructure. The local maintainer's publishing interface is `git push`; do not attempt direct Git operations on `aur.archlinux.org` endpoints.
+> **Repository Context**: In this repository, the CI/CD pipeline processes repo-local PKGBUILDs into AUR-compatible output and pushes them to `aur.archlinux.org`. The AUR hosts the PKGBUILDs; this repository produces them.

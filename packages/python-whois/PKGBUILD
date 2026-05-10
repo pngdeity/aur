@@ -2,6 +2,7 @@
 # Contributor: Michał Wojdyła <micwoj9292@gmail.com>
 # Contributor: Pellegrino Prevete <pellegrinoprevete@gmail.com>
 # Contributor: brent s. <bts@square-r00t.net>
+_deploy_aur=true
 pkgname=python-whois
 _name=python_whois
 pkgver=0.9.6

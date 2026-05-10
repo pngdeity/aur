@@ -101,3 +101,41 @@ jobs:
         run: |
           # Atomic sync of the repository structure to the web root with deletion of pruned packages
           rsync -avz --delete -e "ssh" repo-root/ "$USER@$HOST:/var/www/html/repo/nightly/"
+
+  # AUR PKGBUILD publication — runs in parallel with binary publish, gated on build success
+  deploy-aur:
+    needs: run-builds
+    if: always() && !failure() && !cancelled()
+    runs-on: ubuntu-latest
+    container: archlinux:latest
+    steps:
+      - name: Install dependencies
+        run: pacman -Syu --noconfirm git openssh jq
+
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Configure SSH and Deploy to AUR
+        env:
+          AUR_SSH_PRIVATE_KEY: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
+        run: |
+          if [ -z "${AUR_SSH_PRIVATE_KEY:-}" ]; then
+            echo "::warning::AUR_SSH_PRIVATE_KEY secret not configured. Skipping AUR deployment."
+            exit 0
+          fi
+          mkdir -p ~/.ssh
+          echo "$AUR_SSH_PRIVATE_KEY" > ~/.ssh/id_aur
+          chmod 600 ~/.ssh/id_aur
+          ssh-keyscan -H aur.archlinux.org >> ~/.ssh/known_hosts
+          cat > ~/.ssh/config << 'SSHCONF'
+          Host aur.archlinux.org
+              IdentityFile ~/.ssh/id_aur
+              IdentitiesOnly yes
+          SSHCONF
+
+          PACKAGES=$(echo '${{ toJson(inputs.chunks_json) }}' | jq -r '.[].list[]')
+          for PKG in $PACKAGES; do
+            if [ -d "$PKG" ]; then
+              bash scripts/aur-deploy.sh "$PKG" || echo "::warning::$PKG AUR deployment failed (see above)"
+            fi
+          done

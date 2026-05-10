@@ -161,10 +161,18 @@ To maintain a proactive (not reactive) repository, you MUST periodically run `nv
 to identify upstream version drifts. Every detected delta must be resolved via the `pkg-update` skill,
 which handles the full sync → verify → acknowledge cycle.
 
-### Event-Driven Publishing (Platform Abstraction)
-- **Infrastructure Abstraction**: You are responsible for the **Source of Truth** (the Git repository). The actual deployment, database signing, and artifact hosting are handled by an external, event-driven infrastructure.
-- **The Interface**: Your primary "Publish" button is `git push`. Pushing a verified, signed commit to the remote tracking branch constitutes a formal, non-reversible request for the infrastructure to build and deploy.
-- **Sovereignty**: Do not attempt to manage remote secrets, tokens, or runner configurations unless explicitly instructed. Focus exclusively on ensuring the local state is perfect before the push.
+### Publishing Targets & Platform Responsibilities
+
+This repository produces three types of deployable artifacts, each with a distinct target and responsibility boundary:
+
+| Artifact | Produced By | Target | Responsibility |
+|----------|-------------|--------|----------------|
+| **AUR PKGBUILDs** | CI/CD pipeline (`sync-package.sh` processing step) | `aur.archlinux.org` — the Arch User Repository hosts these PKGBUILDs for end users and AUR helpers to download and build | **This repository** processes and pushes AUR-compatible PKGBUILDs to their respective AUR remotes |
+| **Binary packages** (`.pkg.tar.zst`) | `build.yml` → `arch-builder.sh` → `makepkg` | Apache host (`/var/www/html/repo/nightly/`) — serves a pacman-compatible repository database | **Release pipeline** (`release.yml`) handles database generation, signing, and `rsync` deployment |
+| **Builder image** | `builder-image.yml` → Docker build | `ghcr.io/<org>/<repo>/arch-builder` | **CI/CD pipeline** builds and pushes on Dockerfile changes |
+
+- **The Interface**: The primary publishing interface is the CI/CD pipeline. For binary packages and the builder image, the pipeline triggers automatically on discovery of upstream changes. For AUR PKGBUILDs, the pipeline processes repo-local PKGBUILDs into AUR-compatible output and pushes them to the AUR as a deployment step.
+- **Sovereignty**: Do not attempt to manage remote secrets, tokens, or runner configurations unless explicitly instructed. Focus on ensuring the local state and build output are correct.
 
 ### Tool Supremacy & Precision
 - **Absolute Mandate**: You MUST NEVER bypass the official devtools/pkgctl ecosystem. Direct calls to `makepkg` or manual `sed` logic in `prepare()` are prohibited unless a corresponding `pkgctl` subcommand or `update.sh` hook is technically impossible.
