@@ -18,3 +18,7 @@ prefix = "v"
 source = "git"
 git = "https://github.com/owasp-amass/amass.git"
 prefix = "v"
+
+[python-whois]
+source = "pypi"
+pypi = "python-whois"
