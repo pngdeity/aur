@@ -1,4 +1,6 @@
 # Maintainer: pngdeity <pngdeity@tutanota.com>
+_upstream_aur_pkg="amass-git"
+_deploy_aur=true
 
 _pkgname=amass
 pkgname=${_pkgname}-git
