@@ -12,6 +12,27 @@ Outstanding architectural and documentation items requiring completion.
 
 - [ ] **Skill Description Trigger Validation**: The three Agent Skills (`pkg-update`, `pkg-bootstrap`, `pkg-patch-recovery`) have untested `description` fields. Per the [agentskills.io optimizing descriptions](https://agentskills.io/skill-creation/optimizing-descriptions) guide: design 20 trigger eval queries per skill (should-trigger and should-not-trigger, including near-misses), run each query 3+ times against the agent router, and compute trigger rates. Use train/validation splits to avoid overfitting. Before implementation, research the state of the art — existing automated eval frameworks for skill description testing, prior work from [agentskills/skill-creator](https://github.com/anthropics/skills/tree/main/skills/skill-creator), and any trigger-testing tooling that has emerged since the spec was published.
 
+## Engineering (CI/CD)
+
+- [ ] **Dev Branch with CI Dry-Run Pipeline**: Establish a `dev` branch that runs CI/CD processes in dry-run/validation mode, serving as a staging gate between feature branches and `main`. The end goal is to merge `feat/auto-review` into `dev`, stabilize all automation there, then merge `dev` into `main` once stable. Tasks:
+  1. **Create `dev` branch**: Branch off `main` (or `feat/auto-review` directly) and set it as the default for PRs targeting stabilization.
+  2. **Dry-run pipeline mechanics**: Extend `release.yml` and `build.yml` with a `--dry-run` mode (or a separate `dry-run.yml` workflow) that:
+     - Runs `aur-deploy.sh --dry-run` for every `_deploy_aur=true` package (already implemented; needs wiring)
+     - Runs `pkgctl build` or `makechrootpkg` but stops before artifact publication
+     - Runs `sync-package.sh` validation gates (namcap, pkgdesc consistency, provides/conflicts audit) without committing
+     - Validates `.SRCINFO` regeneration against current state
+  3. **Branch-specific trigger logic**: `dev` branch triggers the dry-run pipeline on push/PR; `main` triggers the production pipeline. Evaluate whether this needs a single `if: github.ref` conditional in `release.yml` or separate workflow files.
+  4. **Stabilization criteria** — functionality that must be proven stable in `dev` before `main` automation is enabled:
+     - **AUR deployment**: `aur-deploy.sh --dry-run` passes for all `_deploy_aur` packages with correct PKGBUILD processing (variable stripping, `.SRCINFO` generation, SSH auth, diff output matching expected state)
+     - **Build integrity**: All packages build cleanly in a chroot (`pkgctl build`) with no dependency resolution failures or namcap errors
+     - **Variant build correctness**: Variant PKGBUILDs produce the expected sub-architecture-targeted binaries; `_repo_subarch` conflict with `_deploy_aur` is enforced
+     - **Quality gates pass**: `check-pkgdesc-consistency.sh` exit-0 bug is fixed; provides/conflicts audit (no unprovided conflicts, no self-references) passes for all packages
+     - **pkgvar array support**: `scripts/pkgvar` handles array variables (see Quality Rules Engine entry above) so that provides/conflicts validation can be automated in CI
+     - **Declarative cleanup coverage**: All repo-local transformations are expressible as declarative flags (`_demote_upstream_maintainer`, `_use_common_gemini_settings`) — no orphaned imperative `update.sh` scripts that might silently fail in the pipeline
+     - **Deterministic idempotency**: `sync-package.sh` produces bitwise-identical output across repeated runs for the same inputs (no timestamp drift, no nonce injection); validated by `makerepropkg` or a checksum-based regression test
+  5. **Merge strategy**: Once all criteria are met, `dev` merges into `main` via a standard PR; the CI trigger condition flips from dry-run to production on `main`. The `dev` branch persists as the ongoing stabilization target for future feature branches.
+  (Due: Before `feat/auto-review` merges to `main`)
+
 ## Decisions Pending
 
 - [ ] **Disposition of `TESTING_ARCHITECTURE_PLAN.md`**: Decide whether to proceed with the Python refactoring of `scripts/`, keep the plan as a reference for future consideration, or archive it as superseded. If proceeding, define acceptance criteria, resourcing, and a target milestone. If archiving, move it to a `docs/archive/` directory or add a "Status: Archived" header.
