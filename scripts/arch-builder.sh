@@ -45,7 +45,7 @@ echo "  -> Starting makepkg..."
 makepkg --syncdeps --noconfirm --noprogressbar --needed
 
 # 3. Move artifacts to a central location
-mkdir -p ../dist
-cp *.pkg.tar.zst ../dist/ 2>/dev/null || true
+mkdir -p ../../dist
+cp *.pkg.tar.zst ../../dist/ 2>/dev/null || true
 
 echo "==> Finished building $PKG_DIR"

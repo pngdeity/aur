@@ -21,6 +21,6 @@ RUN useradd -m builder && \
 # But usually extra-x86_64-build handles this.
 
 WORKDIR /workspace
-CHOWN builder:builder /workspace
+RUN chown builder:builder /workspace
 
 USER root
