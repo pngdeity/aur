@@ -91,7 +91,7 @@ System directives are implemented as `_`-prefixed variables in the `PKGBUILD`.
 
 ### 4.2 Build Workflow (`build.yml`)
 
-Runs inside a specialized Docker container (`ghcr.io/.../arch-builder`) and executes `scripts/arch-builder.sh`, which wraps `pkgctl build` for clean-chroot verification.
+Runs inside a specialized Docker container (`ghcr.io/.../arch-builder`) and executes `scripts/arch-builder.sh`, which uses `makepkg --clean --syncdeps` inside a fresh container per job for dependency-resolved building. For strict clean-chroot verification (locally), use `pkgctl build` — see AGENTS.md §3.
 
 ### 4.3 Release Workflow (`release.yml`)
 
