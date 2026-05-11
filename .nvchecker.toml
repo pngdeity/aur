@@ -1,0 +1,39 @@
+[__config__]
+
+[opencode-git]
+source = "git"
+git = "https://github.com/anomalyco/opencode.git"
+prefix = "v"
+
+[context7-cli]
+source = "npm"
+npm = "ctx7"
+
+[amass-bin]
+source = "git"
+git = "https://github.com/owasp-amass/amass.git"
+prefix = "v"
+
+[amass-git]
+source = "git"
+git = "https://github.com/owasp-amass/amass.git"
+prefix = "v"
+
+[python-whois]
+source = "pypi"
+pypi = "python-whois"
+
+[ranger-doas]
+source = "github"
+github = "ranger/ranger"
+use_latest_tag = true
+prefix = "v"
+
+[jules-tools]
+source = "npm"
+npm = "@google/jules"
+
+[opendoas]
+source = "github"
+github = "Duncaen/OpenDoas"
+use_latest_tag = true

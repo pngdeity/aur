@@ -1,0 +1,64 @@
+name: Build
+on:
+  workflow_call:
+    inputs:
+      version:
+        required: true
+        type: string
+      package_list:
+        required: true
+        type: string # JSON array of package dirs
+      chunk_index:
+        required: true
+        type: string
+
+jobs:
+  execute:
+    runs-on: ubuntu-latest
+    container: ghcr.io/${{ github.repository }}/arch-builder:latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Bootstrap Environment
+        run: |
+          chmod -R a+rw .
+          chmod +x scripts/*.sh
+
+      - name: Validate Metadata
+        run: |
+          PACKAGES=$(echo '${{ inputs.package_list }}' | jq -r '.[]')
+          for PKG in $PACKAGES; do
+            if [ -d "$PKG" ]; then
+              ./scripts/check-metadata.sh "$PKG"
+            fi
+          done
+
+      - name: Check pkgdesc Consistency
+        run: |
+          ./scripts/check-pkgdesc-consistency.sh --ci
+
+      - name: Check PREREVIEW Markers
+        run: |
+          PACKAGES=$(echo '${{ inputs.package_list }}' | jq -r '.[]')
+          for PKG in $PACKAGES; do
+            if [ -d "$PKG" ] && grep -q "^# PREREVIEW:" "$PKG/PKGBUILD" 2>/dev/null; then
+              echo "::warning::$PKG has PREREVIEW marker — build logic changed upstream, human review required."
+            fi
+          done
+
+      - name: Build Batch
+        run: |
+          PACKAGES=$(echo '${{ inputs.package_list }}' | jq -r '.[]')
+          for PKG in $PACKAGES; do
+            if [ -d "$PKG" ]; then
+              # Delegate all build logic to the Arch-native script
+              sudo -u builder ./scripts/arch-builder.sh "$PKG" "${{ inputs.version }}"
+            fi
+          done
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: packages-batch-${{ inputs.chunk_index }}
+          path: dist/*.pkg.tar.zst

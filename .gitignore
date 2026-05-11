@@ -1,0 +1,23 @@
+# Arch Linux build artifacts
+*.pkg.tar.*
+*.src.tar.*
+
+# Extracted sources and build directories
+src/
+pkg/
+
+# Downloaded source archives
+*.tar.gz
+*.tar.xz
+*.tar.bz2
+*.zip
+*.tar.zst
+
+# Logs
+*.log
+
+# Other artifacts
+logpipe.*
+
+# Handoff directory
+handoffs/
