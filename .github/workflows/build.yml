@@ -16,6 +16,8 @@ jobs:
   execute:
     runs-on: ubuntu-latest
     container: ghcr.io/${{ github.repository }}/arch-builder:latest
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6

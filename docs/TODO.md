@@ -14,6 +14,22 @@ Outstanding architectural and documentation items requiring completion.
 
 ## Engineering (CI/CD)
 
+- [ ] **Local Repository for Circular Dependencies**: The original `arch-builder.sh` and `build.yml` had placeholder logic for a `/tmp/local-repo` pacman repository to resolve inter-package circular dependencies within the monorepo. This was removed because an empty file:// repo with no database causes pacman v7.1.0 to fail (`error: could not find database`). When circular dependencies arise (e.g., package A depends on package B and vice versa), implement this properly:
+  1. Create a valid pacman database in `/tmp/local-repo` using `repo-add` after each build publishes a `.pkg.tar.zst` there.
+  2. Add `[local-nightly]` to `pacman.conf` in the `build.yml` Bootstrap step (already runs as root) — but only after at least one package is in the repo.
+  3. Update `arch-builder.sh` to publish built packages to the local repo before moving them to `dist/`.
+  (Due: When the first package pair with mutual dependencies is added to the monorepo)
+
+- [ ] **Binary Publish Prerequisites**: The `release.yml` publish job (lines 27-103) requires infrastructure and secrets that are not yet provisioned. Until resolved, the job will fail harmlessly (AUR deploy runs independently), but no binary packages will reach the nightly repository.
+  1. **Provision Apache host** — the target for `rsync` at `release.yml:103` (`/var/www/html/repo/nightly/`). The job pulls the existing repo at line 68 and pushes at line 103 — both need a live host.
+  2. **Configure GitHub Secrets**:
+     - `REPO_HOST` — Apache server hostname
+     - `REPO_USER` — SSH user with write access to the Apache docroot
+     - `REPO_SSH_PRIVATE_KEY` — SSH key for rsync transport
+     - `REPO_GPG_KEY` — GPG private key for `repo-add --sign` at `release.yml:88`
+  3. **Validate connectivity** — after secrets are set, manually trigger `discovery.yml` (it will find no updates, skip the build, and not reach publish) or test the publish job in isolation.
+  (Due: Before declaring the CI/CD pipeline operational for binary artifact delivery)
+
 - [ ] **Dev Branch with CI Dry-Run Pipeline**: Establish a `dev` branch that runs CI/CD processes in dry-run/validation mode, serving as a staging gate between feature branches and `main`. The end goal is to merge `feat/auto-review` into `dev`, stabilize all automation there, then merge `dev` into `main` once stable. Tasks:
   1. **Create `dev` branch**: Branch off `main` (or `feat/auto-review` directly) and set it as the default for PRs targeting stabilization.
   2. **Dry-run pipeline mechanics**: Extend `release.yml` and `build.yml` with a `--dry-run` mode (or a separate `dry-run.yml` workflow) that:
