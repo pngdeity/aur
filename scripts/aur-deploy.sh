@@ -64,12 +64,9 @@ REPO_LOCAL_VARS=(
     '_demote_upstream_maintainer'
     '_upstream_aur_pkg'
     '_upstream_arch_repo'
-    '_githubname'
-    '_tag'
     '_use_common_gemini_settings'
     '_repo_subarch'
     '_auto_merge_build'
-     '_pkgname'
 )
 for var in "${REPO_LOCAL_VARS[@]}"; do
     sed -i "/^${var}=/d" "$AUR_DIR/PKGBUILD"
