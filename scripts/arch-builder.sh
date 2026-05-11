@@ -2,6 +2,10 @@
 # scripts/arch-builder.sh
 # Standardized Arch Linux package builder for monorepos.
 # Usage: ./arch-builder.sh <package_dir> <version>
+#
+# Build isolation: uses makepkg --clean --syncdeps inside a Docker container
+# (fresh container per job in CI). For strict clean-chroot verification,
+# use 'pkgctl build' locally — see AGENTS.md §3.
 
 set -e
 
@@ -15,17 +19,9 @@ fi
 
 echo "==> Building package in: $PKG_DIR"
 
-# 0. Local Repository Setup (Circular Dependency Resolver)
-LOCAL_REPO_DIR="/tmp/local-repo"
-if [ ! -d "$LOCAL_REPO_DIR" ]; then
-    echo "  -> Initializing local repository for dependency resolution..."
-    mkdir -p "$LOCAL_REPO_DIR"
-    
-    # Add to pacman.conf if not already there. We use sudo since pacman.conf is root-owned.
-    if ! grep -q "\[local-nightly\]" /etc/pacman.conf; then
-        echo -e "\n[local-nightly]\nSigLevel = Optional TrustAll\nServer = file://$LOCAL_REPO_DIR" | sudo tee -a /etc/pacman.conf > /dev/null
-    fi
-fi
+# Reproducible builds: respect SOURCE_DATE_EPOCH if set (e.g. by CI or local env),
+# otherwise fall back to current timestamp.
+export SOURCE_DATE_EPOCH="${SOURCE_DATE_EPOCH:-$(date +%s)}"
 
 cd "$PKG_DIR"
 
@@ -42,7 +38,7 @@ done
 # Delegate compilation and dependency resolution to makepkg.
 # We assume PKGBUILD has already been synchronized (versioned/hashed) by sync-package.sh.
 echo "  -> Starting makepkg..."
-makepkg --syncdeps --noconfirm --noprogressbar --needed
+makepkg --syncdeps --noconfirm --noprogressbar --needed --clean
 
 # 3. Move artifacts to a central location
 mkdir -p ../../dist
