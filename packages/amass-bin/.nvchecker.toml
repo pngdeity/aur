@@ -1,0 +1,4 @@
+[amass-bin]
+source = "git"
+git = "https://github.com/owasp-amass/amass.git"
+prefix = "v"
