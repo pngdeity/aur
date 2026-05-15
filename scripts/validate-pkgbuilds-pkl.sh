@@ -103,4 +103,98 @@ if [[ $FAILED -ne 0 ]]; then
 fi
 
 echo "RESULT: PASS (all packages validated)"
-exit 0
+
+# ═══════════════════════════════════════════════════════════════════════
+# Phase 2: Merge per-package policy exceptions into manifest.json
+# ═══════════════════════════════════════════════════════════════════════
+if [[ -n "${SKIP_CONFTEST:-}" ]]; then
+    echo "SKIP_CONFTEST=1 — skipping policy evaluation"
+    exit 0
+fi
+
+if ! command -v conftest &>/dev/null; then
+    echo "WARN: conftest not found — skipping policy evaluation"
+    exit 0
+fi
+
+echo ""
+echo "── Policy evaluation phase ──"
+
+python3 -c '
+import json, os, sys, glob
+
+manifest_path = sys.argv[1]
+packages_dir = sys.argv[2]
+
+with open(manifest_path) as f:
+    manifest = json.load(f)
+
+exceptions = {}
+for yf in sorted(glob.glob(f"{packages_dir}/*/policy_exceptions.yaml")):
+    pkgname = os.path.basename(os.path.dirname(yf))
+    import yaml
+    with open(yf) as f:
+        data = yaml.safe_load(f)
+    if data and "exceptions" in data:
+        for exc in data["exceptions"]:
+            rule = exc["rule"]
+            reason = exc.get("reason", "")
+            exceptions.setdefault(pkgname, {})[rule] = reason
+
+manifest["exceptions"] = exceptions
+
+with open(manifest_path, "w") as f:
+    json.dump(manifest, f, indent=2)
+
+if exceptions:
+    print(f"Merged exceptions for {len(exceptions)} package(s):")
+    for pkg, rules in sorted(exceptions.items()):
+        for rule, reason in sorted(rules.items()):
+            print(f"  {pkg}: {rule} — {reason}")
+else:
+    print("No per-package policy_exceptions.yaml files found.")
+' "$MANIFEST_FILE" "$PACKAGES_DIR"
+
+echo ""
+
+# ── Run conftest ──
+CONFTEST_TMP="$(mktemp)"
+trap 'rm -f "$CONFTEST_TMP"' EXIT
+
+set +e
+conftest test "$MANIFEST_FILE" --policy policies/ --output json > "$CONFTEST_TMP" 2>/dev/null
+CONFTEST_EXIT=$?
+set -e
+
+python3 -c '
+import json, sys, os
+
+with open(sys.argv[1]) as f:
+    results = json.load(f)
+
+failures = 0
+warnings = 0
+for r in results:
+    fname = r.get("filename", "?")
+    for f_msg in r.get("failures", []):
+        failures += 1
+        msg = f_msg["msg"]
+        print(f"  FAIL: {msg}")
+    for w_msg in r.get("warnings", []):
+        warnings += 1
+        msg = w_msg["msg"]
+        print(f"  WARN: {msg}")
+
+if failures == 0 and warnings == 0:
+    print("conftest: PASS (no violations)")
+    sys.exit(0)
+elif failures > 0:
+    print(f"conftest: FAIL ({failures} deny violations remain after exceptions)")
+    sys.exit(1)
+else:
+    print(f"conftest: PASS ({warnings} warnings remain — no deny violations)")
+    sys.exit(0)
+' "$CONFTEST_TMP"
+
+rm -f "$CONFTEST_TMP"
+trap - EXIT

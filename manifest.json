@@ -1,504 +1,504 @@
-{ "version": 1, "packages": {
-
-"amass-bin": {
-  "pkgname": "amass-bin",
-  "pkgver": "5.1.1",
-  "pkgrel": 1,
-  "pkgdesc": "In-depth Attack Surface Mapping and Asset Discovery",
-  "changelog": "amass-bin.changelog",
-  "arch": [
-    "x86_64"
-  ],
-  "url": "https://github.com/owasp-amass/amass",
-  "license": [
-    "Apache-2.0"
-  ],
-  "provides": [
-    "amass"
-  ],
-  "conflicts": [
-    "amass"
-  ],
-  "source": [
-    {
-      "url": "https://github.com/owasp-amass/amass/releases/download/v5.1.1/amass_linux_amd64.tar.gz",
-      "filename": "https://github.com/owasp-amass/amass/releases/download/v5.1.1/amass_linux_amd64.tar.gz"
+{
+  "version": 1,
+  "packages": {
+    "amass-bin": {
+      "pkgname": "amass-bin",
+      "pkgver": "5.1.1",
+      "pkgrel": 1,
+      "pkgdesc": "In-depth Attack Surface Mapping and Asset Discovery",
+      "changelog": "amass-bin.changelog",
+      "arch": [
+        "x86_64"
+      ],
+      "url": "https://github.com/owasp-amass/amass",
+      "license": [
+        "Apache-2.0"
+      ],
+      "provides": [
+        "amass"
+      ],
+      "conflicts": [
+        "amass"
+      ],
+      "source": [
+        {
+          "url": "https://github.com/owasp-amass/amass/releases/download/v5.1.1/amass_linux_amd64.tar.gz",
+          "filename": "https://github.com/owasp-amass/amass/releases/download/v5.1.1/amass_linux_amd64.tar.gz"
+        }
+      ],
+      "sha512sums": [
+        "6e7289beaf0809e4795f9715de0bd739a41a89493a27b8134c9696f620eff8bca355c92bd83207244da1763f52b4b97e9d4f4201ece357bdaf45cad48c26c8ed"
+      ],
+      "packageFunc": "cd \"${_pkgname}_linux_amd64\";\ninstall -dm 755 \"${pkgdir}/usr/share/${_pkgname}\";\ninstall -Dm 755 ${_pkgname} \"${pkgdir}/usr/bin/${_pkgname}\";\ncp -a --no-preserve=ownership \"resources/\" \"${pkgdir}/usr/share/${_pkgname}\";\nfind \"${pkgdir}/usr/share/${_pkgname}/resources\" -type d -exec chmod 755 {} \\;;\nfind \"${pkgdir}/usr/share/${_pkgname}/resources\" -type f -exec chmod 644 {} \\;"
+    },
+    "amass-git": {
+      "pkgname": "amass-git",
+      "pkgver": "5.1.1.r0.g79299dc",
+      "pkgrel": 2,
+      "pkgdesc": "In-depth Attack Surface Mapping and Asset Discovery",
+      "changelog": "amass-git.changelog",
+      "arch": [
+        "x86_64",
+        "aarch64"
+      ],
+      "url": "https://github.com/owasp-amass/amass",
+      "license": [
+        "Apache-2.0"
+      ],
+      "depends": [
+        "glibc"
+      ],
+      "makedepends": [
+        "go",
+        "git"
+      ],
+      "provides": [
+        "amass"
+      ],
+      "conflicts": [
+        "amass"
+      ],
+      "source": [
+        {
+          "url": "git+https://github.com/owasp-amass/amass.git",
+          "filename": "git+https://github.com/owasp-amass/amass.git"
+        }
+      ],
+      "sha512sums": [
+        "SKIP"
+      ],
+      "pkgverFunc": "cd \"${_pkgname}\";\ngit describe --long --tags --abbrev=7 | sed 's/^v//;s/\\([^-]*-g\\)/r\\1/;s/-/./g'",
+      "build": "cd \"${_pkgname}\";\nmkdir -p bin;\ngo build -trimpath -o bin/amass ./cmd/amass",
+      "packageFunc": "cd \"${_pkgname}\";\ninstall -Dm755 bin/amass \"${pkgdir}/usr/bin/amass\";\ninstall -Dm644 LICENSE \"${pkgdir}/usr/share/licenses/${pkgname}/LICENSE\";\ninstall -dm 755 \"${pkgdir}/usr/share/${_pkgname}\";\ncp -a --no-preserve=ownership \"resources/\" \"${pkgdir}/usr/share/${_pkgname}\";\nfind \"${pkgdir}/usr/share/${_pkgname}/resources\" -type d -exec chmod 755 {} \\;;\nfind \"${pkgdir}/usr/share/${_pkgname}/resources\" -type f -exec chmod 644 {} \\;"
+    },
+    "dnstwist": {
+      "pkgname": "dnstwist",
+      "pkgver": "20250130",
+      "pkgrel": 2,
+      "pkgdesc": "Domain name permutation engine for detecting typo squatting, phishing attacks, and brand impersonation",
+      "arch": [
+        "any"
+      ],
+      "url": "https://github.com/elceef/dnstwist",
+      "license": [
+        "Apache-2.0"
+      ],
+      "depends": [
+        "python"
+      ],
+      "makedepends": [
+        "python-build",
+        "python-installer",
+        "python-setuptools"
+      ],
+      "optdepends": [
+        {
+          "name": "python-dnspython",
+          "desc": "advanced DNS resolution (--nameservers, full DNS record enumeration)"
+        },
+        {
+          "name": "python-geoip2",
+          "desc": "GeoIP location lookup (--geoip)"
+        },
+        {
+          "name": "python-idna",
+          "desc": "internationalized domain name support"
+        },
+        {
+          "name": "python-ppdeep",
+          "desc": "ssdeep fuzzy hashing (--lsh ssdeep)"
+        },
+        {
+          "name": "python-tlsh",
+          "desc": "TLSH similarity hashing (--lsh tlsh)"
+        },
+        {
+          "name": "python-tld",
+          "desc": "improved TLD parsing"
+        },
+        {
+          "name": "python-pillow",
+          "desc": "perceptual image hashing (--phash)"
+        },
+        {
+          "name": "python-selenium",
+          "desc": "web page rendering for screenshots (--screenshots)"
+        }
+      ],
+      "source": [
+        {
+          "url": "https://files.pythonhosted.org/packages/source/d/dnstwist/dnstwist-20250130.tar.gz",
+          "filename": "https://files.pythonhosted.org/packages/source/d/dnstwist/dnstwist-20250130.tar.gz"
+        }
+      ],
+      "sha256sums": [
+        "8b6dd9c42a643a0e8b087903c0e6d75c0f6cebf94920ab0b7760ac2522c6bb42"
+      ],
+      "build": "cd \"$_name-$pkgver\";\npython -m build --wheel --no-isolation",
+      "packageFunc": "cd \"$_name-$pkgver\";\npython -m installer --destdir=\"$pkgdir\" dist/*.whl;\ninstall -Dm644 LICENSE -t \"$pkgdir/usr/share/licenses/$pkgname/\""
+    },
+    "jules-tools": {
+      "pkgname": "jules-tools",
+      "pkgver": "0.1.42",
+      "pkgrel": 1,
+      "pkgdesc": "Jules, the asynchronous coding agent from Google, in the terminal.",
+      "arch": [
+        "any"
+      ],
+      "url": "https://jules.google",
+      "license": [
+        "custom:Proprietary"
+      ],
+      "depends": [
+        "nodejs",
+        "npm"
+      ],
+      "makedepends": [
+        "npm"
+      ],
+      "source": [
+        {
+          "url": "https://registry.npmjs.org/@google/jules/-/jules-0.1.42.tgz",
+          "filename": "https://registry.npmjs.org/@google/jules/-/jules-0.1.42.tgz"
+        }
+      ],
+      "sha256sums": [
+        "84d85b13777236e4815b787910f4b74d1959cad3b3bf722f2b6306f3786a0f75"
+      ],
+      "noextract": [
+        "jules-0.1.42.tgz"
+      ],
+      "packageFunc": "cd $srcdir;\nlocal _npmdir=\"$pkgdir/usr/lib/node_modules/\";\nmkdir -p $_npmdir;\ncd $_npmdir;\nnpm install -g --prefix \"$pkgdir/usr\" \"$_npmscope/$_npmname@$_npmver\";\nchown -R root:root \"$pkgdir\""
+    },
+    "opencode-git": {
+      "pkgname": "opencode-git",
+      "pkgver": "1.15.0",
+      "pkgrel": 1,
+      "pkgdesc": "The open source coding agent",
+      "changelog": "opencode-git.changelog",
+      "arch": [
+        "aarch64",
+        "x86_64"
+      ],
+      "url": "https://github.com/anomalyco/opencode",
+      "license": [
+        "MIT"
+      ],
+      "depends": [
+        "curl",
+        "fzf",
+        "git",
+        "glibc",
+        "icu",
+        "ripgrep"
+      ],
+      "makedepends": [
+        "bun",
+        "git"
+      ],
+      "optdepends": [
+        {
+          "name": "wl-clipboard",
+          "desc": "clipboard support on Wayland"
+        },
+        {
+          "name": "xclip",
+          "desc": "clipboard support on X11"
+        }
+      ],
+      "provides": [
+        "opencode"
+      ],
+      "conflicts": [
+        "opencode"
+      ],
+      "source": [
+        {
+          "url": "git+https://github.com/anomalyco/opencode.git",
+          "filename": "opencode"
+        },
+        {
+          "url": "https://models.dev/api.json",
+          "filename": "models.dev-api.json"
+        }
+      ],
+      "sha256sums": [
+        "SKIP",
+        "a93b1d2c9903c430faf0f335aa2222612c40400ef6a5d000977dea480d043af1"
+      ],
+      "options": [
+        "!debug",
+        "!strip"
+      ],
+      "pkgverFunc": "cd \"$_pkgname\";\nlocal version tag base rev hash;\nversion=$(sed -n 's/^[[:space:]]*\"version\": \"\\([^\"]*\\)\",$/\\1/p' packages/opencode/package.json | head -n1);\ntag=\"v${version}\";\nbase=$(git merge-base HEAD \"${tag}\");\nrev=$(git rev-list --count \"${base}..HEAD\");\nhash=$(git rev-parse --short=7 HEAD);\nprintf '%s.r%s.g%s\\n' \"${version}\" \"${rev}\" \"${hash}\"",
+      "prepare": "cd \"$_pkgname\";\nbun install --frozen-lockfile --ignore-scripts",
+      "build": "cd \"$_pkgname\";\nOPENCODE_VERSION=$pkgver MODELS_DEV_API_JSON=\"${srcdir}/models.dev-api.json\" bun run --cwd packages/opencode build --single --baseline --skip-install",
+      "check": "cd \"$_pkgname/packages/opencode\"",
+      "packageFunc": "local target;\ncd \"$_pkgname\";\ntarget=\"$(_target_arch)\";\ninstall -Dm755 \"packages/opencode/dist/opencode-linux-${target}/bin/opencode\" \"${pkgdir}/usr/bin/opencode\";\nSHELL=/bin/bash \"${pkgdir}/usr/bin/opencode\" completion | install -Dm644 /dev/stdin \"${pkgdir}/usr/share/bash-completion/completions/opencode\";\nSHELL=/bin/zsh \"${pkgdir}/usr/bin/opencode\" completion | install -Dm644 /dev/stdin \"${pkgdir}/usr/share/zsh/site-functions/_opencode\";\ninstall -Dm644 LICENSE \"${pkgdir}/usr/share/licenses/${pkgname}/LICENSE\""
+    },
+    "opendoas": {
+      "pkgname": "opendoas",
+      "pkgver": "6.8.2",
+      "pkgrel": 1,
+      "pkgdesc": "Run commands as super user or another user (patched version)",
+      "arch": [
+        "x86_64"
+      ],
+      "url": "https://github.com/Duncaen/OpenDoas",
+      "license": [
+        "custom:ISC"
+      ],
+      "depends": [
+        "pam"
+      ],
+      "makedepends": [
+        "git"
+      ],
+      "provides": [
+        "doas"
+      ],
+      "conflicts": [
+        "doas"
+      ],
+      "replaces": [
+        "doas"
+      ],
+      "source": [
+        {
+          "url": "git+https://github.com/Duncaen/OpenDoas.git#tag=v6.8.2",
+          "filename": "opendoas"
+        },
+        {
+          "url": "change-PATH.patch",
+          "filename": "change-PATH.patch"
+        },
+        {
+          "url": "rowhammer.patch",
+          "filename": "rowhammer.patch"
+        },
+        {
+          "url": "retry.patch",
+          "filename": "retry.patch"
+        },
+        {
+          "url": "arg-handling.patch",
+          "filename": "arg-handling.patch"
+        },
+        {
+          "url": "post-release-v6.8.2.patch",
+          "filename": "post-release-v6.8.2.patch"
+        }
+      ],
+      "sha256sums": [
+        "43b4c2de1aaa31aac1d322b98883334b864c606783c4dfb3ddbfa0d88af9332b",
+        "d1784db14976a9988666d27c96cd3ab09f91c3435eb06efd01374712982ff8f8",
+        "80c9ebdb373c552730e13f6c562820a80540a96f0471f2c96170f69fba052d0a",
+        "cae34e452f63dec782fe2e0a3b2ca73045a7a7f21468e7dd1ea84a11296ce8c2",
+        "3e86c2601377aa0ffdf132365838caa4bdcb4c6e6b6ffddb2070e43157337b5e",
+        "dab653136a5adb37991b215963157588a14e16be8aa32d33c37590e86c763477"
+      ],
+      "install": "opendoas.install",
+      "backup": [
+        "etc/pam.d/doas"
+      ],
+      "pkgverFunc": "cd \"$pkgname\";\ngit describe --long --tags | sed 's,^v,,; s|-\\(.*\\)-g|.r\\1.g|'",
+      "prepare": "cd \"$pkgname\";\npatch -Np1 -i ../change-PATH.patch;\npatch -Np1 -i ../rowhammer.patch;\npatch -Np1 -i ../retry.patch;\npatch -Np1 -i ../arg-handling.patch;\npatch -Np1 -i ../post-release-v6.8.2.patch",
+      "build": "cd \"$pkgname\";\n./configure --prefix=/usr --with-timestamp;\nmake",
+      "packageFunc": "cd \"$pkgname\";\nmake DESTDIR=\"$pkgdir\" install;\ninstall -Dm644 LICENSE -t \"$pkgdir/usr/share/licenses/$pkgname\""
+    },
+    "python-whois": {
+      "pkgname": "python-whois",
+      "pkgver": "0.9.6",
+      "pkgrel": 2,
+      "pkgdesc": "Whois querying and parsing of domain registration information",
+      "arch": [
+        "any"
+      ],
+      "url": "https://pypi.org/project/python-whois/",
+      "license": [
+        "MIT"
+      ],
+      "depends": [
+        "python",
+        "python-dateutil"
+      ],
+      "makedepends": [
+        "python-build",
+        "python-installer",
+        "python-setuptools"
+      ],
+      "checkdepends": [
+        "python-pytest",
+        "python-simplejson"
+      ],
+      "optdepends": [
+        {
+          "name": "python-pysocks",
+          "desc": "SOCKS proxy support for whois queries"
+        }
+      ],
+      "source": [
+        {
+          "url": "https://files.pythonhosted.org/packages/source/p/python_whois/python_whois-0.9.6.tar.gz",
+          "filename": "https://files.pythonhosted.org/packages/source/p/python_whois/python_whois-0.9.6.tar.gz"
+        }
+      ],
+      "sha256sums": [
+        "2e6de7b6d70e305a85f4859cd17781ee3f0da3a02a8e94f23cb4cdcd2e400bfa"
+      ],
+      "build": "cd \"$_name-$pkgver\";\npython -m build --wheel --no-isolation",
+      "check": "cd \"$_name-$pkgver\";\npython -m pytest",
+      "packageFunc": "cd \"$_name-$pkgver\";\npython -m installer --destdir=\"$pkgdir\" dist/*.whl;\ninstall -Dm644 LICENSE.txt -t \"$pkgdir/usr/share/licenses/$pkgname/\""
+    },
+    "ranger-doas": {
+      "pkgname": "ranger-doas",
+      "pkgver": "1.9.4",
+      "pkgrel": 5,
+      "pkgdesc": "Simple, vim-like file manager, patched to use doas instead of sudo",
+      "arch": [
+        "any"
+      ],
+      "url": "https://ranger.github.io",
+      "license": [
+        "GPL-3.0-only"
+      ],
+      "depends": [
+        "python"
+      ],
+      "makedepends": [
+        "python-build",
+        "python-installer",
+        "python-wheel",
+        "python-setuptools"
+      ],
+      "checkdepends": [
+        "python-pytest"
+      ],
+      "optdepends": [
+        {
+          "name": "atool",
+          "desc": "for previews of archives"
+        },
+        {
+          "name": "elinks",
+          "desc": "for previews of html pages"
+        },
+        {
+          "name": "ffmpegthumbnailer",
+          "desc": "for video previews"
+        },
+        {
+          "name": "highlight",
+          "desc": "for syntax highlighting of code"
+        },
+        {
+          "name": "imagemagick",
+          "desc": "auto-rotate image previews based on EXIF data"
+        },
+        {
+          "name": "libcaca",
+          "desc": "for ASCII-art image previews"
+        },
+        {
+          "name": "lynx",
+          "desc": "for previews of html pages"
+        },
+        {
+          "name": "mediainfo",
+          "desc": "for viewing information about media files"
+        },
+        {
+          "name": "odt2txt",
+          "desc": "for OpenDocument texts"
+        },
+        {
+          "name": "perl-image-exiftool",
+          "desc": "for viewing information about media files"
+        },
+        {
+          "name": "poppler",
+          "desc": "for pdf previews"
+        },
+        {
+          "name": "python-chardet",
+          "desc": "in case of encoding detection problems"
+        },
+        {
+          "name": "python-pillow",
+          "desc": "for in-terminal preview of images in Kitty"
+        },
+        {
+          "name": "doas",
+          "desc": "to use the \"run as root\"-feature"
+        },
+        {
+          "name": "transmission-cli",
+          "desc": "for viewing bittorrent information"
+        },
+        {
+          "name": "ueberzug",
+          "desc": "for previews of images"
+        },
+        {
+          "name": "w3m",
+          "desc": "for previews of images and html pages"
+        }
+      ],
+      "provides": [
+        "ranger=1.9.4"
+      ],
+      "conflicts": [
+        "ranger"
+      ],
+      "source": [
+        {
+          "url": "https://ranger.github.io/ranger-1.9.4.tar.gz",
+          "filename": "https://ranger.github.io/ranger-1.9.4.tar.gz"
+        },
+        {
+          "url": "https://ranger.github.io/ranger-1.9.4.tar.gz.sig",
+          "filename": "https://ranger.github.io/ranger-1.9.4.tar.gz.sig"
+        },
+        {
+          "url": "ranger-1.9.4-fix-ncurses-endwin-error-1.patch",
+          "filename": "ranger-1.9.4-fix-ncurses-endwin-error-1.patch"
+        },
+        {
+          "url": "ranger-1.9.4-fix-ncurses-endwin-error-2.patch",
+          "filename": "ranger-1.9.4-fix-ncurses-endwin-error-2.patch"
+        },
+        {
+          "url": "ranger-1.9.4-fix-ncurses-endwin-error-3.patch",
+          "filename": "ranger-1.9.4-fix-ncurses-endwin-error-3.patch"
+        },
+        {
+          "url": "doas-substitution.patch",
+          "filename": "doas-substitution.patch"
+        }
+      ],
+      "sha512sums": [
+        "18cd1d66838a5f85176e6b7502521a7e449aaa0b12e97d62142d39f980c529c5b97a50f6fb8a65adb64612fa80450b1e13047327f7bcc005a494af4ab321e4d4",
+        "SKIP",
+        "827239e37cf70d1a5017259484846dc9496aa0add98623b6c173cb13080c23fffe28e1e533a9faaa18489eefb3e388dac632bf8ed536d575c59accaa76fdb418",
+        "21ba11dd084fb1b90edca301ffcaf702d48cfaeee74574777b589145ec033677834d34bf195817c9c18db0eb6dc69b6aa60b99b04080028ac0fdeea308d221e8",
+        "c1bbe01c287527ead05f627dbb3de678d3d6c170dd1d3ae2a719592c1b56463838664ee8b2470310f0a658d252496a6f0005502259cd5bc1e7abf7f35c24f97a",
+        "f0dbae8df0171e826bf75437edd6528a0eacd8871e0e16e2454fdb0a78993fc969295c26cee1998487ae48a5c661bec4a78793e7ab1f34f9fc6a5431fb97305f"
+      ],
+      "validpgpkeys": [
+        "1E9B36EC051FF6F7FFC969A7F08CE1E200FB5CDF",
+        "30193C49CB39CD27008246ADE5902A52B247B8DE",
+        "66FA95C0F1619BDA520A41F60D63346A5D15D055"
+      ],
+      "prepare": "cd \"${pkgname%-doas}-${pkgver}\";\nsed -i 's/xdg-open -- /xdg-open /' \"ranger/config/rifle.conf\";\npatch -Np1 -i \"../doas-substitution.patch\";\npatch -Np1 -i \"../ranger-1.9.4-fix-ncurses-endwin-error-2.patch\";\npatch -Np1 -i \"../ranger-1.9.4-fix-ncurses-endwin-error-1.patch\";\npatch -Np1 -i \"../ranger-1.9.4-fix-ncurses-endwin-error-3.patch\"",
+      "build": "cd \"${pkgname%-doas}-${pkgver}\";\npython -m build -wn",
+      "check": "cd \"${pkgname%-doas}-${pkgver}\";\nlocal _pyver=$(python -c 'import sys; print(\"\".join(map(str, sys.version_info[:2])))');\nexport PYTHONPATH=\"$PWD/lib.linux-$CARCH-cpython-$_pyver\";\nexport TERM=linux;\npytest",
+      "packageFunc": "cd \"${pkgname%-doas}-${pkgver}\";\npython -m installer -d \"$pkgdir\" dist/*.whl"
     }
-  ],
-  "sha512sums": [
-    "6e7289beaf0809e4795f9715de0bd739a41a89493a27b8134c9696f620eff8bca355c92bd83207244da1763f52b4b97e9d4f4201ece357bdaf45cad48c26c8ed"
-  ],
-  "packageFunc": "cd \"${_pkgname}_linux_amd64\";\ninstall -dm 755 \"${pkgdir}/usr/share/${_pkgname}\";\ninstall -Dm 755 ${_pkgname} \"${pkgdir}/usr/bin/${_pkgname}\";\ncp -a --no-preserve=ownership \"resources/\" \"${pkgdir}/usr/share/${_pkgname}\";\nfind \"${pkgdir}/usr/share/${_pkgname}/resources\" -type d -exec chmod 755 {} \\;;\nfind \"${pkgdir}/usr/share/${_pkgname}/resources\" -type f -exec chmod 644 {} \\;"
+  },
+  "exceptions": {
+    "ranger-doas": {
+      "vcs_skip": "Detached signature (.sig) has SKIP checksum per standard Arch practice \u2014 integrity verified via validpgpkeys instead of checksums. Signatures may change on re-issuance.",
+      "architecture_mismatch": "CARCH referenced only in check() to locate compiled Python extension paths for pytest. Package is genuinely arch='any' (pure Python). This is a well-established pattern in Arch Python packaging."
+    }
+  }
 }
-,
-"amass-git": {
-  "pkgname": "amass-git",
-  "pkgver": "5.1.1.r0.g79299dc",
-  "pkgrel": 2,
-  "pkgdesc": "In-depth Attack Surface Mapping and Asset Discovery",
-  "changelog": "amass-git.changelog",
-  "arch": [
-    "x86_64",
-    "aarch64"
-  ],
-  "url": "https://github.com/owasp-amass/amass",
-  "license": [
-    "Apache-2.0"
-  ],
-  "depends": [
-    "glibc"
-  ],
-  "makedepends": [
-    "go",
-    "git"
-  ],
-  "provides": [
-    "amass"
-  ],
-  "conflicts": [
-    "amass"
-  ],
-  "source": [
-    {
-      "url": "git+https://github.com/owasp-amass/amass.git",
-      "filename": "git+https://github.com/owasp-amass/amass.git"
-    }
-  ],
-  "sha512sums": [
-    "SKIP"
-  ],
-  "pkgverFunc": "cd \"${_pkgname}\";\ngit describe --long --tags --abbrev=7 | sed 's/^v//;s/\\([^-]*-g\\)/r\\1/;s/-/./g'",
-  "build": "cd \"${_pkgname}\";\nmkdir -p bin;\ngo build -trimpath -o bin/amass ./cmd/amass",
-  "packageFunc": "cd \"${_pkgname}\";\ninstall -Dm755 bin/amass \"${pkgdir}/usr/bin/amass\";\ninstall -Dm644 LICENSE \"${pkgdir}/usr/share/licenses/${pkgname}/LICENSE\";\ninstall -dm 755 \"${pkgdir}/usr/share/${_pkgname}\";\ncp -a --no-preserve=ownership \"resources/\" \"${pkgdir}/usr/share/${_pkgname}\";\nfind \"${pkgdir}/usr/share/${_pkgname}/resources\" -type d -exec chmod 755 {} \\;;\nfind \"${pkgdir}/usr/share/${_pkgname}/resources\" -type f -exec chmod 644 {} \\;"
-}
-,
-"dnstwist": {
-  "pkgname": "dnstwist",
-  "pkgver": "20250130",
-  "pkgrel": 2,
-  "pkgdesc": "Domain name permutation engine for detecting typo squatting, phishing attacks, and brand impersonation",
-  "arch": [
-    "any"
-  ],
-  "url": "https://github.com/elceef/dnstwist",
-  "license": [
-    "Apache-2.0"
-  ],
-  "depends": [
-    "python"
-  ],
-  "makedepends": [
-    "python-build",
-    "python-installer",
-    "python-setuptools"
-  ],
-  "optdepends": [
-    {
-      "name": "python-dnspython",
-      "desc": "advanced DNS resolution (--nameservers, full DNS record enumeration)"
-    },
-    {
-      "name": "python-geoip2",
-      "desc": "GeoIP location lookup (--geoip)"
-    },
-    {
-      "name": "python-idna",
-      "desc": "internationalized domain name support"
-    },
-    {
-      "name": "python-ppdeep",
-      "desc": "ssdeep fuzzy hashing (--lsh ssdeep)"
-    },
-    {
-      "name": "python-tlsh",
-      "desc": "TLSH similarity hashing (--lsh tlsh)"
-    },
-    {
-      "name": "python-tld",
-      "desc": "improved TLD parsing"
-    },
-    {
-      "name": "python-pillow",
-      "desc": "perceptual image hashing (--phash)"
-    },
-    {
-      "name": "python-selenium",
-      "desc": "web page rendering for screenshots (--screenshots)"
-    }
-  ],
-  "source": [
-    {
-      "url": "https://files.pythonhosted.org/packages/source/d/dnstwist/dnstwist-20250130.tar.gz",
-      "filename": "https://files.pythonhosted.org/packages/source/d/dnstwist/dnstwist-20250130.tar.gz"
-    }
-  ],
-  "sha256sums": [
-    "8b6dd9c42a643a0e8b087903c0e6d75c0f6cebf94920ab0b7760ac2522c6bb42"
-  ],
-  "build": "cd \"$_name-$pkgver\";\npython -m build --wheel --no-isolation",
-  "packageFunc": "cd \"$_name-$pkgver\";\npython -m installer --destdir=\"$pkgdir\" dist/*.whl;\ninstall -Dm644 LICENSE -t \"$pkgdir/usr/share/licenses/$pkgname/\""
-}
-,
-"jules-tools": {
-  "pkgname": "jules-tools",
-  "pkgver": "0.1.42",
-  "pkgrel": 1,
-  "pkgdesc": "Jules, the asynchronous coding agent from Google, in the terminal.",
-  "arch": [
-    "any"
-  ],
-  "url": "https://jules.google",
-  "license": [
-    "custom:Proprietary"
-  ],
-  "depends": [
-    "nodejs",
-    "npm"
-  ],
-  "makedepends": [
-    "npm"
-  ],
-  "source": [
-    {
-      "url": "https://registry.npmjs.org/@google/jules/-/jules-0.1.42.tgz",
-      "filename": "https://registry.npmjs.org/@google/jules/-/jules-0.1.42.tgz"
-    }
-  ],
-  "sha256sums": [
-    "84d85b13777236e4815b787910f4b74d1959cad3b3bf722f2b6306f3786a0f75"
-  ],
-  "noextract": [
-    "jules-0.1.42.tgz"
-  ],
-  "packageFunc": "cd $srcdir;\nlocal _npmdir=\"$pkgdir/usr/lib/node_modules/\";\nmkdir -p $_npmdir;\ncd $_npmdir;\nnpm install -g --prefix \"$pkgdir/usr\" \"$_npmscope/$_npmname@$_npmver\";\nchown -R root:root \"$pkgdir\""
-}
-,
-"opencode-git": {
-  "pkgname": "opencode-git",
-  "pkgver": "1.15.0",
-  "pkgrel": 1,
-  "pkgdesc": "The open source coding agent",
-  "changelog": "opencode-git.changelog",
-  "arch": [
-    "aarch64",
-    "x86_64"
-  ],
-  "url": "https://github.com/anomalyco/opencode",
-  "license": [
-    "MIT"
-  ],
-  "depends": [
-    "curl",
-    "fzf",
-    "git",
-    "glibc",
-    "icu",
-    "ripgrep"
-  ],
-  "makedepends": [
-    "bun",
-    "git"
-  ],
-  "optdepends": [
-    {
-      "name": "wl-clipboard",
-      "desc": "clipboard support on Wayland"
-    },
-    {
-      "name": "xclip",
-      "desc": "clipboard support on X11"
-    }
-  ],
-  "provides": [
-    "opencode"
-  ],
-  "conflicts": [
-    "opencode"
-  ],
-  "source": [
-    {
-      "url": "git+https://github.com/anomalyco/opencode.git",
-      "filename": "opencode"
-    },
-    {
-      "url": "https://models.dev/api.json",
-      "filename": "models.dev-api.json"
-    }
-  ],
-  "sha256sums": [
-    "SKIP",
-    "a93b1d2c9903c430faf0f335aa2222612c40400ef6a5d000977dea480d043af1"
-  ],
-  "options": [
-    "!debug",
-    "!strip"
-  ],
-  "pkgverFunc": "cd \"$_pkgname\";\nlocal version tag base rev hash;\nversion=$(sed -n 's/^[[:space:]]*\"version\": \"\\([^\"]*\\)\",$/\\1/p' packages/opencode/package.json | head -n1);\ntag=\"v${version}\";\nbase=$(git merge-base HEAD \"${tag}\");\nrev=$(git rev-list --count \"${base}..HEAD\");\nhash=$(git rev-parse --short=7 HEAD);\nprintf '%s.r%s.g%s\\n' \"${version}\" \"${rev}\" \"${hash}\"",
-  "prepare": "cd \"$_pkgname\";\nbun install --frozen-lockfile --ignore-scripts",
-  "build": "cd \"$_pkgname\";\nOPENCODE_VERSION=$pkgver MODELS_DEV_API_JSON=\"${srcdir}/models.dev-api.json\" bun run --cwd packages/opencode build --single --baseline --skip-install",
-  "check": "cd \"$_pkgname/packages/opencode\"",
-  "packageFunc": "local target;\ncd \"$_pkgname\";\ntarget=\"$(_target_arch)\";\ninstall -Dm755 \"packages/opencode/dist/opencode-linux-${target}/bin/opencode\" \"${pkgdir}/usr/bin/opencode\";\nSHELL=/bin/bash \"${pkgdir}/usr/bin/opencode\" completion | install -Dm644 /dev/stdin \"${pkgdir}/usr/share/bash-completion/completions/opencode\";\nSHELL=/bin/zsh \"${pkgdir}/usr/bin/opencode\" completion | install -Dm644 /dev/stdin \"${pkgdir}/usr/share/zsh/site-functions/_opencode\";\ninstall -Dm644 LICENSE \"${pkgdir}/usr/share/licenses/${pkgname}/LICENSE\""
-}
-,
-"opendoas": {
-  "pkgname": "opendoas",
-  "pkgver": "6.8.2",
-  "pkgrel": 1,
-  "pkgdesc": "Run commands as super user or another user (patched version)",
-  "arch": [
-    "x86_64"
-  ],
-  "url": "https://github.com/Duncaen/OpenDoas",
-  "license": [
-    "custom:ISC"
-  ],
-  "depends": [
-    "pam"
-  ],
-  "makedepends": [
-    "git"
-  ],
-  "provides": [
-    "doas"
-  ],
-  "conflicts": [
-    "doas"
-  ],
-  "replaces": [
-    "doas"
-  ],
-  "source": [
-    {
-      "url": "git+https://github.com/Duncaen/OpenDoas.git#tag=v6.8.2",
-      "filename": "opendoas"
-    },
-    {
-      "url": "change-PATH.patch",
-      "filename": "change-PATH.patch"
-    },
-    {
-      "url": "rowhammer.patch",
-      "filename": "rowhammer.patch"
-    },
-    {
-      "url": "retry.patch",
-      "filename": "retry.patch"
-    },
-    {
-      "url": "arg-handling.patch",
-      "filename": "arg-handling.patch"
-    },
-    {
-      "url": "post-release-v6.8.2.patch",
-      "filename": "post-release-v6.8.2.patch"
-    }
-  ],
-  "sha256sums": [
-    "43b4c2de1aaa31aac1d322b98883334b864c606783c4dfb3ddbfa0d88af9332b",
-    "d1784db14976a9988666d27c96cd3ab09f91c3435eb06efd01374712982ff8f8",
-    "80c9ebdb373c552730e13f6c562820a80540a96f0471f2c96170f69fba052d0a",
-    "cae34e452f63dec782fe2e0a3b2ca73045a7a7f21468e7dd1ea84a11296ce8c2",
-    "3e86c2601377aa0ffdf132365838caa4bdcb4c6e6b6ffddb2070e43157337b5e",
-    "dab653136a5adb37991b215963157588a14e16be8aa32d33c37590e86c763477"
-  ],
-  "install": "opendoas.install",
-  "backup": [
-    "etc/pam.d/doas"
-  ],
-  "pkgverFunc": "cd \"$pkgname\";\ngit describe --long --tags | sed 's,^v,,; s|-\\(.*\\)-g|.r\\1.g|'",
-  "prepare": "cd \"$pkgname\";\npatch -Np1 -i ../change-PATH.patch;\npatch -Np1 -i ../rowhammer.patch;\npatch -Np1 -i ../retry.patch;\npatch -Np1 -i ../arg-handling.patch;\npatch -Np1 -i ../post-release-v6.8.2.patch",
-  "build": "cd \"$pkgname\";\n./configure --prefix=/usr --with-timestamp;\nmake",
-  "packageFunc": "cd \"$pkgname\";\nmake DESTDIR=\"$pkgdir\" install;\ninstall -Dm644 LICENSE -t \"$pkgdir/usr/share/licenses/$pkgname\""
-}
-,
-"python-whois": {
-  "pkgname": "python-whois",
-  "pkgver": "0.9.6",
-  "pkgrel": 2,
-  "pkgdesc": "Whois querying and parsing of domain registration information",
-  "arch": [
-    "any"
-  ],
-  "url": "https://pypi.org/project/python-whois/",
-  "license": [
-    "MIT"
-  ],
-  "depends": [
-    "python",
-    "python-dateutil"
-  ],
-  "makedepends": [
-    "python-build",
-    "python-installer",
-    "python-setuptools"
-  ],
-  "checkdepends": [
-    "python-pytest",
-    "python-simplejson"
-  ],
-  "optdepends": [
-    {
-      "name": "python-pysocks",
-      "desc": "SOCKS proxy support for whois queries"
-    }
-  ],
-  "source": [
-    {
-      "url": "https://files.pythonhosted.org/packages/source/p/python_whois/python_whois-0.9.6.tar.gz",
-      "filename": "https://files.pythonhosted.org/packages/source/p/python_whois/python_whois-0.9.6.tar.gz"
-    }
-  ],
-  "sha256sums": [
-    "2e6de7b6d70e305a85f4859cd17781ee3f0da3a02a8e94f23cb4cdcd2e400bfa"
-  ],
-  "build": "cd \"$_name-$pkgver\";\npython -m build --wheel --no-isolation",
-  "check": "cd \"$_name-$pkgver\";\npython -m pytest",
-  "packageFunc": "cd \"$_name-$pkgver\";\npython -m installer --destdir=\"$pkgdir\" dist/*.whl;\ninstall -Dm644 LICENSE.txt -t \"$pkgdir/usr/share/licenses/$pkgname/\""
-}
-,
-"ranger-doas": {
-  "pkgname": "ranger-doas",
-  "pkgver": "1.9.4",
-  "pkgrel": 5,
-  "pkgdesc": "Simple, vim-like file manager, patched to use doas instead of sudo",
-  "arch": [
-    "any"
-  ],
-  "url": "https://ranger.github.io",
-  "license": [
-    "GPL-3.0-only"
-  ],
-  "depends": [
-    "python"
-  ],
-  "makedepends": [
-    "python-build",
-    "python-installer",
-    "python-wheel",
-    "python-setuptools"
-  ],
-  "checkdepends": [
-    "python-pytest"
-  ],
-  "optdepends": [
-    {
-      "name": "atool",
-      "desc": "for previews of archives"
-    },
-    {
-      "name": "elinks",
-      "desc": "for previews of html pages"
-    },
-    {
-      "name": "ffmpegthumbnailer",
-      "desc": "for video previews"
-    },
-    {
-      "name": "highlight",
-      "desc": "for syntax highlighting of code"
-    },
-    {
-      "name": "imagemagick",
-      "desc": "auto-rotate image previews based on EXIF data"
-    },
-    {
-      "name": "libcaca",
-      "desc": "for ASCII-art image previews"
-    },
-    {
-      "name": "lynx",
-      "desc": "for previews of html pages"
-    },
-    {
-      "name": "mediainfo",
-      "desc": "for viewing information about media files"
-    },
-    {
-      "name": "odt2txt",
-      "desc": "for OpenDocument texts"
-    },
-    {
-      "name": "perl-image-exiftool",
-      "desc": "for viewing information about media files"
-    },
-    {
-      "name": "poppler",
-      "desc": "for pdf previews"
-    },
-    {
-      "name": "python-chardet",
-      "desc": "in case of encoding detection problems"
-    },
-    {
-      "name": "python-pillow",
-      "desc": "for in-terminal preview of images in Kitty"
-    },
-    {
-      "name": "doas",
-      "desc": "to use the \"run as root\"-feature"
-    },
-    {
-      "name": "transmission-cli",
-      "desc": "for viewing bittorrent information"
-    },
-    {
-      "name": "ueberzug",
-      "desc": "for previews of images"
-    },
-    {
-      "name": "w3m",
-      "desc": "for previews of images and html pages"
-    }
-  ],
-  "provides": [
-    "ranger=1.9.4"
-  ],
-  "conflicts": [
-    "ranger"
-  ],
-  "source": [
-    {
-      "url": "https://ranger.github.io/ranger-1.9.4.tar.gz",
-      "filename": "https://ranger.github.io/ranger-1.9.4.tar.gz"
-    },
-    {
-      "url": "https://ranger.github.io/ranger-1.9.4.tar.gz.sig",
-      "filename": "https://ranger.github.io/ranger-1.9.4.tar.gz.sig"
-    },
-    {
-      "url": "ranger-1.9.4-fix-ncurses-endwin-error-1.patch",
-      "filename": "ranger-1.9.4-fix-ncurses-endwin-error-1.patch"
-    },
-    {
-      "url": "ranger-1.9.4-fix-ncurses-endwin-error-2.patch",
-      "filename": "ranger-1.9.4-fix-ncurses-endwin-error-2.patch"
-    },
-    {
-      "url": "ranger-1.9.4-fix-ncurses-endwin-error-3.patch",
-      "filename": "ranger-1.9.4-fix-ncurses-endwin-error-3.patch"
-    },
-    {
-      "url": "doas-substitution.patch",
-      "filename": "doas-substitution.patch"
-    }
-  ],
-  "sha512sums": [
-    "18cd1d66838a5f85176e6b7502521a7e449aaa0b12e97d62142d39f980c529c5b97a50f6fb8a65adb64612fa80450b1e13047327f7bcc005a494af4ab321e4d4",
-    "SKIP",
-    "827239e37cf70d1a5017259484846dc9496aa0add98623b6c173cb13080c23fffe28e1e533a9faaa18489eefb3e388dac632bf8ed536d575c59accaa76fdb418",
-    "21ba11dd084fb1b90edca301ffcaf702d48cfaeee74574777b589145ec033677834d34bf195817c9c18db0eb6dc69b6aa60b99b04080028ac0fdeea308d221e8",
-    "c1bbe01c287527ead05f627dbb3de678d3d6c170dd1d3ae2a719592c1b56463838664ee8b2470310f0a658d252496a6f0005502259cd5bc1e7abf7f35c24f97a",
-    "f0dbae8df0171e826bf75437edd6528a0eacd8871e0e16e2454fdb0a78993fc969295c26cee1998487ae48a5c661bec4a78793e7ab1f34f9fc6a5431fb97305f"
-  ],
-  "validpgpkeys": [
-    "1E9B36EC051FF6F7FFC969A7F08CE1E200FB5CDF",
-    "30193C49CB39CD27008246ADE5902A52B247B8DE",
-    "66FA95C0F1619BDA520A41F60D63346A5D15D055"
-  ],
-  "prepare": "cd \"${pkgname%-doas}-${pkgver}\";\nsed -i 's/xdg-open -- /xdg-open /' \"ranger/config/rifle.conf\";\npatch -Np1 -i \"../doas-substitution.patch\";\npatch -Np1 -i \"../ranger-1.9.4-fix-ncurses-endwin-error-2.patch\";\npatch -Np1 -i \"../ranger-1.9.4-fix-ncurses-endwin-error-1.patch\";\npatch -Np1 -i \"../ranger-1.9.4-fix-ncurses-endwin-error-3.patch\"",
-  "build": "cd \"${pkgname%-doas}-${pkgver}\";\npython -m build -wn",
-  "check": "cd \"${pkgname%-doas}-${pkgver}\";\nlocal _pyver=$(python -c 'import sys; print(\"\".join(map(str, sys.version_info[:2])))');\nexport PYTHONPATH=\"$PWD/lib.linux-$CARCH-cpython-$_pyver\";\nexport TERM=linux;\npytest",
-  "packageFunc": "cd \"${pkgname%-doas}-${pkgver}\";\npython -m installer -d \"$pkgdir\" dist/*.whl"
-}
-
-}}
