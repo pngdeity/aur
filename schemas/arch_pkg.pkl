@@ -339,6 +339,7 @@ class Package {
         _renderFunc("package", packageFunc)
       }
     }.join("\n")
+
 }
 
 // ── Default Package (for schema validation) ──
@@ -356,5 +357,5 @@ _defaultPackage: Package = new Package {
 // ── Module Output ──
 
 output {
-  text = _defaultPackage.renderPKGBUILD()
+  value = _defaultPackage
 }
