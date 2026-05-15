@@ -1,8 +1,9 @@
 pkgbase = opencode-git
 	pkgdesc = The open source coding agent
-	pkgver = 1.14.48.r38.gcddab63
+	pkgver = 1.15.0
 	pkgrel = 1
 	url = https://github.com/anomalyco/opencode
+	changelog = opencode-git.changelog
 	arch = aarch64
 	arch = x86_64
 	license = MIT
@@ -23,6 +24,6 @@ pkgbase = opencode-git
 	source = opencode::git+https://github.com/anomalyco/opencode.git
 	source = models.dev-api.json::https://models.dev/api.json
 	sha256sums = SKIP
-	sha256sums = SKIP
+	sha256sums = a93b1d2c9903c430faf0f335aa2222612c40400ef6a5d000977dea480d043af1
 
 pkgname = opencode-git

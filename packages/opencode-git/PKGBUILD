@@ -4,8 +4,9 @@ _deploy_aur=true
 _pkgname=opencode
 
 pkgname=${_pkgname}-git
+changelog=opencode-git.changelog
 _githubname=anomalyco/opencode
-pkgver=1.14.48.r38.gcddab63
+pkgver=1.15.0
 pkgrel=1
 pkgdesc="The open source coding agent"
 url="https://github.com/${_githubname}"
@@ -25,7 +26,7 @@ source=(
   'models.dev-api.json::https://models.dev/api.json'
 )
 sha256sums=('SKIP'
-            'SKIP')
+            'a93b1d2c9903c430faf0f335aa2222612c40400ef6a5d000977dea480d043af1')
 
 _target_arch() {
   case "${CARCH}" in
