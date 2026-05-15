@@ -1,3 +1,5 @@
+**Note:** Pkl selected as schema language per PKL-CROSS-PHASE-EVALUATION.md. KCL references in this document are historical.
+
 # KCL + OPA Shift-Left Validation Layer — Implementation Plan
 
 **Date:** 2026-05-11

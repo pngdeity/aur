@@ -1,3 +1,5 @@
+**Status: SUPERSEDED by Pkl.** See PKL-CROSS-PHASE-EVALUATION.md. Retained as rationale artifact only. **Do not implement from this document.**
+
 # Phase 1 — KCL PKGBUILD Schema Design
 
 **Date:** 2026-05-11
