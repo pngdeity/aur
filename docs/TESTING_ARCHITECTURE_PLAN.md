@@ -1,3 +1,5 @@
+**Status: Reference** — retained for design rationale. No active Python refactoring is underway.
+
 # Architecture & Testing Strategy for Automation Scripts
 
 **Status:** Proposed  
