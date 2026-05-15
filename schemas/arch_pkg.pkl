@@ -198,6 +198,9 @@ class Package {
   /// npm pinned version
   hidden _npmver: String?
 
+  /// Local helper variable (convenience alias, e.g. _name=$pkgname)
+  hidden _name: String?
+
   // ── Renderer Methods ──
 
   /// Quote a string for PKGBUILD output.
