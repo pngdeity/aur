@@ -9,6 +9,10 @@ prefix = "v"
 source = "npm"
 npm = "ctx7"
 
+[dnstwist]
+source = "pypi"
+pypi = "dnstwist"
+
 [amass-bin]
 source = "git"
 git = "https://github.com/owasp-amass/amass.git"
