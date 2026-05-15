@@ -45,7 +45,8 @@ START_DIR="$PWD"
 #   $1 = package directory (cd target)
 #   $2 = start directory (startdir)
 #   $3 = PKGBUILD filename to source
-#   $4 = variable name to extract (dereferenced via ${!4:-})
+#   $4 = variable name to extract
+# Output: one value per line for both scalars and arrays (array elements one per line).
 resolve_one() {
     bash -c '
         cd "$1" 2>/dev/null || true
@@ -56,7 +57,18 @@ resolve_one() {
         git()   { :; }; gpg()    { :; }; gpg2()    { :; }
         pip()   { :; }; pip3()   { :; }
         source "$3" 2>/dev/null
-        printf "%s" "${!4:-}"
+
+        varname="$4"
+        decl=$(declare -p "$varname" 2>/dev/null) || { exit 0; }
+
+        case "$decl" in
+            "declare -a "*|"declare -A "*)
+                eval "printf \"%s\n\" \"\${$varname[@]}\""
+                ;;
+            *)
+                printf "%s\n" "${!varname:-}"
+                ;;
+        esac
     ' _ "$PKG_DIR" "$START_DIR" "$PKG_FILE" "$1" 2>/dev/null
 }
 
@@ -64,19 +76,29 @@ if $JSON_MODE; then
     first=true
     printf "{"
     for var in "$@"; do
-        val=$(resolve_one "$var")
-        # Minimal JSON escaping
-        val_escaped="${val//\\/\\\\}"
-        val_escaped="${val_escaped//\"/\\\"}"
-        val_escaped="${val_escaped//$'\n'/\\n}"
-        val_escaped="${val_escaped//$'\t'/\\t}"
+        mapfile -t lines < <(resolve_one "$var")
         $first && first=false || printf ","
-        printf '"%s":"%s"' "$var" "$val_escaped"
+
+        if [[ ${#lines[@]} -eq 0 ]]; then
+            printf '"%s":""' "$var"
+        elif [[ ${#lines[@]} -eq 1 ]]; then
+            val_escaped="${lines[0]//\\/\\\\}"
+            val_escaped="${val_escaped//\"/\\\"}"
+            printf '"%s":"%s"' "$var" "$val_escaped"
+        else
+            printf '"%s":[' "$var"
+            for i in "${!lines[@]}"; do
+                [[ $i -gt 0 ]] && printf ","
+                val_escaped="${lines[$i]//\\/\\\\}"
+                val_escaped="${lines[$i]//\"/\\\"}"
+                printf '"%s"' "$val_escaped"
+            done
+            printf "]"
+        fi
     done
     printf "}\n"
 else
     for var in "$@"; do
         resolve_one "$var"
-        printf "\n"
     done
 fi
