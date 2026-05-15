@@ -30,29 +30,18 @@ Outstanding architectural and documentation items requiring completion.
   3. **Validate connectivity** — after secrets are set, manually trigger `discovery.yml` (it will find no updates, skip the build, and not reach publish) or test the publish job in isolation.
   (Due: Before declaring the CI/CD pipeline operational for binary artifact delivery)
 
-- [ ] **Dev Branch with CI Dry-Run Pipeline**: Establish a `dev` branch that runs CI/CD processes in dry-run/validation mode, serving as a staging gate between feature branches and `main`. The end goal is to merge `feat/auto-review` into `dev`, stabilize all automation there, then merge `dev` into `main` once stable. Tasks:
-  1. **Create `dev` branch**: Branch off `main` (or `feat/auto-review` directly) and set it as the default for PRs targeting stabilization.
-  2. **Dry-run pipeline mechanics**: Extend `release.yml` and `build.yml` with a `--dry-run` mode (or a separate `dry-run.yml` workflow) that:
-     - Runs `aur-deploy.sh --dry-run` for every `_deploy_aur=true` package (already implemented; needs wiring)
-     - Runs `pkgctl build` or `makechrootpkg` but stops before artifact publication
-     - Runs `sync-package.sh` validation gates (namcap, pkgdesc consistency, provides/conflicts audit) without committing
-     - Validates `.SRCINFO` regeneration against current state
-  3. **Branch-specific trigger logic**: `dev` branch triggers the dry-run pipeline on push/PR; `main` triggers the production pipeline. Evaluate whether this needs a single `if: github.ref` conditional in `release.yml` or separate workflow files.
-  4. **Stabilization criteria** — functionality that must be proven stable in `dev` before `main` automation is enabled:
-     - **AUR deployment**: `aur-deploy.sh --dry-run` passes for all `_deploy_aur` packages with correct PKGBUILD processing (variable stripping, `.SRCINFO` generation, SSH auth, diff output matching expected state)
-     - **Build integrity**: All packages build cleanly in a chroot (`pkgctl build`) with no dependency resolution failures or namcap errors
-     - **Variant build correctness**: Variant PKGBUILDs produce the expected sub-architecture-targeted binaries; `_repo_subarch` conflict with `_deploy_aur` is enforced
-     - **Quality gates pass**: `check-pkgdesc-consistency.sh` exit-0 bug is fixed; provides/conflicts audit (no unprovided conflicts, no self-references) passes for all packages
-     - **pkgvar array support**: `scripts/pkgvar` handles array variables (see Quality Rules Engine entry above) so that provides/conflicts validation can be automated in CI
-     - **Declarative cleanup coverage**: All repo-local transformations are expressible as declarative flags (`_demote_upstream_maintainer`, `_use_common_gemini_settings`) — no orphaned imperative `update.sh` scripts that might silently fail in the pipeline
-     - **Deterministic idempotency**: `sync-package.sh` produces bitwise-identical output across repeated runs for the same inputs (no timestamp drift, no nonce injection); validated by `makerepropkg` or a checksum-based regression test
-  5. **Merge strategy**: Once all criteria are met, `dev` merges into `main` via a standard PR; the CI trigger condition flips from dry-run to production on `main`. The `dev` branch persists as the ongoing stabilization target for future feature branches.
-  (Due: Before `feat/auto-review` merges to `main`)
+- [x] **Dev Branch with CI Dry-Run Pipeline** (partially complete — infrastructure in place, stabilization pending): `origin/dev` branch created from main (2026-05-15 swarm, S9.2). Discovery workflow dispatched on `dev` (S9.3). Remaining work:
+   1. ~~**Create `dev` branch**~~: Done — `origin/dev` exists at same SHA as `main` (08f7faf).
+   2. **Dry-run pipeline mechanics**: (pending) Extend `release.yml` and `build.yml` with `--dry-run` mode.
+   3. **Branch-specific trigger logic**: (pending) `dev` triggers dry-run; `main` triggers production.
+   4. **Stabilization criteria**: (pending — see Ready for Human checklist below).
+   5. **Merge strategy**: (pending) `dev` → `main` PR after criteria met.
+   (Due: Before `feat/auto-review` merges to `main`)
 
 ## Decisions Pending
 
 - [ ] **Disposition of `TESTING_ARCHITECTURE_PLAN.md`**: Decide whether to proceed with the Python refactoring of `scripts/`, keep the plan as a reference for future consideration, or archive it as superseded. If proceeding, define acceptance criteria, resourcing, and a target milestone. If archiving, move it to a `docs/archive/` directory or add a "Status: Archived" header.
-- [ ] **Disposition of `manifest.json`**: `manifest.json` is currently tracked in git (`git ls-files` confirms presence) but `docs/PKL-CROSS-PHASE-EVALUATION.md` (Phase 2 §3, Phase 3 renderer) treats it as a generated build/CI artifact — produced by `pkl eval --format json` or `kcl compile`, consumed by `conftest test`, never hand-edited. Decision needed: `git rm --cached` + `.gitignore` entry (consistent with build-artifact treatment), or keep tracked (simpler CI bootstrap, no toolchain requirement to generate from scratch). (Due: Before Phase 1 PKGBUILD import pipeline goes live.)
+- [x] **Disposition of `manifest.json`**: Resolved 2026-05-15 swarm (S8.2): `manifest.json` added to `.gitignore` as a generated build artifact. Regenerated by `validate-pkgbuilds-pkl.sh` at CI time. Not version-controlled.
 - [ ] **Disposition of `nvc_versions.json`**: Untracked file in repo root (`git check-ignore` returns exit 1 — no `.gitignore` rule; `git ls-files` returns nothing — not staged). `nvchecker` uses it as persistent version state storage for the `--version-file` flag. Decision needed: commit it (makes nvchecker state canonical across clones — CI and developer runouts produce identical deltas) or `.gitignore` it (state is machine-local; each clone's first `nvchecker` run bootstraps fresh from upstream). (Due: Before declaring the maintenance pulse operational.)
 
 ## Engineering
@@ -75,5 +64,17 @@ Outstanding architectural and documentation items requiring completion.
 
 - [x] **Bash Completion Shared Convention**: The `_comp_` namespace and `_comp_compgen_help` conventions are duplicated across `gemini-bash-completion` and `doas-bash-completion` local AGENTS.md files. Create a centralized reference (e.g., a `docs/BASH-COMPLETION-CONVENTIONS.md`) documenting the shared `_comp_` namespace requirement and dynamic help invocation pattern. Once published, evaluate whether the per-package AGENTS.md entries can be slimmed or removed. **(Done: `docs/BASH-COMPLETION-CONVENTIONS.md` exists; per-package local AGENTS.md update pending.)**
 - [ ] **Packager Best Practices Audit**: Audit the [DeveloperWiki:How to be a packager](https://wiki.archlinux.org/title/DeveloperWiki:How_to_be_a_packager) against this repository's AGENTS.md, agent skills, and CI/CD outputs. Identify any practices not yet reflected in automation rules or documentation standards, and integrate them. (Due: Indeterminate)
-- [ ] **AGENTS.md docs/ Reference Table Staleness**: The `### docs/ Directory Reference` table in `AGENTS.md` lists 8 docs files, but `docs/` contains 18 `.md` files — 10 are missing from the table (`BASH-COMPLETION-CONVENTIONS.md`, `SRCINFO-VERSION-CONTROL-POLICY.md`, `PKL-CROSS-PHASE-EVALUATION.md`, `SWARM-PLAN.md`, `KCL-OPA-VALIDATION-IMPLEMENTATION-PLAN.md`, `KCL-OPA-PHASE{1,2,3}-*.md`). Batch remediation scheduled via S8.1. Ongoing: keep the table aligned with actual files — add every new doc, remove entries for deleted docs. (Due: S8.1 completion.)
-- [ ] **pkgvar Array Support Documentation**: `scripts/pkgvar` supports array variables via `declare -p` (shell-sourced resolution captures full arrays). `docs/PKGBUILD-CUSTOM-VARIABLES-REFERENCE.md` documents `pkgvar` but does not cover array extraction — the `--array` flag, `declare -p` output format, or multi-element handling. The docs need to document this capability so consumers (CI gates, `sync-package.sh`, quality rules engine) can use it reliably. (Due: Before quality rules engine array-rules go live.)
+- [x] **AGENTS.md docs/ Reference Table Staleness**: Resolved 2026-05-15 swarm (S8.1): all 10 missing docs added to table (18 entries total, aligned with actual files). Ongoing: add every new doc, remove entries for deleted docs.
+- [x] **pkgvar Array Support Documentation**: Resolved 2026-05-15 swarm (S8.5): `docs/PKGBUILD-CUSTOM-VARIABLES-REFERENCE.md` now documents array variable support via `declare -p`, with single/multi-element examples and JSON mode output.
+
+## Ready for Human (Post-Swarm 2026-05-15)
+
+These items require human execution — chroot builds, branch management, secret provisioning, and CI verification.
+
+- [ ] **chroot builds — 8 packages**: Run `pkgctl build` for all 8 packages in a clean chroot. Verify no build failures, dependency resolution errors, or namcap issues.
+- [ ] **fix/packages-opendoas-ranger-jules disposition**: Resolve the `fix/packages-opendoas-ranger-jules` branch — merge, rebase, or close.
+- [ ] **HPA rebase onto `dev`**: Rebase the `feat/hpa-builds` or equivalent HPA branch onto the new `origin/dev` branch.
+- [ ] **AUR deployment (SSH auth)**: Configure AUR SSH keys and test `aur-deploy.sh` push for `_deploy_aur=true` packages (amass-bin, opendoas, python-whois).
+- [ ] **nvc_versions.json decision**: Currently untracked on disk. Decide: commit as canonical nvchecker state, or gitignore as machine-local file.
+- [ ] **CI results review**: Check discovery workflow run on `dev` branch (dispatched 2026-05-15). Verify the new validation gate passes.
+- [ ] **build.yml workflow_dispatch trigger**: Add `workflow_dispatch` to `build.yml` so the validate job can be tested independently (currently `workflow_call` only).
