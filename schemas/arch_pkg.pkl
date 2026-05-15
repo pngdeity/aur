@@ -1,0 +1,357 @@
+/// PKGBUILD(5) Typed Data Model (Pkl)
+/// Covers the complete PKGBUILD(5) surface area plus repository-specific
+/// _-prefixed variables defined in docs/PKGBUILD-CUSTOM-VARIABLES-REFERENCE.md
+///
+/// Usage:
+///   pkl eval packages/<name>/package.pkl --format json  →  JSON for OPA
+///   pkl eval packages/<name>/package.pkl                →  PKGBUILD text
+///
+/// References:
+///   - PKGBUILD(5):       https://man.archlinux.org/man/PKGBUILD.5
+///   - Pkl Language Ref:  https://pkl-lang.org/main/current/language-reference/index.html
+
+module schemas.arch_pkg
+
+// ── Type Aliases ──
+
+/// Known architecture values (PKGBUILD(5) §7.7)
+typealias KnownArchitecture = "x86_64"|"i686"|"aarch64"|"armv7h"|"arm"|"any"
+
+/// Known makepkg option flags (PKGBUILD(5) §7.19)
+typealias KnownOption = "!strip"|"!debug"|"!lto"|"!staticlibs"|"!emptydirs"
+                       |"!zipman"|"!purge"|"!libtool"|"!ccache"|"!buildflags"
+                       |"!makeflags"
+                       |"staticlibs"|"zipman"|"purge"|"libtool"
+                       |"strip"|"debug"|"lto"|"makeflags"|"buildflags"
+
+// ── Sub-Classes ──
+
+/// A single source entry, optionally renamed via filename::url syntax.
+/// Example: "opendoas::git+https://github.com/Duncaen/OpenDoas.git#tag=v6.8.2"
+class SourceEntry {
+  /// Full URL including VCS fragments (#tag=, #commit=, #branch=)
+  url: String
+
+  /// Local filename this source will be saved as
+  filename: String
+}
+
+/// A single optional dependency with its description.
+/// PKGBUILD entry: 'wl-clipboard: clipboard support on Wayland'
+class OptDependsEntry {
+  /// Package name (before the ": ")
+  name: String
+
+  /// Description (after the ": ")
+  desc: String = ""
+}
+
+// ── Package Class ──
+
+/// Top-level PKGBUILD class. Closed by default — no undeclared properties are permitted.
+class Package {
+  // Identity & Versioning (PKGBUILD(5) §7.1-7.5, 7.16)
+
+  /// Package name. Must start with alphanumeric, @, ., _, or + (not hyphen).
+  pkgname: String(matches(Regex(#"^[a-z0-9@._+][a-z0-9@._+-]*$"#)))
+
+  /// Software version number
+  pkgver: String
+
+  /// Packaging revision index. Positive number, floats allowed for variant builds.
+  pkgrel: Number(this > 0)
+
+  /// Epoch (only set when version numbering changes)
+  epoch: Int(this >= 0)?
+
+  /// Package description
+  pkgdesc: String
+
+  /// Changelog filename
+  changelog: String?
+
+  // Architecture & Metadata (PKGBUILD(5) §7.7, 7.8, 7.12, 7.13)
+
+  /// Target architectures
+  arch: Listing<KnownArchitecture>
+
+  /// Upstream URL
+  url: String
+
+  /// Software licenses
+  license: Listing<String>
+
+  /// Package groups (rarely used)
+  groups: Listing<String>?
+
+  // Package Relationships (PKGBUILD(5) §7.14, 7.15)
+
+  /// Runtime dependencies
+  depends: Listing<String>?
+
+  /// Build-time dependencies
+  makedepends: Listing<String>?
+
+  /// Test-only dependencies
+  checkdepends: Listing<String>?
+
+  /// Optional dependencies with descriptions
+  optdepends: Listing<OptDependsEntry>?
+
+  /// Virtual packages provided
+  provides: Listing<String>?
+
+  /// Conflicting packages
+  conflicts: Listing<String>?
+
+  /// Replaced packages
+  replaces: Listing<String>?
+
+  // Source & Integrity (PKGBUILD(5) §7.9, 7.10, 7.17)
+
+  /// Download sources
+  source: Listing<SourceEntry>?
+
+  sha256sums: Listing<String>?
+  sha512sums: Listing<String>?
+  sha224sums: Listing<String>?
+  sha384sums: Listing<String>?
+  b2sums:     Listing<String>?
+
+  /// Valid PGP key fingerprints
+  validpgpkeys: Listing<String>?
+
+  /// Source files to not extract
+  noextract: Listing<String>?
+
+  // Install & Config (PKGBUILD(5) §7.11, 7.18, 7.19)
+
+  /// .install scriptlet filename
+  install: String?
+
+  /// Configuration files to preserve on upgrade
+  backup: Listing<String>?
+
+  /// makepkg option flags
+  options: Listing<KnownOption>?
+
+  // Lifecycle Functions (PKGBUILD(5) §8.8-8.9)
+  // Stored as raw Bash text. Named "packageFunc" because "package" is a Pkl keyword.
+
+  /// pkgver() dynamic version function (VCS packages)
+  pkgverFunc: String?
+
+  /// prepare() — source preparation
+  prepare: String?
+
+  /// build() — compilation
+  build: String?
+
+  /// check() — test suite
+  check: String?
+
+  /// package() — packaging. Named "packageFunc" because "package" is a Pkl keyword.
+  packageFunc: String?
+
+  // Custom Variables (Repository-Specific)
+  // Declared as "hidden" — accessible within the class, omitted from JSON output.
+  // These drive build system behavior but are not part of the rendered PKGBUILD.
+
+  /// AUR deployment gate. Mutually exclusive with _repo_subarch.
+  hidden _deploy_aur: Boolean = false
+
+  /// Canonical software name (without variant suffix). Discriminator for variant groups.
+  hidden _pkgname: String?
+
+  /// GitHub owner/repo for changelog generation
+  hidden _githubname: String(matches(Regex(#"^[a-zA-Z0-9._-]+/[a-zA-Z0-9._-]+$"#)))?
+
+  /// AUR package name for upstream merge
+  hidden _upstream_aur_pkg: String?
+
+  /// Arch GitLab repo path for upstream merge
+  hidden _upstream_arch_repo: String?
+
+  /// Convert upstream maintainer to contributor
+  hidden _demote_upstream_maintainer: Boolean = false
+
+  /// Auto-adopt upstream build logic changes
+  hidden _auto_merge_build: Boolean = false
+
+  /// Synchronize shared gemini settings asset
+  hidden _use_common_gemini_settings: Boolean = false
+
+  /// Sub-architecture target (variant builds only)
+  hidden _repo_subarch: ("x86_64_v3"|"x86_64_v4")?
+
+  /// Custom tag pattern for changelog generation
+  hidden _tag: String?
+
+  // Package-Local Conventions
+
+  /// npm package scope (e.g., "@google")
+  hidden _npmscope: String?
+
+  /// npm package name
+  hidden _npmname: String?
+
+  /// npm pinned version
+  hidden _npmver: String?
+
+  // ── Renderer Methods ──
+
+  /// Quote a string for PKGBUILD output.
+  /// Simple values (alphanumeric, ., _, +, -, @) are output unquoted.
+  /// Values with spaces, special chars, or empty strings are single-quoted.
+  function _quoteString(s: String): String =
+    if (s.isEmpty) "''"
+    else if (s.matches(Regex(#"^[a-zA-Z0-9@._+-]+$"#))) s
+    else "'\(s.replaceAll(Regex(#"'"#), "'\\''"))'"
+
+  /// Render a SourceEntry for PKGBUILD source array.
+  function _renderSource(e: SourceEntry): String =
+    if (e.url == e.filename) _quoteString(e.filename)
+    else "'\(e.filename.replaceAll(Regex(#"'"#), "'\\''"))::\(e.url.replaceAll(Regex(#"'"#), "'\\''"))'"
+
+  /// Render an OptDependsEntry for PKGBUILD optdepends array.
+  function _renderOptDepends(e: OptDependsEntry): String =
+    if (e.desc == "") _quoteString(e.name)
+    else "'\(e.name.replaceAll(Regex(#"'"#), "'\\''")): \(e.desc.replaceAll(Regex(#"'"#), "'\\''"))'"
+
+  /// Indent function body text by 4 spaces.
+  function _indentBody(body: String): String =
+    body.split("\n").toList().map((line) -> "    \(line)").join("\n")
+
+  /// Render a lifecycle function block.
+  function _renderFunc(name: String, body: String?): String? =
+    if (body == null) null else "\(name)() {\n\(_indentBody(body))\n}"
+
+  /// Render this package as a valid PKGBUILD string.
+  /// Maps: packageFunc → package() in output (Pkl keyword transformation).
+  /// Follows PKGBUILD(5) canonical field ordering.
+  function renderPKGBUILD(): String =
+    new Listing {
+      "# Maintainer: pngdeity <pngdeity@tutanota.com>"
+      ""
+
+      // Identity & Versioning
+      "pkgname=\(pkgname)"
+      "pkgver=\(pkgver)"
+      "pkgrel=\(pkgrel)"
+
+      when (epoch != null) {
+        let (e = epoch!!) "epoch=\(e)"
+      }
+
+      "pkgdesc=\(_quoteString(pkgdesc))"
+
+      // Architecture & Metadata
+      "arch=('\(arch.join("' '"))')"
+      "url='\(url.replaceAll(Regex(#"'"#), "'\\''"))'"
+      "license=('\(license.join("' '"))')"
+
+      when (groups != null && !groups.isEmpty) {
+        let (g = groups!!) "groups=('\(g.join("' '"))')"
+      }
+
+      // Package Relationships
+      when (depends != null && !depends.isEmpty) {
+        let (d = depends!!) "depends=('\(d.join("' '"))')"
+      }
+      when (makedepends != null && !makedepends.isEmpty) {
+        let (m = makedepends!!) "makedepends=('\(m.join("' '"))')"
+      }
+      when (checkdepends != null && !checkdepends.isEmpty) {
+        let (c = checkdepends!!) "checkdepends=('\(c.join("' '"))')"
+      }
+      when (optdepends != null && !optdepends.isEmpty) {
+        let (o = optdepends!!) "optdepends=(\(o.toList().map((e) -> _renderOptDepends(e)).join(" ")))"
+      }
+      when (provides != null && !provides.isEmpty) {
+        let (p = provides!!) "provides=('\(p.join("' '"))')"
+      }
+      when (conflicts != null && !conflicts.isEmpty) {
+        let (c = conflicts!!) "conflicts=('\(c.join("' '"))')"
+      }
+      when (replaces != null && !replaces.isEmpty) {
+        let (r = replaces!!) "replaces=('\(r.join("' '"))')"
+      }
+
+      // Install & Config
+      when (backup != null && !backup.isEmpty) {
+        let (b = backup!!) "backup=('\(b.join("' '"))')"
+      }
+      when (options != null && !options.isEmpty) {
+        let (o = options!!) "options=('\(o.join("' '"))')"
+      }
+      when (install != null) {
+        let (ins = install!!) "install=\(_quoteString(ins))"
+      }
+
+      when (changelog != null) {
+        let (cl = changelog!!) "changelog=\(_quoteString(cl))"
+      }
+
+      // Source & Integrity
+      when (source != null && !source.isEmpty) {
+        let (s = source!!) "source=(\(s.toList().map((e) -> _renderSource(e)).join(" ")))"
+      }
+      when (noextract != null && !noextract.isEmpty) {
+        let (n = noextract!!) "noextract=('\(n.join("' '"))')"
+      }
+      when (validpgpkeys != null && !validpgpkeys.isEmpty) {
+        let (v = validpgpkeys!!) "validpgpkeys=('\(v.join("' '"))')"
+      }
+      when (sha256sums != null && !sha256sums.isEmpty) {
+        let (s = sha256sums!!) "sha256sums=('\(s.join("' '"))')"
+      }
+      when (sha512sums != null && !sha512sums.isEmpty) {
+        let (s = sha512sums!!) "sha512sums=('\(s.join("' '"))')"
+      }
+      when (sha224sums != null && !sha224sums.isEmpty) {
+        let (s = sha224sums!!) "sha224sums=('\(s.join("' '"))')"
+      }
+      when (sha384sums != null && !sha384sums.isEmpty) {
+        let (s = sha384sums!!) "sha384sums=('\(s.join("' '"))')"
+      }
+      when (b2sums != null && !b2sums.isEmpty) {
+        let (s = b2sums!!) "b2sums=('\(s.join("' '"))')"
+      }
+
+      // Lifecycle Functions
+      // Note: packageFunc is rendered as "package()" — the Pkl keyword transformation.
+      when (pkgverFunc != null) {
+        _renderFunc("pkgver", pkgverFunc)
+      }
+      when (prepare != null) {
+        _renderFunc("prepare", prepare)
+      }
+      when (build != null) {
+        _renderFunc("build", build)
+      }
+      when (check != null) {
+        _renderFunc("check", check)
+      }
+      when (packageFunc != null) {
+        _renderFunc("package", packageFunc)
+      }
+    }.join("\n")
+}
+
+// ── Default Package (for schema validation) ──
+
+_defaultPackage: Package = new Package {
+  pkgname = "testpkg"
+  pkgver = "1.0"
+  pkgrel = 1
+  pkgdesc = "Test package for schema validation"
+  arch = new Listing { "x86_64" }
+  url = "https://example.com"
+  license = new Listing { "MIT" }
+}
+
+// ── Module Output ──
+
+output {
+  text = _defaultPackage.renderPKGBUILD()
+}
