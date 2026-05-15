@@ -5,6 +5,7 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PKG_DIR="$1"
 DRY_RUN=false
 
@@ -90,10 +91,8 @@ fi
 
 # --- Git Push ---
 AUR_REMOTE="ssh://aur@aur.archlinux.org/${PKG_NAME}.git"
-# NOTE: pkgver and pkgrel are always string literals in AUR output. Migration
-# to pkgvar is tracked in docs/TODO.md.
-PKGVER=$(grep -oP '^pkgver=\K.*' "$AUR_DIR/PKGBUILD" | tr -d "'" | head -1)
-PKGREL=$(grep -oP '^pkgrel=\K.*' "$AUR_DIR/PKGBUILD" | tr -d "'" | head -1)
+PKGVER=$("$SCRIPT_DIR/pkgvar" "$AUR_DIR/PKGBUILD" pkgver)
+PKGREL=$("$SCRIPT_DIR/pkgvar" "$AUR_DIR/PKGBUILD" pkgrel)
 
 # Check SSH connectivity to AUR (requires AUR_SSH_PRIVATE_KEY in ssh-agent or key file)
 echo "  -> Checking SSH connectivity to AUR"
