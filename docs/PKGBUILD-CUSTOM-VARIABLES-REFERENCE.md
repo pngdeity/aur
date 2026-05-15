@@ -90,6 +90,32 @@ grep -q "^_demote_upstream_maintainer=true" PKGBUILD
 
 **Remaining grep patterns**: Five extraction points in `sync-package.sh` (lines 176, 177, 264, 268, 273) and two in `aur-deploy.sh` (lines 96, 97) use `grep` for variables that are currently always string literals (`_upstream_arch_repo`, `_upstream_aur_pkg`, `_githubname`, `_tag`, `_github_api_version`, `pkgver`, `pkgrel`). These work correctly today but would silently fail if any PKGBUILD used variable references in those fields. Migration to `pkgvar` is tracked in `docs/TODO.md`.
 
+### Array Variable Support
+
+`pkgvar` uses `declare -p` to serialize bash variables. When the requested variable is a bash array (`declare -a` or `declare -A`), each element is output on its own line. Scalar variables are output as a single line.
+
+Arrays are common for standard PKGBUILD variables like `provides`, `conflicts`, `depends`, `source`, `sha256sums`, and custom array variables:
+
+```
+# Single-element array (provides):
+$ scripts/pkgvar packages/opendoas/PKGBUILD provides
+doas
+
+# Multi-element array (source):
+$ scripts/pkgvar packages/opendoas/PKGBUILD source
+opendoas::git+https://github.com/Duncaen/OpenDoas.git#tag=v6.8.2
+change-PATH.patch
+rowhammer.patch
+
+# JSON mode preserves array structure:
+$ scripts/pkgvar packages/opendoas/PKGBUILD --json provides source
+{"provides":["doas"],"source":["opendoas::git+https://github.com/Duncaen/OpenDoas.git#tag=v6.8.2","change-PATH.patch","rowhammer.patch"]}
+```
+
+**Implementation**: The `resolve_one()` function calls `declare -p <varname>` and branches on the output prefix (`declare -a` or `declare -A` for arrays, otherwise scalar). Array elements are expanded via `"${<varname>[@]}"` and printed one per line. Scalars use indirect expansion `${!varname:-}`. This approach avoids fragile text parsing and correctly handles multi-word values, special characters, and empty arrays.
+
+**Consuming array output**: Piping through `mapfile -t lines < <(scripts/pkgvar ... <varname>)` is the recommended pattern for reading array output in bash. In JSON mode (`--json`), arrays are rendered as proper JSON arrays.
+
 ### pkgdesc Consistency Enforcement
 
 All packages sharing the same `_pkgname` MUST use identical `pkgdesc`. The enforcement topology has four layers:
