@@ -2,6 +2,10 @@
 
 This document defines the specialized mandates and expert workflows for contributing to Arch Linux package files within this repository. Adhere to these standards to ensure the highest quality, security, and automation compatibility.
 
+## System Constraints
+
+- **No privilege escalation**: `doas` authentication is unavailable in non-interactive mode. Never attempt `doas`, `sudo`, or any root-requiring command. For builds requiring a clean chroot (`pkgctl build`, etc.), report the step as pending human execution.
+
 ## 1. Foundational Documentation & Specifications
 
 All contributions to the `packages/` directory must adhere to the following canonical specifications.

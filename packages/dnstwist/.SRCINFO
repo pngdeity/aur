@@ -1,0 +1,23 @@
+pkgbase = dnstwist
+	pkgdesc = Domain name permutation engine for detecting typo squatting, phishing attacks, and brand impersonation
+	pkgver = 20250130
+	pkgrel = 1
+	url = https://github.com/elceef/dnstwist
+	arch = any
+	license = Apache-2.0
+	makedepends = python-build
+	makedepends = python-installer
+	makedepends = python-setuptools
+	depends = python
+	optdepends = python-dnspython: advanced DNS resolution (--nameservers, full DNS record enumeration)
+	optdepends = python-geoip2: GeoIP location lookup (--geoip)
+	optdepends = python-idna: internationalized domain name support
+	optdepends = python-ppdeep: ssdeep fuzzy hashing (--lsh ssdeep)
+	optdepends = python-tlsh: TLSH similarity hashing (--lsh tlsh)
+	optdepends = python-tld: improved TLD parsing
+	optdepends = python-pillow: perceptual image hashing (--phash)
+	optdepends = python-selenium: web page rendering for screenshots (--screenshots)
+	source = https://files.pythonhosted.org/packages/source/d/dnstwist/dnstwist-20250130.tar.gz
+	sha256sums = 8b6dd9c42a643a0e8b087903c0e6d75c0f6cebf94920ab0b7760ac2522c6bb42
+
+pkgname = dnstwist

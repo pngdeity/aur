@@ -1,0 +1,43 @@
+# Maintainer: pngdeity <pngdeity@tutanota.com>
+# Contributor: archlinuxaur <https://aur.archlinux.org/account/archlinuxaur>
+
+_deploy_aur=false
+pkgname=dnstwist
+_name=dnstwist
+pkgver=20250130
+pkgrel=1
+pkgdesc='Domain name permutation engine for detecting typo squatting, phishing attacks, and brand impersonation'
+arch=(any)
+url='https://github.com/elceef/dnstwist'
+license=(Apache-2.0)
+depends=(
+  python
+)
+makedepends=(
+  python-build
+  python-installer
+  python-setuptools
+)
+optdepends=(
+  'python-dnspython: advanced DNS resolution (--nameservers, full DNS record enumeration)'
+  'python-geoip2: GeoIP location lookup (--geoip)'
+  'python-idna: internationalized domain name support'
+  'python-ppdeep: ssdeep fuzzy hashing (--lsh ssdeep)'
+  'python-tlsh: TLSH similarity hashing (--lsh tlsh)'
+  'python-tld: improved TLD parsing'
+  'python-pillow: perceptual image hashing (--phash)'
+  'python-selenium: web page rendering for screenshots (--screenshots)'
+)
+source=("https://files.pythonhosted.org/packages/source/${_name::1}/$_name/$_name-$pkgver.tar.gz")
+sha256sums=('8b6dd9c42a643a0e8b087903c0e6d75c0f6cebf94920ab0b7760ac2522c6bb42')
+
+build() {
+  cd "$_name-$pkgver"
+  python -m build --wheel --no-isolation
+}
+
+package() {
+  cd "$_name-$pkgver"
+  python -m installer --destdir="$pkgdir" dist/*.whl
+  install -Dm644 LICENSE -t "$pkgdir/usr/share/licenses/$pkgname/"
+}
