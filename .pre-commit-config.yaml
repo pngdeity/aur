@@ -8,3 +8,10 @@ repos:
         files: ^packages/.*/PKGBUILD$
         pass_filenames: false
         always_run: false
+      - id: pkl-validate
+        name: PKGBUILD Pkl Manifest Validation
+        entry: bash scripts/validate-pkgbuilds-pkl.sh
+        language: system
+        files: ^packages/.*/(PKGBUILD|package\.pkl)$
+        pass_filenames: false
+        stages: [commit]
