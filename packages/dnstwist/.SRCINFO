@@ -1,7 +1,7 @@
 pkgbase = dnstwist
 	pkgdesc = Domain name permutation engine for detecting typo squatting, phishing attacks, and brand impersonation
 	pkgver = 20250130
-	pkgrel = 1
+	pkgrel = 2
 	url = https://github.com/elceef/dnstwist
 	arch = any
 	license = Apache-2.0
