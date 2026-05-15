@@ -1,0 +1,7 @@
+exceptions:
+  - pkgname: "ranger-doas"
+    rule: "vcs_skip"
+    reason: "Detached signature (.sig) has SKIP checksum per standard Arch practice — integrity verified via validpgpkeys instead of checksums."
+  - pkgname: "ranger-doas"
+    rule: "architecture_mismatch"
+    reason: "CARCH referenced only in check() to locate compiled Python extension paths for pytest. Package is genuinely arch='any' (pure Python)."

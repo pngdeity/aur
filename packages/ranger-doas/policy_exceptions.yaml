@@ -1,0 +1,5 @@
+exceptions:
+  - rule: "vcs_skip"
+    reason: "Detached signature (.sig) has SKIP checksum per standard Arch practice — integrity verified via validpgpkeys instead of checksums. Signatures may change on re-issuance."
+  - rule: "architecture_mismatch"
+    reason: "CARCH referenced only in check() to locate compiled Python extension paths for pytest. Package is genuinely arch='any' (pure Python). This is a well-established pattern in Arch Python packaging."
