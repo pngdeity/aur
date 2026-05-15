@@ -173,11 +173,8 @@ CURRENT_REL=$(grep -oP '^pkgrel=\K.*' PKGBUILD || echo "1")
 
 # 0. Upstream Merge Logic
 UPSTREAM_CHANGED=false
-# NOTE: These grep extractions work because _upstream_arch_repo and _upstream_aur_pkg
-# are always string literals. If any PKGBUILD uses variable references in these fields,
-# migrate to: $("$SCRIPT_DIR/pkgvar" PKGBUILD _upstream_arch_repo)
-ARCH_REPO=$(grep -E '^_upstream_arch_repo=' PKGBUILD | cut -d= -f2 | tr -d '"' | tr -d "'" || echo "")
-AUR_PKG=$(grep -E '^_upstream_aur_pkg=' PKGBUILD | cut -d= -f2 | tr -d '"' | tr -d "'" || echo "")
+ARCH_REPO=$("$SCRIPT_DIR/pkgvar" PKGBUILD _upstream_arch_repo)
+AUR_PKG=$("$SCRIPT_DIR/pkgvar" PKGBUILD _upstream_aur_pkg)
 
 if [[ -n "$ARCH_REPO" ]]; then
     echo "  -> Checking official Arch upstream ($ARCH_REPO)"
@@ -264,19 +261,17 @@ if grep -q "^_use_common_gemini_settings=true" PKGBUILD; then
 fi
 
 # 2. Intelligent Changelog Automation (DRY path)
-# NOTE: _githubname and _tag are always string literals today. If any PKGBUILD
-# uses variable references in these fields, migrate to:
-#   $("$SCRIPT_DIR/pkgvar" PKGBUILD --json _githubname _tag)
-GITHUB_REPO=$(grep -oP '(?<=^_githubname=).+' PKGBUILD | tr -d '"' | tr -d "'" || echo "")
+GITHUB_REPO=$("$SCRIPT_DIR/pkgvar" PKGBUILD _githubname)
 
 if [[ -n "${GITHUB_REPO}" ]]; then
     # Determine the tag pattern, fallback to v$pkgver
-    TAG_PATTERN=$(grep -oP '(?<=^_tag=).+' PKGBUILD | tr -d '"' | tr -d "'" || echo "")
+    TAG_PATTERN=$("$SCRIPT_DIR/pkgvar" PKGBUILD _tag)
     TAG=${TAG_PATTERN:-"v${NEW_VER}"}
     TAG=$(echo "${TAG}" | sed "s/\${pkgver}/${NEW_VER}/g")
     
-    # Extract API version if specified
-    API_VER=$(grep -oP '(?<=^# _github_api_version=).+' PKGBUILD | tr -d '"' | tr -d "'" || echo "2026-03-10")
+    # Extract API version if specified, fallback to "2026-03-10"
+    API_VER=$("$SCRIPT_DIR/pkgvar" PKGBUILD _github_api_version)
+    API_VER="${API_VER:-2026-03-10}"
 
     CHANGELOG_FILE="${PKG_NAME}.changelog"
     bash "${SCRIPT_DIR}/generate-changelog.sh" "${GITHUB_REPO}" "${TAG}" "${CHANGELOG_FILE}" "${API_VER}"
