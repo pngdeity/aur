@@ -21,3 +21,11 @@ logpipe.*
 
 # Handoff directory
 handoffs/
+
+# Generated wrapper artifacts
+packages/*/package.pkl
+packages/*/package.json
+manifest.json
+
+# SRCINFO as build artifact (per SRCINFO-VERSION-CONTROL-POLICY.md)
+packages/*/.SRCINFO
