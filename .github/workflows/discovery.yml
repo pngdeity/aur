@@ -22,8 +22,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - id: get-updates
-        name: Consolidate, Run nvchecker, and Sync
+      - name: Consolidate, Run nvchecker, and Sync
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -53,12 +52,26 @@ jobs:
             bash scripts/sync-package.sh "$NAME" "$VER"
           done
 
-          # Validate pkgdesc consistency before committing (gate: blocks push of inconsistent state)
+      - name: Check pkgdesc Consistency
+        run: |
           if ! bash scripts/check-pkgdesc-consistency.sh --ci; then
             echo "::error::Aborting discovery pipeline — pkgdesc consistency violations found."
             exit 1
           fi
 
+      - name: Validate PKGBUILDs with Pkl
+        run: |
+          pacman -S --noconfirm python-yaml
+          curl -Lo /usr/local/bin/pkl https://github.com/apple/pkl/releases/download/0.25.3/pkl-linux-amd64
+          chmod +x /usr/local/bin/pkl
+          if ! bash scripts/validate-pkgbuilds-pkl.sh; then
+            echo "::error::Pkl validation failed — blocking push"
+            exit 1
+          fi
+
+      - id: get-updates
+        name: Filter and Push Updates
+        run: |
           # Filter out packages with PREREVIEW markers (build logic changed, needs human review)
           UPDATED_NAMES=$(jq -r 'select(.event=="updated") | .name' results.json | jq -R . | jq -s -c .)
           BLOCKED_NAMES="[]"
