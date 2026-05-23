@@ -46,3 +46,8 @@ npm = "@google/jules"
 source = "github"
 github = "Duncaen/OpenDoas"
 use_latest_tag = true
+
+[pkl-lsp-bin]
+source = "github"
+github = "colelawrence/pkl-lsp"
+use_latest_tag = true
