@@ -47,6 +47,12 @@ source = "github"
 github = "Duncaen/OpenDoas"
 use_latest_tag = true
 
+[go-regal-bin]
+source = "github"
+github = "StyraInc/regal"
+use_latest_tag = true
+prefix = "v"
+
 [pkl-lsp-bin]
 source = "github"
 github = "colelawrence/pkl-lsp"

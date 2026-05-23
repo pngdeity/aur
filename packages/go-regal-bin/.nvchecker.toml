@@ -1,0 +1,5 @@
+[go-regal-bin]
+source = "github"
+github = "StyraInc/regal"
+use_latest_tag = true
+prefix = "v"
