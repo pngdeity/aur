@@ -11,18 +11,18 @@ coalesce_checksums(pkg) := c if {
 	c = pkg.sha256sums
 } else := c if {
 	pkg.sha512sums != null
-	c == pkg.sha512sums
+	c = pkg.sha512sums
 } else := c if {
 	pkg.sha224sums != null
-	c == pkg.sha224sums
+	c = pkg.sha224sums
 } else := c if {
 	pkg.sha384sums != null
-	c == pkg.sha384sums
+	c = pkg.sha384sums
 } else := c if {
 	pkg.b2sums != null
-	c == pkg.b2sums
+	c = pkg.b2sums
 } else := [] if {
-	c == []
+	c = []
 }
 
 is_vcs_url(url) if {
@@ -39,6 +39,14 @@ is_vcs_url(url) if {
 
 is_vcs_url(url) if {
 	startswith(url, "bzr+")
+}
+
+is_pinned_source(url) if {
+	contains(url, "#tag=")
+}
+
+is_pinned_source(url) if {
+	contains(url, "#commit=")
 }
 
 is_empty_or_null(v) if {
@@ -263,20 +271,11 @@ deny_no_self_reference contains msg if {
 }
 
 # ─────────────────────────────────────────────────────────────────────
-# Rule 6: deploy_aur_subarch_mutex (ERROR)
-# _deploy_aur=true and _repo_subarch set are mutually exclusive.
+# Rule 6: deploy_aur_subarch_mutex (moved to Pkl constraint)
+# Enforced natively by schemas/arch_pkg.pkl — the Rego version is retired.
+# Removed 2026-05-23: Pkl's local fixed constraint sees hidden fields
+# that OPA cannot access via JSON manifest.
 # ─────────────────────────────────────────────────────────────────────
-deny_deploy_aur_subarch_mutex contains msg if {
-	pkg := input.packages[_]
-	not has_exception(pkg, "deploy_aur_subarch_mutex")
-	pkg._deploy_aur == true
-	pkg._repo_subarch != null
-
-	msg := sprintf(
-		"%s: _deploy_aur=true is mutually exclusive with _repo_subarch='%s' — AUR packages cannot be sub-architecture variants (deploy_aur_subarch_mutex rule)",
-		[pkg.pkgname, pkg._repo_subarch],
-	)
-}
 
 # ─────────────────────────────────────────────────────────────────────
 # Rule 7: pkgdesc_consistency (ERROR)
@@ -448,6 +447,20 @@ warn_vcs_skip contains msg if {
 warn_vcs_skip contains msg if {
 	pkg := input.packages[_]
 	not has_exception(pkg, "vcs_skip")
+	checksums := coalesce_checksums(pkg)
+	src := pkg.source[i]
+	checksums[i] == "SKIP"
+	is_pinned_source(src.url)
+
+	msg := sprintf(
+		"%s: pinned source '%s' has SKIP checksum — should have integrity hash (vcs_skip rule)",
+		[pkg.pkgname, src.filename],
+	)
+}
+
+warn_vcs_skip contains msg if {
+	pkg := input.packages[_]
+	not has_exception(pkg, "vcs_skip")
 	src := pkg.source_x86_64[i]
 	pkg.sha512sums_x86_64[i] == "SKIP"
 	not is_vcs_url(src.url)
@@ -472,17 +485,92 @@ warn_vcs_skip contains msg if {
 }
 
 # ─────────────────────────────────────────────────────────────────────
-# Rule 12: maintainer_present (WARN)
-# Every package should declare a maintainer. The KCL schema does not
-# model # Maintainer: comments — this emits a constant per-package
-# reminder for manual verification.
+# Rule 12: deny_missing_maintainer (FAIL)
+# Every package must declare a maintainer in "Name <email>" format.
+# The Pkl schema enforces format — this is a presence safety net.
 # ─────────────────────────────────────────────────────────────────────
-warn_maintainer_present contains msg if {
+deny_missing_maintainer contains msg if {
 	pkg := input.packages[_]
-	not has_exception(pkg, "maintainer_present")
+	not has_exception(pkg, "missing_maintainer")
+	object.get(pkg, "maintainer", null) == null
 	msg := sprintf(
-		"%s: maintainer attribution not modeled in schema — verify manually (maintainer_present rule)",
+		"%s: maintainer is missing (must be 'Name <email>')",
 		[pkg.pkgname],
+	)
+}
+
+# ─────────────────────────────────────────────────────────────────────
+# Rule 13: deny_arch_any_arch_specific (ERROR)
+# arch=('any') packages must not declare architecture-specific
+# source arrays — makepkg will never download them.
+# ─────────────────────────────────────────────────────────────────────
+deny_arch_any_arch_specific contains msg if {
+	pkg := input.packages[_]
+	not has_exception(pkg, "arch_any_arch_specific")
+	pkg.arch == ["any"]
+	count(pkg.source_x86_64) > 0
+	msg := sprintf(
+		"%s: arch='any' but source_x86_64[] has %d entries — arch-specific sources will never be downloaded (arch_any_arch_specific rule)",
+		[pkg.pkgname, count(pkg.source_x86_64)],
+	)
+}
+
+deny_arch_any_arch_specific contains msg if {
+	pkg := input.packages[_]
+	not has_exception(pkg, "arch_any_arch_specific")
+	pkg.arch == ["any"]
+	count(pkg.source_aarch64) > 0
+	msg := sprintf(
+		"%s: arch='any' but source_aarch64[] has %d entries — arch-specific sources will never be downloaded (arch_any_arch_specific rule)",
+		[pkg.pkgname, count(pkg.source_aarch64)],
+	)
+}
+
+# ─────────────────────────────────────────────────────────────────────
+# Rule 14: deny_vcs_without_skip (ERROR)
+# VCS source URLs (git+, svn+, hg+, bzr+) must have "SKIP" checksums.
+# Without SKIP, makepkg will checksum-verify a moving target.
+# ─────────────────────────────────────────────────────────────────────
+deny_vcs_without_skip contains msg if {
+	pkg := input.packages[_]
+	not has_exception(pkg, "vcs_without_skip")
+	checksums := coalesce_checksums(pkg)
+	src := pkg.source[i]
+	is_vcs_url(src.url)
+	not is_pinned_source(src.url)
+	checksums[i] != "SKIP"
+
+	msg := sprintf(
+		"%s: VCS source '%s' must have SKIP checksum (vcs_without_skip rule)",
+		[pkg.pkgname, object.get(src, "filename", src.url)],
+	)
+}
+
+deny_vcs_without_skip contains msg if {
+	pkg := input.packages[_]
+	not has_exception(pkg, "vcs_without_skip")
+	src := pkg.source_x86_64[i]
+	is_vcs_url(src.url)
+	not is_pinned_source(src.url)
+	pkg.sha512sums_x86_64[i] != "SKIP"
+
+	msg := sprintf(
+		"%s: VCS source_x86_64 '%s' must have SKIP checksum (vcs_without_skip rule)",
+		[pkg.pkgname, object.get(src, "filename", src.url)],
+	)
+}
+
+deny_vcs_without_skip contains msg if {
+	pkg := input.packages[_]
+	not has_exception(pkg, "vcs_without_skip")
+	src := pkg.source_aarch64[i]
+	is_vcs_url(src.url)
+	not is_pinned_source(src.url)
+	pkg.sha512sums_aarch64[i] != "SKIP"
+
+	msg := sprintf(
+		"%s: VCS source_aarch64 '%s' must have SKIP checksum (vcs_without_skip rule)",
+		[pkg.pkgname, object.get(src, "filename", src.url)],
 	)
 }
 

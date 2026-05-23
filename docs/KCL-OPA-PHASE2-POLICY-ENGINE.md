@@ -578,28 +578,28 @@ is_vcs_url(url) {
 - `opendoas`: VCS git+https URL with SKIP checksum (if present) → pass; local patches with real hashes → pass
 - Hypothetical: `https://example.com/pkg.tar.gz` with SKIP checksum → WARN
 
-### 3.12 Rule 12: `maintainer_present`
+### 3.12 Rule 12: `deny_missing_maintainer`
 
-**Severity**: WARN
+**Severity**: FAIL
 **Source**: Repo convention (`AGENTS.md` §2 Identity & Security)
 **Scope**: Per-package
 
-```
-Rule: Every package should declare a maintainer.
-Trigger: No package metadata indicating maintainer attribution.
-```
+Every package must declare a maintainer in "Name <email>" format. The Pkl schema
+enforces the format; this rule catches cases where the field is absent entirely.
 
 **Rego implementation**:
 
 ```rego
-warn_maintainer_present contains msg if {
+deny_missing_maintainer contains msg if {
     pkg := input.packages[_]
-    msg := sprintf("%s: maintainer attribution not modeled in KCL schema — verify manually (maintainer_present rule)",
-                   [pkg.pkgname])
+    not has_exception(pkg, "missing_maintainer")
+    object.get(pkg, "maintainer", null) == null
+    msg := sprintf(
+        "%s: maintainer is missing (must be 'Name <email>')",
+        [pkg.pkgname],
+    )
 }
 ```
-
-**Note**: This rule is inherently limited because the KCL schema does not model `# Maintainer:` comments. It emits a constant per-package warning as a reminder. The repository's `# Maintainer: pngdeity <pngdeity@tutanota.com>` convention is enforced by `sync-package.sh` and human review, not programmatically by OPA. Registered as a warning to avoid blocking builds.
 
 ---
 
@@ -738,7 +738,7 @@ CONFTEST_BIN="${CONFTEST_BIN:-conftest}"
 SKIP_OPA="${SKIP_OPA:-}"
 TMPDIR="${TMPDIR:-/tmp}/kcl-validate-$$"
 PACKAGES_DIR="packages"
-SCHEMA_FILE="schemas/arch_pkg.k"
+SCHEMA_FILE="schemas/arch_pkg.pkl"
 POLICIES_DIR="policies"
 FAILED=0
 

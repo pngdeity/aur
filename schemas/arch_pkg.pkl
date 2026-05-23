@@ -20,21 +20,26 @@ import "custom_types.pkl" as ct
 /// Known architecture values (PKGBUILD(5) §7.7)
 typealias KnownArchitecture = "x86_64"|"i686"|"aarch64"|"armv7h"|"arm"|"any"
 
-/// License identifier. Either "custom" (optionally with ":" qualifier) or an SPDX identifier.
-typealias LicenseId = "custom"|String(matches(Regex(#"^custom:[A-Za-z0-9.+_-]+$"#)))|spdx.SpdxId
+/// License identifier. Either "custom" (optionally with ":" qualifier), "LicenseRef-*" (SPDX custom), or an SPDX identifier.
+typealias LicenseId = "custom"|String(matches(Regex(#"^custom:[A-Za-z0-9.+_-]+$"#)))|String(matches(Regex(#"^LicenseRef-[A-Za-z0-9.-]+$"#)))|spdx.SpdxId
 
-/// Dependency entry: package name with optional version constraint (>=, <=, =, >, <) and optional epoch.
-typealias DependsEntry = String(matches(Regex(#"^[a-z0-9@._+][a-z0-9@._+-]*(?:(?:[<>]=|[<>=])(?:\d+:)?[a-zA-Z0-9._]+)*$"#)))
+/// Dependency entry: package name with optional single version constraint (>=, <=, =, >, <) and optional epoch.
+/// Multiple constraints require separate array entries (PKGBUILD(5) convention).
+typealias DependsEntry = String(matches(Regex(#"^[a-z0-9@._+][a-z0-9@._+-]*(?:(?:[<>]=|[<>=])(?:\d+:)?[a-zA-Z0-9._]+)?$"#)))
+
+/// Provision entry: package name with optional =version (no comparison operators per PKGBUILD(5)).
+typealias ProvidesEntry = String(matches(Regex(#"^[a-z0-9@._+][a-z0-9@._+-]*(?:=(?:\d+:)?[a-zA-Z0-9._]+)?$"#)))
 
 /// Checksum entry: hex digest or "SKIP" (VCS sources).
 typealias ChecksumEntry = "SKIP"|String(matches(Regex(#"^[A-Fa-f0-9]+$"#)))
 
 /// Known makepkg option flags (PKGBUILD(5) §7.19)
 typealias KnownOption = "!strip"|"!debug"|"!lto"|"!staticlibs"|"!emptydirs"
-                       |"!zipman"|"!purge"|"!libtool"|"!ccache"|"!buildflags"
-                       |"!makeflags"
-                       |"staticlibs"|"zipman"|"purge"|"libtool"
-                       |"strip"|"debug"|"lto"|"makeflags"|"buildflags"
+                       |"!zipman"|"!docs"|"!libtool"|"!ccache"|"!distcc"
+                       |"!buildflags"|"!makeflags"
+                       |"strip"|"debug"|"lto"|"staticlibs"|"emptydirs"
+                       |"zipman"|"docs"|"libtool"|"ccache"|"distcc"
+                       |"buildflags"|"makeflags"
 
 // ── Sub-Classes ──
 
@@ -62,19 +67,31 @@ class OptDependsEntry {
 
 /// Top-level PKGBUILD class. Closed by default — no undeclared properties are permitted.
 class Package {
+  // Identity (PKGBUILD(5) convention: # Maintainer:/# Contributor: comments)
+
+  /// Primary maintainer. Must match "Name <email>" format (PKGBUILD(5) convention).
+  maintainer: String(matches(Regex(#"^[^<>]+ <[^<>]+@[^<>]+>$"#)))
+    = "pngdeity <pngdeity@tutanota.com>"
+
+  /// Past contributors. Free-form — may be bare name, "Name <email>", or "Name <url>" (PKGBUILD(5) convention, loosely enforced).
+  contributor: Listing<String(this.length > 0)>?
+
   // Identity & Versioning (PKGBUILD(5) §7.1-7.5, 7.16)
 
   /// Package name. Must start with alphanumeric, @, ., _, or + (not hyphen).
   pkgname: String(matches(Regex(#"^[a-z0-9@._+][a-z0-9@._+-]*$"#)))
 
-  /// Software version number. Must not contain hyphens or whitespace (PKGBUILD(5)).
-  pkgver: String(matches(Regex(#"^[^- \t]+$"#)))
+  /// Split package group name. Defaults to first element of pkgname if omitted (PKGBUILD(5)).
+  pkgbase: String(matches(Regex(#"^[a-z0-9@._+][a-z0-9@._+-]*$"#)))?
+
+  /// Software version number. Must not contain colons, forward slashes, hyphens, or whitespace (PKGBUILD(5)).
+  pkgver: String(matches(Regex(#"^[^-/: \t]+$"#)))
 
   /// Packaging revision index. Positive number, floats allowed for variant builds.
   pkgrel: Number(this > 0)
 
-  /// Epoch (only set when version numbering changes)
-  epoch: Int(this >= 0)?
+  /// Epoch (only set when version numbering changes). Must be positive (> 0); default is 0 when omitted.
+  epoch: Int(this > 0)?
 
   /// Package description. Must be 1-80 characters.
   pkgdesc: String(this.length > 0 && this.length <= 80)
@@ -87,8 +104,8 @@ class Package {
   /// Target architectures. If "any" is present, it must be the sole entry.
   arch: Listing<KnownArchitecture>(!this.contains("any") || this.length == 1)
 
-  /// Upstream URL. Must start with https:// or git+https://.
-  url: String(this.startsWith("https://") || this.startsWith("git+https://"))
+  /// Upstream URL. Must start with https://.
+  url: String(this.startsWith("https://"))
 
   /// Software licenses
   license: Listing<LicenseId>
@@ -110,8 +127,8 @@ class Package {
   /// Optional dependencies with descriptions
   optdepends: Listing<OptDependsEntry>?
 
-  /// Virtual packages provided. Same format as depends.
-  provides: Listing<DependsEntry>?
+  /// Virtual packages provided. Must be bare name or name=version only (no comparison operators).
+  provides: Listing<ProvidesEntry>?
 
   /// Conflicting packages. Same format as depends.
   conflicts: Listing<DependsEntry>?
@@ -138,8 +155,8 @@ class Package {
   sha512sums_x86_64: Listing<ChecksumEntry>?
   sha512sums_aarch64: Listing<ChecksumEntry>?
 
-  /// Valid PGP key fingerprints. Hex digits, optionally space-separated.
-  validpgpkeys: Listing<String(matches(Regex(#"^[A-Fa-f0-9 ]+$"#)))>?
+  /// Valid PGP key fingerprints. Uppercase hex only, no whitespace (PKGBUILD(5)).
+  validpgpkeys: Listing<String(matches(Regex(#"^[A-F0-9]+$"#)))>?
 
   /// Source files to not extract
   noextract: Listing<String(this.length > 0 && !this.startsWith("/"))>?
@@ -150,13 +167,16 @@ class Package {
   install: String(!this.contains("/") && this.length > 0 && this.endsWith(".install"))?
 
   /// Configuration files to preserve on upgrade. Relative paths (no leading /).
-  backup: Listing<String(!this.startsWith("/"))>?
+  backup: Listing<String(this.length > 0 && !this.startsWith("/"))>?
 
   /// makepkg option flags
   options: Listing<KnownOption>?
 
   // Lifecycle Functions (PKGBUILD(5) §8.8-8.9)
   // Stored as raw Bash text. Named "packageFunc" because "package" is a Pkl keyword.
+
+  /// verify() — source authentication. Runs before extraction (PKGBUILD(5)).
+  verify: String(!this.isEmpty)?
 
   /// pkgver() dynamic version function (VCS packages)
   pkgverFunc: String(!this.isEmpty)?
@@ -178,10 +198,10 @@ class Package {
   // These drive build system behavior but are not part of the rendered PKGBUILD.
 
   /// AUR deployment gate. Mutually exclusive with _repo_subarch.
-  hidden _deploy_aur: Boolean = false
+  _deploy_aur: Boolean = false
 
   /// Canonical software name (without variant suffix). Discriminator for variant groups.
-  hidden _pkgname: String?
+  _pkgname: String?
 
   /// GitHub owner/repo for changelog generation
   hidden _githubname: ct.GitHubName?
@@ -221,6 +241,12 @@ class Package {
   /// Local helper variable (convenience alias, e.g. _name=$pkgname)
   hidden _name: String?
 
+  // ── Cross-Field Constraints ──
+
+  /// _deploy_aur and _repo_subarch are mutually exclusive (AGENTS.md §AUR Deployment Gate).
+  local deploy_aur_subarch_mutex: Boolean =
+    !(_deploy_aur && _repo_subarch != null)
+
   // ── Renderer Methods ──
 
   /// Quote a string for PKGBUILD output.
@@ -254,11 +280,22 @@ class Package {
   /// Follows PKGBUILD(5) canonical field ordering.
   function renderPKGBUILD(): String =
     new Listing {
-      "# Maintainer: pngdeity <pngdeity@tutanota.com>"
+      "# Maintainer: \(maintainer)"
+      when (contributor != null && !contributor.isEmpty) {
+        let (cl = contributor!!)
+        new Listing {
+          for (c in cl) {
+            "# Contributor: \(c)"
+          }
+        }.join("\n")
+      }
       ""
 
       // Identity & Versioning
       "pkgname=\(pkgname)"
+      when (pkgbase != null) {
+        let (b = pkgbase!!) "pkgbase=\(b)"
+      }
       "pkgver=\(pkgver)"
       "pkgrel=\(pkgrel)"
 
@@ -355,6 +392,9 @@ class Package {
 
       // Lifecycle Functions
       // Note: packageFunc is rendered as "package()" — the Pkl keyword transformation.
+      when (verify != null) {
+        _renderFunc("verify", verify)
+      }
       when (pkgverFunc != null) {
         _renderFunc("pkgver", pkgverFunc)
       }

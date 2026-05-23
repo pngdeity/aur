@@ -221,7 +221,7 @@ Pkl is a configuration language with type validation, **not** a policy engine. I
 | 9. `required_fields` | **Yes** | Non-optional fields on class | Already enforced |
 | 10. `source_integrity` | Partial | Can enforce checksum array presence; length equality requires iteration | Partial Pkl; OPA for completeness |
 | 11. `vcs_skip` | No | — | Requires URL protocol parsing |
-| 12. `maintainer_present` | No | — | KCL schema doesn't model comments; same limitation for Pkl |
+| 12. `deny_missing_maintainer` | Yes | — | Schema now models maintainer field; OPA gate-checks for absence. |
 
 **Pkl covers 3 of 12 rules at the schema level** (rules 6, 8, 9), versus KCL's 2 (rules 8, 9). Rule 6 (`deploy_aur_subarch_mutex`) can be expressed as a Pkl type constraint because it's a simple cross-field conditional, whereas KCL expresses it in a `check:` block.
 

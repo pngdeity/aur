@@ -26,6 +26,10 @@ rules:
     directory-package-mismatch:
       level: ignore
       # policies/ directory contains repository.rego, not main.rego. Conftest compatible.
+    prefer-equals-comparison:
+      level: ignore
+      # First variable binding via `=` is required in else-chain bodies.
+      # Using `==` makes the compiler treat c as unsafe. See coalesce_checksums.
     equals-pattern-matching:
       level: ignore
       # is_empty_or_null uses explicit v == null checks for clarity.

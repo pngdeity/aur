@@ -2,6 +2,7 @@
   "version": 1,
   "packages": {
     "amass-bin": {
+      "maintainer": "pngdeity <pngdeity@tutanota.com>",
       "pkgname": "amass-bin",
       "pkgver": "5.1.1",
       "pkgrel": 1,
@@ -29,9 +30,12 @@
       "sha512sums": [
         "6e7289beaf0809e4795f9715de0bd739a41a89493a27b8134c9696f620eff8bca355c92bd83207244da1763f52b4b97e9d4f4201ece357bdaf45cad48c26c8ed"
       ],
-      "packageFunc": "cd \"${_pkgname}_linux_amd64\";\ninstall -dm 755 \"${pkgdir}/usr/share/${_pkgname}\";\ninstall -Dm 755 ${_pkgname} \"${pkgdir}/usr/bin/${_pkgname}\";\ncp -a --no-preserve=ownership \"resources/\" \"${pkgdir}/usr/share/${_pkgname}\";\nfind \"${pkgdir}/usr/share/${_pkgname}/resources\" -type d -exec chmod 755 {} \\;;\nfind \"${pkgdir}/usr/share/${_pkgname}/resources\" -type f -exec chmod 644 {} \\;"
+      "packageFunc": "cd \"${_pkgname}_linux_amd64\";\ninstall -dm 755 \"${pkgdir}/usr/share/${_pkgname}\";\ninstall -Dm 755 ${_pkgname} \"${pkgdir}/usr/bin/${_pkgname}\";\ncp -a --no-preserve=ownership \"resources/\" \"${pkgdir}/usr/share/${_pkgname}\";\nfind \"${pkgdir}/usr/share/${_pkgname}/resources\" -type d -exec chmod 755 {} \\;;\nfind \"${pkgdir}/usr/share/${_pkgname}/resources\" -type f -exec chmod 644 {} \\;",
+      "_deploy_aur": true,
+      "_pkgname": "amass"
     },
     "amass-git": {
+      "maintainer": "pngdeity <pngdeity@tutanota.com>",
       "pkgname": "amass-git",
       "pkgver": "5.1.1.r0.g79299dc",
       "pkgrel": 2,
@@ -69,13 +73,79 @@
       ],
       "pkgverFunc": "cd \"${_pkgname}\";\ngit describe --long --tags --abbrev=7 | sed 's/^v//;s/\\([^-]*-g\\)/r\\1/;s/-/./g'",
       "build": "cd \"${_pkgname}\";\nmkdir -p bin;\ngo build -trimpath -o bin/amass ./cmd/amass",
-      "packageFunc": "cd \"${_pkgname}\";\ninstall -Dm755 bin/amass \"${pkgdir}/usr/bin/amass\";\ninstall -Dm644 LICENSE \"${pkgdir}/usr/share/licenses/${pkgname}/LICENSE\";\ninstall -dm 755 \"${pkgdir}/usr/share/${_pkgname}\";\ncp -a --no-preserve=ownership \"resources/\" \"${pkgdir}/usr/share/${_pkgname}\";\nfind \"${pkgdir}/usr/share/${_pkgname}/resources\" -type d -exec chmod 755 {} \\;;\nfind \"${pkgdir}/usr/share/${_pkgname}/resources\" -type f -exec chmod 644 {} \\;"
+      "packageFunc": "cd \"${_pkgname}\";\ninstall -Dm755 bin/amass \"${pkgdir}/usr/bin/amass\";\ninstall -Dm644 LICENSE \"${pkgdir}/usr/share/licenses/${pkgname}/LICENSE\";\ninstall -dm 755 \"${pkgdir}/usr/share/${_pkgname}\";\ncp -a --no-preserve=ownership \"resources/\" \"${pkgdir}/usr/share/${_pkgname}\";\nfind \"${pkgdir}/usr/share/${_pkgname}/resources\" -type d -exec chmod 755 {} \\;;\nfind \"${pkgdir}/usr/share/${_pkgname}/resources\" -type f -exec chmod 644 {} \\;",
+      "_deploy_aur": true,
+      "_pkgname": "amass"
+    },
+    "apm-bin": {
+      "maintainer": "Nathan Somers <pngdeity@tutanota.com>",
+      "contributor": [
+        "Mohamed Hisham Abdelzaher <mohamed.hisham.abdelzaher@gmail.com>"
+      ],
+      "pkgname": "apm-bin",
+      "pkgver": "0.14.1",
+      "pkgrel": 1,
+      "pkgdesc": "Agent Package Manager by Microsoft",
+      "arch": [
+        "x86_64",
+        "aarch64"
+      ],
+      "url": "https://github.com/microsoft/apm",
+      "license": [
+        "MIT"
+      ],
+      "depends": [
+        "git",
+        "glibc>=2.35"
+      ],
+      "provides": [
+        "apm=0.14.1"
+      ],
+      "conflicts": [
+        "apm"
+      ],
+      "source": [
+        {
+          "url": "https://raw.githubusercontent.com/microsoft/apm/v0.14.1/LICENSE",
+          "filename": "LICENSE"
+        }
+      ],
+      "source_x86_64": [
+        {
+          "url": "https://github.com/microsoft/apm/releases/download/v0.14.1/apm-linux-x86_64.tar.gz",
+          "filename": "https://github.com/microsoft/apm/releases/download/v0.14.1/apm-linux-x86_64.tar.gz"
+        }
+      ],
+      "source_aarch64": [
+        {
+          "url": "https://github.com/microsoft/apm/releases/download/v0.14.1/apm-linux-arm64.tar.gz",
+          "filename": "https://github.com/microsoft/apm/releases/download/v0.14.1/apm-linux-arm64.tar.gz"
+        }
+      ],
+      "sha512sums": [
+        "b5abd9f896a468d8d5459c1a475c973e4d16c7df52f11edae95ad5af0886885e87d5cc626f40fcc844f1288a47e923101e0c88f620d4215769286b367044b510"
+      ],
+      "sha512sums_x86_64": [
+        "8f45f05d92ae2d5d94e949719c855b350a0b84d433f5eaed4f1696a07503941e4028cc64525286d39c98e35e80fdc5394b337339066f10554d14488466aa1c0a"
+      ],
+      "sha512sums_aarch64": [
+        "3c593a455599924aa96a7cffcc417e67bcf775ab22176c85689691c4b1f55513ae5c9d5f9305094213fc43d76fc9bbf04c3a2835126e069463d5f88c9fdba01b"
+      ],
+      "options": [
+        "!strip"
+      ],
+      "packageFunc": "install -d \"${pkgdir}/usr/lib/apm\";\nif [[ \"${CARCH}\" == \"aarch64\" ]]; then\n    cp -a \"${srcdir}/apm-linux-arm64/\"* \"${pkgdir}/usr/lib/apm/\";\nelse\n    cp -a \"${srcdir}/apm-linux-x86_64/\"* \"${pkgdir}/usr/lib/apm/\";\nfi;\ninstall -d \"${pkgdir}/usr/bin\";\nln -sf \"/usr/lib/apm/apm\" \"${pkgdir}/usr/bin/apm\";\ninstall -Dm644 LICENSE \"${pkgdir}/usr/share/licenses/${pkgname}/LICENSE\"",
+      "_deploy_aur": false
     },
     "dnstwist": {
+      "maintainer": "pngdeity <pngdeity@tutanota.com>",
+      "contributor": [
+        "archlinuxaur <https://aur.archlinux.org/account/archlinuxaur>"
+      ],
       "pkgname": "dnstwist",
       "pkgver": "20250130",
       "pkgrel": 2,
-      "pkgdesc": "Domain name permutation engine for detecting typo squatting, phishing attacks, and brand impersonation",
+      "pkgdesc": "Domain name permutation engine for detecting typosquatting and phishing attacks",
       "arch": [
         "any"
       ],
@@ -135,9 +205,71 @@
         "8b6dd9c42a643a0e8b087903c0e6d75c0f6cebf94920ab0b7760ac2522c6bb42"
       ],
       "build": "cd \"$_name-$pkgver\";\npython -m build --wheel --no-isolation",
-      "packageFunc": "cd \"$_name-$pkgver\";\npython -m installer --destdir=\"$pkgdir\" dist/*.whl;\ninstall -Dm644 LICENSE -t \"$pkgdir/usr/share/licenses/$pkgname/\""
+      "packageFunc": "cd \"$_name-$pkgver\";\npython -m installer --destdir=\"$pkgdir\" dist/*.whl;\ninstall -Dm644 LICENSE -t \"$pkgdir/usr/share/licenses/$pkgname/\"",
+      "_deploy_aur": false
+    },
+    "go-regal-bin": {
+      "maintainer": "Nathan Somers <pngdeity@tutanota.com>",
+      "contributor": [
+        "NikoMitK"
+      ],
+      "pkgname": "go-regal-bin",
+      "pkgver": "0.40.0",
+      "pkgrel": 1,
+      "pkgdesc": "A linter and language server for Rego",
+      "arch": [
+        "x86_64",
+        "aarch64"
+      ],
+      "url": "https://github.com/StyraInc/regal",
+      "license": [
+        "Apache-2.0"
+      ],
+      "depends": [
+        "glibc"
+      ],
+      "provides": [
+        "go-regal",
+        "go-regal-git",
+        "regal"
+      ],
+      "conflicts": [
+        "go-regal",
+        "go-regal-git",
+        "regal"
+      ],
+      "source": [
+        {
+          "url": "https://raw.githubusercontent.com/StyraInc/regal/refs/heads/main/LICENSE",
+          "filename": "regal-license"
+        }
+      ],
+      "source_x86_64": [
+        {
+          "url": "https://github.com/StyraInc/regal/releases/download/v0.40.0/regal_Linux_x86_64",
+          "filename": "regal_Linux"
+        }
+      ],
+      "source_aarch64": [
+        {
+          "url": "https://github.com/StyraInc/regal/releases/download/v0.40.0/regal_Linux_arm64",
+          "filename": "regal_Linux"
+        }
+      ],
+      "sha512sums": [
+        "dc6b68d13b8cf959644b935f1192b02c71aa7a5cf653bd43b4480fa89eec8d4d3f16a2278ec8c3b40ab1fdb233b3173a78fd83590d6f739e0c9e8ff56c282557"
+      ],
+      "sha512sums_x86_64": [
+        "23916fdcda50e72612dd5e964763de6ae2554a638854c91515971504cc55527ce9bff890834a6361c7f3cf959eac72d3c2bf08946f0957768bba3f1b67cf99dd"
+      ],
+      "sha512sums_aarch64": [
+        "f3af02d0067653f03d4400598957d0cec4d08f208e6fe79aa76fd7afe3f18f931bfbe8d6e9dfcd1e87d2f12b4249755b38839a167bd8cc0956a3e8ac07830841"
+      ],
+      "packageFunc": "install -Dm644 \"${srcdir}/regal-license\" \"${pkgdir}/usr/share/licenses/${pkgname}/LICENSE\";\ninstall -Dm755 \"${srcdir}/regal_Linux\" \"${pkgdir}/usr/bin/regal\"",
+      "_deploy_aur": false
     },
     "jules-tools": {
+      "maintainer": "pngdeity <pngdeity@tutanota.com>",
       "pkgname": "jules-tools",
       "pkgver": "0.1.42",
       "pkgrel": 1,
@@ -168,9 +300,14 @@
       "noextract": [
         "jules-0.1.42.tgz"
       ],
-      "packageFunc": "cd $srcdir;\nlocal _npmdir=\"$pkgdir/usr/lib/node_modules/\";\nmkdir -p $_npmdir;\ncd $_npmdir;\nnpm install -g --prefix \"$pkgdir/usr\" \"$_npmscope/$_npmname@$_npmver\";\nchown -R root:root \"$pkgdir\""
+      "packageFunc": "cd $srcdir;\nlocal _npmdir=\"$pkgdir/usr/lib/node_modules/\";\nmkdir -p $_npmdir;\ncd $_npmdir;\nnpm install -g --prefix \"$pkgdir/usr\" \"$_npmscope/$_npmname@$_npmver\";\nchown -R root:root \"$pkgdir\"",
+      "_deploy_aur": false
     },
     "opencode-git": {
+      "maintainer": "pngdeity <pngdeity@tutanota.com>",
+      "contributor": [
+        "robertfoster <morf3089@gmail.com>"
+      ],
       "pkgname": "opencode-git",
       "pkgver": "1.15.0",
       "pkgrel": 1,
@@ -234,9 +371,16 @@
       "prepare": "cd \"$_pkgname\";\nbun install --frozen-lockfile --ignore-scripts",
       "build": "cd \"$_pkgname\";\nOPENCODE_VERSION=$pkgver MODELS_DEV_API_JSON=\"${srcdir}/models.dev-api.json\" bun run --cwd packages/opencode build --single --baseline --skip-install",
       "check": "cd \"$_pkgname/packages/opencode\"",
-      "packageFunc": "local target;\ncd \"$_pkgname\";\ntarget=\"$(_target_arch)\";\ninstall -Dm755 \"packages/opencode/dist/opencode-linux-${target}/bin/opencode\" \"${pkgdir}/usr/bin/opencode\";\nSHELL=/bin/bash \"${pkgdir}/usr/bin/opencode\" completion | install -Dm644 /dev/stdin \"${pkgdir}/usr/share/bash-completion/completions/opencode\";\nSHELL=/bin/zsh \"${pkgdir}/usr/bin/opencode\" completion | install -Dm644 /dev/stdin \"${pkgdir}/usr/share/zsh/site-functions/_opencode\";\ninstall -Dm644 LICENSE \"${pkgdir}/usr/share/licenses/${pkgname}/LICENSE\""
+      "packageFunc": "local target;\ncd \"$_pkgname\";\ntarget=\"$(_target_arch)\";\ninstall -Dm755 \"packages/opencode/dist/opencode-linux-${target}/bin/opencode\" \"${pkgdir}/usr/bin/opencode\";\nSHELL=/bin/bash \"${pkgdir}/usr/bin/opencode\" completion | install -Dm644 /dev/stdin \"${pkgdir}/usr/share/bash-completion/completions/opencode\";\nSHELL=/bin/zsh \"${pkgdir}/usr/bin/opencode\" completion | install -Dm644 /dev/stdin \"${pkgdir}/usr/share/zsh/site-functions/_opencode\";\ninstall -Dm644 LICENSE \"${pkgdir}/usr/share/licenses/${pkgname}/LICENSE\"",
+      "_deploy_aur": true,
+      "_pkgname": "opencode"
     },
     "opendoas": {
+      "maintainer": "Nathan Somers <pngdeity@tutanota.com>",
+      "contributor": [
+        "alive4ever <alive4ever at live.com>",
+        "Earnest"
+      ],
       "pkgname": "opendoas",
       "pkgver": "6.8.2",
       "pkgrel": 1,
@@ -304,9 +448,64 @@
       "pkgverFunc": "cd \"$pkgname\";\ngit describe --long --tags | sed 's,^v,,; s|-\\(.*\\)-g|.r\\1.g|'",
       "prepare": "cd \"$pkgname\";\npatch -Np1 -i ../change-PATH.patch;\npatch -Np1 -i ../rowhammer.patch;\npatch -Np1 -i ../retry.patch;\npatch -Np1 -i ../arg-handling.patch;\npatch -Np1 -i ../post-release-v6.8.2.patch",
       "build": "cd \"$pkgname\";\n./configure --prefix=/usr --with-timestamp;\nmake",
-      "packageFunc": "cd \"$pkgname\";\nmake DESTDIR=\"$pkgdir\" install;\ninstall -Dm644 LICENSE -t \"$pkgdir/usr/share/licenses/$pkgname\""
+      "packageFunc": "cd \"$pkgname\";\nmake DESTDIR=\"$pkgdir\" install;\ninstall -Dm644 LICENSE -t \"$pkgdir/usr/share/licenses/$pkgname\"",
+      "_deploy_aur": false
+    },
+    "pkl-lsp-bin": {
+      "maintainer": "Nathan Somers <pngdeity@tutanota.com>",
+      "contributor": [
+        "colelawrence <https://github.com/colelawrence/pkl-lsp>"
+      ],
+      "pkgname": "pkl-lsp-bin",
+      "pkgver": "0.6.0",
+      "pkgrel": 1,
+      "pkgdesc": "Language Server Protocol implementation for Pkl (GraalVM native binary)",
+      "arch": [
+        "x86_64",
+        "aarch64"
+      ],
+      "url": "https://github.com/colelawrence/pkl-lsp",
+      "license": [
+        "Apache-2.0"
+      ],
+      "depends": [
+        "glibc",
+        "zlib"
+      ],
+      "provides": [
+        "pkl-lsp"
+      ],
+      "conflicts": [
+        "pkl-lsp"
+      ],
+      "source_x86_64": [
+        {
+          "url": "https://github.com/colelawrence/pkl-lsp/releases/download/0.6.0-native.20260518.5/pkl-lsp-0.6.0-native.20260518.5-linux-x64.tar.gz",
+          "filename": "https://github.com/colelawrence/pkl-lsp/releases/download/0.6.0-native.20260518.5/pkl-lsp-0.6.0-native.20260518.5-linux-x64.tar.gz"
+        }
+      ],
+      "source_aarch64": [
+        {
+          "url": "https://github.com/colelawrence/pkl-lsp/releases/download/0.6.0-native.20260518.5/pkl-lsp-0.6.0-native.20260518.5-linux-arm64.tar.gz",
+          "filename": "https://github.com/colelawrence/pkl-lsp/releases/download/0.6.0-native.20260518.5/pkl-lsp-0.6.0-native.20260518.5-linux-arm64.tar.gz"
+        }
+      ],
+      "sha512sums_x86_64": [
+        "922dfac283b844dfdbb30809bcbfd9b125a7f97d7c41ec476f73800653f4975098e0d546bae3f608e71b800212b5c8c8e7d6676cc9007da16019f2d9da87e39c"
+      ],
+      "sha512sums_aarch64": [
+        "8c9deb8dbe28de75383947cff3584f2248ae5a3c60bf582d24cdb2f464ab0dde8e841ff83e6b572f2ecee0fce0c9e03844addab497b00cface8dbb131046ab3d"
+      ],
+      "packageFunc": "install -Dm755 pkl-lsp \"${pkgdir}/usr/bin/pkl-lsp\"",
+      "_deploy_aur": true
     },
     "python-whois": {
+      "maintainer": "pngdeity <pngdeity@tutanota.com>",
+      "contributor": [
+        "Micha\u0142 Wojdy\u0142a <micwoj9292@gmail.com>",
+        "Pellegrino Prevete <pellegrinoprevete@gmail.com>",
+        "brent s. <bts@square-r00t.net>"
+      ],
       "pkgname": "python-whois",
       "pkgver": "0.9.6",
       "pkgrel": 2,
@@ -348,9 +547,17 @@
       ],
       "build": "cd \"$_name-$pkgver\";\npython -m build --wheel --no-isolation",
       "check": "cd \"$_name-$pkgver\";\npython -m pytest",
-      "packageFunc": "cd \"$_name-$pkgver\";\npython -m installer --destdir=\"$pkgdir\" dist/*.whl;\ninstall -Dm644 LICENSE.txt -t \"$pkgdir/usr/share/licenses/$pkgname/\""
+      "packageFunc": "cd \"$_name-$pkgver\";\npython -m installer --destdir=\"$pkgdir\" dist/*.whl;\ninstall -Dm644 LICENSE.txt -t \"$pkgdir/usr/share/licenses/$pkgname/\"",
+      "_deploy_aur": true
     },
     "ranger-doas": {
+      "maintainer": "pngdeity <pngdeity@tutanota.com>",
+      "contributor": [
+        "Levente Polyak <anthraxx[at]archlinux[dot]org>",
+        "Caleb Maclennan <caleb@alerque.com>",
+        "schuay <jakob.gruber@gmail.com>",
+        "Roman Zimbelmann <romanz@lavabit.com>"
+      ],
       "pkgname": "ranger-doas",
       "pkgver": "1.9.4",
       "pkgrel": 5,
@@ -492,7 +699,8 @@
       "prepare": "cd \"${pkgname%-doas}-${pkgver}\";\nsed -i 's/xdg-open -- /xdg-open /' \"ranger/config/rifle.conf\";\npatch -Np1 -i \"../doas-substitution.patch\";\npatch -Np1 -i \"../ranger-1.9.4-fix-ncurses-endwin-error-2.patch\";\npatch -Np1 -i \"../ranger-1.9.4-fix-ncurses-endwin-error-1.patch\";\npatch -Np1 -i \"../ranger-1.9.4-fix-ncurses-endwin-error-3.patch\"",
       "build": "cd \"${pkgname%-doas}-${pkgver}\";\npython -m build -wn",
       "check": "cd \"${pkgname%-doas}-${pkgver}\";\nlocal _pyver=$(python -c 'import sys; print(\"\".join(map(str, sys.version_info[:2])))');\nexport PYTHONPATH=\"$PWD/lib.linux-$CARCH-cpython-$_pyver\";\nexport TERM=linux;\npytest",
-      "packageFunc": "cd \"${pkgname%-doas}-${pkgver}\";\npython -m installer -d \"$pkgdir\" dist/*.whl"
+      "packageFunc": "cd \"${pkgname%-doas}-${pkgver}\";\npython -m installer -d \"$pkgdir\" dist/*.whl",
+      "_deploy_aur": false
     }
   },
   "exceptions": {
