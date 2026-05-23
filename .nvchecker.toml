@@ -23,6 +23,11 @@ source = "git"
 git = "https://github.com/owasp-amass/amass.git"
 prefix = "v"
 
+[apm-bin]
+source = "git"
+git = "https://github.com/microsoft/apm.git"
+prefix = "v"
+
 [python-whois]
 source = "pypi"
 pypi = "python-whois"
