@@ -104,7 +104,7 @@ Sources: Handoff §3.B/C, AGENTS.md variant conventions, TODO §62.
 | # | Rule Name | Trigger | Severity | Source |
 |---|-----------|---------|----------|--------|
 | 1 | `enforce_https` | Any `source[].url` starting with `http://` | ERROR | Handoff |
-| 2 | `privilege_escalation` | String `sudo` in any lifecycle function or `.install` file | ERROR | Handoff |
+| 2 | `privilege_escalation` | String `sudo` in any lifecycle function or `.install` file | WARN | Handoff |
 | 3 | `architecture_mismatch` | Architecture-specific flags on `arch=(any)` packages | WARN | Adapted from handoff "headless" rule |
 | 4 | `no_unprovided_conflicts` | Entry in `conflicts` or `replaces` not also in `provides` | ERROR | AGENTS.md |
 | 5 | `no_self_reference` | `pkgname` appearing in its own `provides` or `conflicts` | ERROR | AGENTS.md |

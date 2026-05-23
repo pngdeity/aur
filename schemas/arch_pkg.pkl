@@ -159,19 +159,19 @@ class Package {
   // Stored as raw Bash text. Named "packageFunc" because "package" is a Pkl keyword.
 
   /// pkgver() dynamic version function (VCS packages)
-  pkgverFunc: String?
+  pkgverFunc: String(!this.isEmpty)?
 
   /// prepare() — source preparation
-  prepare: String?
+  prepare: String(!this.isEmpty)?
 
   /// build() — compilation
-  build: String?
+  build: String(!this.isEmpty)?
 
   /// check() — test suite
-  check: String?
+  check: String(!this.isEmpty)?
 
   /// package() — packaging. Named "packageFunc" because "package" is a Pkl keyword.
-  packageFunc: String?
+  packageFunc: String(!this.isEmpty)?
 
   // Custom Variables (Repository-Specific)
   // Declared as "hidden" — accessible within the class, omitted from JSON output.

@@ -92,10 +92,13 @@ has_exception(pkg, rule) if {
 # Source URL protocols must be https:// or git+https://
 # FTP sources are valid per PKGBUILD(5)
 # ─────────────────────────────────────────────────────────────────────
+_all_source_arrays := {"source", "source_x86_64", "source_aarch64"}
+
 deny_enforce_https contains msg if {
 	pkg := input.packages[_]
 	not has_exception(pkg, "enforce_https")
-	src := pkg.source[_]
+	name := _all_source_arrays[_]
+	src := object.get(pkg, name, [])[_]
 	contains(src.url, "://")
 	not startswith(src.url, "https://")
 	not startswith(src.url, "git+https://")
@@ -266,17 +269,17 @@ deny_pkgdesc_consistency contains msg if {
 
 # ─────────────────────────────────────────────────────────────────────
 # Rule 8: valid_architectures (ERROR)
-# Arch array values must be from the known set: x86_64, aarch64, any.
+# Arch array values must be from the known set (matching KnownArchitecture in Pkl schema).
 # ─────────────────────────────────────────────────────────────────────
 deny_valid_architectures contains msg if {
 	pkg := input.packages[_]
 	not has_exception(pkg, "valid_architectures")
-	valid_arches := {"x86_64", "aarch64", "any"}
+	valid_arches := {"x86_64", "aarch64", "i686", "armv7h", "arm", "any"}
 
 	arch := pkg.arch[_]
 	not valid_arches[arch]
 
-	msg := sprintf("%s: unknown architecture '%s' — must be one of: x86_64, aarch64, any (valid_architectures rule)",
+	msg := sprintf("%s: unknown architecture '%s' — must be one of: x86_64, aarch64, i686, armv7h, arm, any (valid_architectures rule)",
 		[pkg.pkgname, arch])
 }
 
@@ -307,9 +310,11 @@ deny_required_fields contains msg if {
 
 # ─────────────────────────────────────────────────────────────────────
 # Rule 10: source_integrity (ERROR)
-# If source[] is present, exactly one checksum array must be present
-# and its length must match source[] length.
+# If source[] (or arch-specific variant) is present, a matching
+# checksum array must be present and its length must match.
 # ─────────────────────────────────────────────────────────────────────
+
+# Generic source ↔ checksum
 deny_source_integrity contains msg if {
 	pkg := input.packages[_]
 	not has_exception(pkg, "source_integrity")
@@ -334,6 +339,46 @@ deny_source_integrity contains msg if {
 		[pkg.pkgname, count(pkg.source), count(checksums)])
 }
 
+# Arch-specific source_x86_64 ↔ sha512sums_x86_64
+deny_source_integrity contains msg if {
+	pkg := input.packages[_]
+	not has_exception(pkg, "source_integrity")
+	count(pkg.source_x86_64) > 0
+	not has_field(pkg, "sha512sums_x86_64")
+
+	msg := sprintf("%s: source_x86_64[] has %d entries but no sha512sums_x86_64 present (source_integrity rule)",
+		[pkg.pkgname, count(pkg.source_x86_64)])
+}
+
+deny_source_integrity contains msg if {
+	pkg := input.packages[_]
+	not has_exception(pkg, "source_integrity")
+	count(pkg.source_x86_64) != count(pkg.sha512sums_x86_64)
+
+	msg := sprintf("%s: source_x86_64[] has %d entries but sha512sums_x86_64 has %d entries (source_integrity rule)",
+		[pkg.pkgname, count(pkg.source_x86_64), count(pkg.sha512sums_x86_64)])
+}
+
+# Arch-specific source_aarch64 ↔ sha512sums_aarch64
+deny_source_integrity contains msg if {
+	pkg := input.packages[_]
+	not has_exception(pkg, "source_integrity")
+	count(pkg.source_aarch64) > 0
+	not has_field(pkg, "sha512sums_aarch64")
+
+	msg := sprintf("%s: source_aarch64[] has %d entries but no sha512sums_aarch64 present (source_integrity rule)",
+		[pkg.pkgname, count(pkg.source_aarch64)])
+}
+
+deny_source_integrity contains msg if {
+	pkg := input.packages[_]
+	not has_exception(pkg, "source_integrity")
+	count(pkg.source_aarch64) != count(pkg.sha512sums_aarch64)
+
+	msg := sprintf("%s: source_aarch64[] has %d entries but sha512sums_aarch64 has %d entries (source_integrity rule)",
+		[pkg.pkgname, count(pkg.source_aarch64), count(pkg.sha512sums_aarch64)])
+}
+
 # ─────────────────────────────────────────────────────────────────────
 # Rule 11: vcs_skip (WARN)
 # Non-VCS source entries should not have SKIP checksums.
@@ -347,6 +392,28 @@ warn_vcs_skip contains msg if {
 	not is_vcs_url(src.url)
 
 	msg := sprintf("%s: non-VCS source '%s' has SKIP checksum — should have integrity hash (vcs_skip rule)",
+		[pkg.pkgname, src.filename])
+}
+
+warn_vcs_skip contains msg if {
+	pkg := input.packages[_]
+	not has_exception(pkg, "vcs_skip")
+	src := pkg.source_x86_64[i]
+	pkg.sha512sums_x86_64[i] == "SKIP"
+	not is_vcs_url(src.url)
+
+	msg := sprintf("%s: non-VCS source_x86_64 '%s' has SKIP checksum — should have integrity hash (vcs_skip rule)",
+		[pkg.pkgname, src.filename])
+}
+
+warn_vcs_skip contains msg if {
+	pkg := input.packages[_]
+	not has_exception(pkg, "vcs_skip")
+	src := pkg.source_aarch64[i]
+	pkg.sha512sums_aarch64[i] == "SKIP"
+	not is_vcs_url(src.url)
+
+	msg := sprintf("%s: non-VCS source_aarch64 '%s' has SKIP checksum — should have integrity hash (vcs_skip rule)",
 		[pkg.pkgname, src.filename])
 }
 

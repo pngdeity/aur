@@ -128,7 +128,7 @@ Trigger: Any source[].url where protocol is http:// (not https://, git+https://,
 
 ```rego
 deny_enforce_https contains msg if {
-    pkg := input[_]
+    pkg := input.packages[_]
     src := pkg.source[_]
     not startswith(src.url, "https://")
     not startswith(src.url, "git+https://")
@@ -139,7 +139,7 @@ deny_enforce_https contains msg if {
 }
 
 deny_enforce_https contains msg if {
-    pkg := input[_]
+    pkg := input.packages[_]
     startswith(pkg.url, "http://")
 
     msg := sprintf("%s: url field '%s' must use HTTPS (enforce_https rule)",
@@ -159,7 +159,7 @@ Exception exemptions are handled by the `exception` rule (see §4.1) — deny ru
 
 ### 3.2 Rule 2: `privilege_escalation`
 
-**Severity**: ERROR
+**Severity**: WARN (rule name: `warn_privilege_escalation`)
 **Source**: Handoff §3.B
 **Scope**: Per-package
 
@@ -173,10 +173,10 @@ Trigger: String "sudo" (word boundary) appears in any of:
 **Rego implementation**:
 
 ```rego
-deny_privilege_escalation contains msg if {
-    pkg := input[_]
+warn_privilege_escalation contains msg if {
+    pkg := input.packages[_]
 
-    func_fields := [pkg.prepare, pkg.build, pkg.check, pkg.package, pkg.pkgver_func]
+    func_fields := [pkg.prepare, pkg.build, pkg.check, pkg.packageFunc, pkg.pkgverFunc]
     field_names := ["prepare", "build", "check", "package", "pkgver_func"]
 
     func := func_fields[i]
@@ -199,7 +199,7 @@ deny_privilege_escalation contains msg if {
 
 ```rego
 warn_install_present contains msg if {
-    pkg := input[_]
+    pkg := input.packages[_]
     pkg.install != null
     msg := sprintf("%s: has .install scriptlet '%s' — manually verify no sudo usage",
                    [pkg.pkgname, pkg.install])
@@ -223,7 +223,7 @@ Trigger: arch=["any"] AND (depends contains arch-specific packages like
 
 ```rego
 warn_architecture_mismatch contains msg if {
-    pkg := input[_]
+    pkg := input.packages[_]
     pkg.arch == ["any"]
 
     # Check for arch-specific dependency patterns
@@ -236,7 +236,7 @@ warn_architecture_mismatch contains msg if {
 }
 
 warn_architecture_mismatch contains msg if {
-    pkg := input[_]
+    pkg := input.packages[_]
     pkg.arch == ["any"]
 
     funcs := [pkg.prepare, pkg.build, pkg.check, pkg.package]
@@ -270,7 +270,7 @@ Trigger: conflicts[i] or replaces[i] not present in provides[]
 
 ```rego
 deny_no_unprovided_conflicts contains msg if {
-    pkg := input[_]
+    pkg := input.packages[_]
     conflict := pkg.conflicts[_]
     not conflict_in_provides(pkg, conflict)
 
@@ -279,7 +279,7 @@ deny_no_unprovided_conflicts contains msg if {
 }
 
 deny_no_unprovided_conflicts contains msg if {
-    pkg := input[_]
+    pkg := input.packages[_]
     replace := pkg.replaces[_]
     not conflict_in_provides(pkg, replace)
 
@@ -313,14 +313,14 @@ Trigger: pkgname appears in provides[] or conflicts[]
 
 ```rego
 deny_no_self_reference contains msg if {
-    pkg := input[_]
+    pkg := input.packages[_]
     pkg.provides[_] == pkg.pkgname
     msg := sprintf("%s: self-reference — provides contains own pkgname '%s' (no_self_reference rule)",
                    [pkg.pkgname, pkg.pkgname])
 }
 
 deny_no_self_reference contains msg if {
-    pkg := input[_]
+    pkg := input.packages[_]
     pkg.conflicts[_] == pkg.pkgname
     msg := sprintf("%s: self-reference — conflicts contains own pkgname '%s' (no_self_reference rule)",
                    [pkg.pkgname, pkg.pkgname])
@@ -347,7 +347,7 @@ Trigger: _deploy_aur == true AND _repo_subarch != null
 
 ```rego
 deny_deploy_aur_subarch_mutex contains msg if {
-    pkg := input[_]
+    pkg := input.packages[_]
     pkg._deploy_aur == true
     pkg._repo_subarch != null
 
@@ -411,7 +411,7 @@ Note: This duplicates the KCL schema `check` block. It's included in OPA for cas
 
 ```rego
 deny_valid_architectures contains msg if {
-    pkg := input[_]
+    pkg := input.packages[_]
     valid_arches := {"x86_64", "aarch64", "any"}
 
     arch := pkg.arch[_]
@@ -438,7 +438,7 @@ Trigger: Any required field is null, empty string, zero, or empty array.
 
 ```rego
 deny_required_fields contains msg if {
-    pkg := input[_]
+    pkg := input.packages[_]
     required := [
         {"name": "pkgname", "value": pkg.pkgname},
         {"name": "pkgver",  "value": pkg.pkgver},
@@ -490,7 +490,7 @@ Trigger: (source is non-empty) AND (no checksum array present OR
 
 ```rego
 deny_source_integrity contains msg if {
-    pkg := input[_]
+    pkg := input.packages[_]
     count(pkg.source) > 0
     pkg.sha256sums == null
     pkg.sha512sums == null
@@ -503,7 +503,7 @@ deny_source_integrity contains msg if {
 }
 
 deny_source_integrity contains msg if {
-    pkg := input[_]
+    pkg := input.packages[_]
     checksums := coalesce_checksums(pkg)
     count(pkg.source) != count(checksums)
 
@@ -549,7 +549,7 @@ Trigger: A source[i].url that is NOT a VCS URL (no git+, svn+, hg+, bzr+ prefix)
 
 ```rego
 warn_vcs_skip contains msg if {
-    pkg := input[_]
+    pkg := input.packages[_]
     checksums := coalesce_checksums(pkg)
     src := pkg.source[i]
     checksums[i] == "SKIP"
@@ -593,7 +593,7 @@ Trigger: No package metadata indicating maintainer attribution.
 
 ```rego
 warn_maintainer_present contains msg if {
-    pkg := input[_]
+    pkg := input.packages[_]
     msg := sprintf("%s: maintainer attribution not modeled in KCL schema — verify manually (maintainer_present rule)",
                    [pkg.pkgname])
 }
@@ -627,7 +627,7 @@ The exception rule in `policies/repository.rego` matches exemption data against 
 
 ```rego
 exception contains rules if {
-    pkg := input[_]
+    pkg := input.packages[_]
     exc := data.exceptions.exceptions[_]
     exc.pkgname == pkg.pkgname
     rules := [exc.rule]
