@@ -29,8 +29,10 @@ _VAR_NAMES = [
     "depends", "makedepends", "checkdepends", "optdepends",
     "provides", "conflicts", "replaces",
     # source & integrity
-    "source", "sha256sums", "sha512sums", "sha224sums", "sha384sums",
-    "b2sums", "validpgpkeys", "noextract",
+    "source", "source_x86_64", "source_aarch64",
+    "sha256sums", "sha512sums", "sha224sums", "sha384sums",
+    "b2sums", "sha512sums_x86_64", "sha512sums_aarch64",
+    "validpgpkeys", "noextract",
     # install & config
     "install", "backup", "options",
 ]
@@ -411,8 +413,10 @@ _FIELD_ORDER: list[str] = [
     "depends", "makedepends", "checkdepends", "optdepends",
     "provides", "conflicts", "replaces",
     # source & integrity
-    "source", "sha256sums", "sha512sums", "sha224sums", "sha384sums",
-    "b2sums", "validpgpkeys", "noextract",
+    "source", "source_x86_64", "source_aarch64",
+    "sha256sums", "sha512sums", "sha224sums", "sha384sums",
+    "b2sums", "sha512sums_x86_64", "sha512sums_aarch64",
+    "validpgpkeys", "noextract",
     # install & config
     "install", "backup", "options",
     # lifecycle functions
@@ -497,6 +501,9 @@ def _format_field(key: str, val: Any, indent: str = "") -> str:
     elif key == "source" and isinstance(val, list):
         entries = parse_source_entries(val)
         return f"{indent}source = {_pkl_value(entries, indent)}"
+    elif key in ("source_x86_64", "source_aarch64") and isinstance(val, list):
+        entries = parse_source_entries(val)
+        return f"{indent}{key} = {_pkl_value(entries, indent)}"
     elif key == "optdepends" and isinstance(val, list):
         entries = parse_optdepends(val)
         return f"{indent}optdepends = {_pkl_value(entries, indent)}"

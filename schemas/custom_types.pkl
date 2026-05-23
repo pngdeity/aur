@@ -1,0 +1,8 @@
+// Type constraints for repository-specific PKGBUILD custom variables.
+// Referenced in: docs/PKGBUILD-CUSTOM-VARIABLES-REFERENCE.md
+
+/// GitHub owner/repo pair (e.g., "microsoft/apm").
+typealias GitHubName = String(matches(Regex(#"^[a-zA-Z0-9._-]+/[a-zA-Z0-9._-]+$"#)))
+
+/// Sub-architecture targets for variant builds (x86-64-v3 / v4).
+typealias SubArch = "x86_64_v3"|"x86_64_v4"

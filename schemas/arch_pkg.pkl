@@ -12,10 +12,22 @@
 
 module schemas.arch_pkg
 
+import "licenses.spdx.pkl" as spdx
+import "custom_types.pkl" as ct
+
 // ── Type Aliases ──
 
 /// Known architecture values (PKGBUILD(5) §7.7)
 typealias KnownArchitecture = "x86_64"|"i686"|"aarch64"|"armv7h"|"arm"|"any"
+
+/// License identifier. Either "custom" (optionally with ":" qualifier) or an SPDX identifier.
+typealias LicenseId = "custom"|String(matches(Regex(#"^custom:[A-Za-z0-9.+_-]+$"#)))|spdx.SpdxId
+
+/// Dependency entry: package name with optional version constraint (>=, <=, =, >, <) and optional epoch.
+typealias DependsEntry = String(matches(Regex(#"^[a-z0-9@._+][a-z0-9@._+-]*(?:(?:[<>]=|[<>=])(?:\d+:)?[a-zA-Z0-9._]+)*$"#)))
+
+/// Checksum entry: hex digest or "SKIP" (VCS sources).
+typealias ChecksumEntry = "SKIP"|String(matches(Regex(#"^[A-Fa-f0-9]+$"#)))
 
 /// Known makepkg option flags (PKGBUILD(5) §7.19)
 typealias KnownOption = "!strip"|"!debug"|"!lto"|"!staticlibs"|"!emptydirs"
@@ -30,17 +42,17 @@ typealias KnownOption = "!strip"|"!debug"|"!lto"|"!staticlibs"|"!emptydirs"
 /// Example: "opendoas::git+https://github.com/Duncaen/OpenDoas.git#tag=v6.8.2"
 class SourceEntry {
   /// Full URL including VCS fragments (#tag=, #commit=, #branch=)
-  url: String
+  url: String(this.length > 0)
 
   /// Local filename this source will be saved as
-  filename: String
+  filename: String(this.length > 0 && !this.startsWith("/"))
 }
 
 /// A single optional dependency with its description.
 /// PKGBUILD entry: 'wl-clipboard: clipboard support on Wayland'
 class OptDependsEntry {
-  /// Package name (before the ": ")
-  name: String
+  /// Package name (before the ": "). Same format as depends.
+  name: DependsEntry
 
   /// Description (after the ": ")
   desc: String = ""
@@ -55,8 +67,8 @@ class Package {
   /// Package name. Must start with alphanumeric, @, ., _, or + (not hyphen).
   pkgname: String(matches(Regex(#"^[a-z0-9@._+][a-z0-9@._+-]*$"#)))
 
-  /// Software version number
-  pkgver: String
+  /// Software version number. Must not contain hyphens or whitespace (PKGBUILD(5)).
+  pkgver: String(matches(Regex(#"^[^- \t]+$"#)))
 
   /// Packaging revision index. Positive number, floats allowed for variant builds.
   pkgrel: Number(this > 0)
@@ -64,73 +76,81 @@ class Package {
   /// Epoch (only set when version numbering changes)
   epoch: Int(this >= 0)?
 
-  /// Package description
-  pkgdesc: String
+  /// Package description. Must be 1-80 characters.
+  pkgdesc: String(this.length > 0 && this.length <= 80)
 
-  /// Changelog filename
-  changelog: String?
+  /// Changelog filename. Must be a basename (no path separators) ending in .changelog.
+  changelog: String(!this.contains("/") && this.length > 0 && this.endsWith(".changelog"))?
 
   // Architecture & Metadata (PKGBUILD(5) §7.7, 7.8, 7.12, 7.13)
 
-  /// Target architectures
-  arch: Listing<KnownArchitecture>
+  /// Target architectures. If "any" is present, it must be the sole entry.
+  arch: Listing<KnownArchitecture>(!this.contains("any") || this.length == 1)
 
-  /// Upstream URL
-  url: String
+  /// Upstream URL. Must start with https:// or git+https://.
+  url: String(this.startsWith("https://") || this.startsWith("git+https://"))
 
   /// Software licenses
-  license: Listing<String>
+  license: Listing<LicenseId>
 
   /// Package groups (rarely used)
-  groups: Listing<String>?
+  groups: Listing<String(matches(Regex(#"^[a-z0-9@._+][a-z0-9@._+-]*$"#)))>?
 
   // Package Relationships (PKGBUILD(5) §7.14, 7.15)
 
   /// Runtime dependencies
-  depends: Listing<String>?
+  depends: Listing<DependsEntry>?
 
-  /// Build-time dependencies
-  makedepends: Listing<String>?
+  /// Build-time dependencies. Same format as depends.
+  makedepends: Listing<DependsEntry>?
 
-  /// Test-only dependencies
-  checkdepends: Listing<String>?
+  /// Test-only dependencies. Same format as depends.
+  checkdepends: Listing<DependsEntry>?
 
   /// Optional dependencies with descriptions
   optdepends: Listing<OptDependsEntry>?
 
-  /// Virtual packages provided
-  provides: Listing<String>?
+  /// Virtual packages provided. Same format as depends.
+  provides: Listing<DependsEntry>?
 
-  /// Conflicting packages
-  conflicts: Listing<String>?
+  /// Conflicting packages. Same format as depends.
+  conflicts: Listing<DependsEntry>?
 
-  /// Replaced packages
-  replaces: Listing<String>?
+  /// Replaced packages. Same format as depends.
+  replaces: Listing<DependsEntry>?
 
   // Source & Integrity (PKGBUILD(5) §7.9, 7.10, 7.17)
 
   /// Download sources
   source: Listing<SourceEntry>?
 
-  sha256sums: Listing<String>?
-  sha512sums: Listing<String>?
-  sha224sums: Listing<String>?
-  sha384sums: Listing<String>?
-  b2sums:     Listing<String>?
+  /// Architecture-specific sources (PKGBUILD(5) source_<arch>)
+  source_x86_64: Listing<SourceEntry>?
+  source_aarch64: Listing<SourceEntry>?
 
-  /// Valid PGP key fingerprints
-  validpgpkeys: Listing<String>?
+  sha256sums: Listing<ChecksumEntry>?
+  sha512sums: Listing<ChecksumEntry>?
+  sha224sums: Listing<ChecksumEntry>?
+  sha384sums: Listing<ChecksumEntry>?
+  b2sums:     Listing<ChecksumEntry>?
+
+  /// Architecture-specific checksums (PKGBUILD(5) sha512sums_<arch>)
+  sha512sums_x86_64: Listing<ChecksumEntry>?
+  sha512sums_aarch64: Listing<ChecksumEntry>?
+
+  /// Valid PGP key fingerprints. Hex digits, optionally space-separated.
+  validpgpkeys: Listing<String(matches(Regex(#"^[A-Fa-f0-9 ]+$"#)))>?
 
   /// Source files to not extract
-  noextract: Listing<String>?
+  noextract: Listing<String(this.length > 0 && !this.startsWith("/"))>?
 
   // Install & Config (PKGBUILD(5) §7.11, 7.18, 7.19)
 
-  /// .install scriptlet filename
-  install: String?
+  /// .install scriptlet filename. Must be a basename ending in .install.
+  install: String(!this.contains("/") && this.length > 0 && this.endsWith(".install"))?
 
-  /// Configuration files to preserve on upgrade
-  backup: Listing<String>?
+  /// Configuration files to preserve on upgrade. Relative paths (no leading /).
+  backup: Listing<String(!this.startsWith("/"))>?
 
   /// makepkg option flags
   options: Listing<KnownOption>?
@@ -164,7 +184,7 @@ class Package {
   hidden _pkgname: String?
 
   /// GitHub owner/repo for changelog generation
-  hidden _githubname: String(matches(Regex(#"^[a-zA-Z0-9._-]+/[a-zA-Z0-9._-]+$"#)))?
+  hidden _githubname: ct.GitHubName?
 
   /// AUR package name for upstream merge
   hidden _upstream_aur_pkg: String?
@@ -182,7 +202,7 @@ class Package {
   hidden _use_common_gemini_settings: Boolean = false
 
   /// Sub-architecture target (variant builds only)
-  hidden _repo_subarch: ("x86_64_v3"|"x86_64_v4")?
+  hidden _repo_subarch: ct.SubArch?
 
   /// Custom tag pattern for changelog generation
   hidden _tag: String?
@@ -299,6 +319,12 @@ class Package {
       when (source != null && !source.isEmpty) {
         let (s = source!!) "source=(\(s.toList().map((e) -> _renderSource(e)).join(" ")))"
       }
+      when (source_x86_64 != null && !source_x86_64.isEmpty) {
+        let (s = source_x86_64!!) "source_x86_64=(\(s.toList().map((e) -> _renderSource(e)).join(" ")))"
+      }
+      when (source_aarch64 != null && !source_aarch64.isEmpty) {
+        let (s = source_aarch64!!) "source_aarch64=(\(s.toList().map((e) -> _renderSource(e)).join(" ")))"
+      }
       when (noextract != null && !noextract.isEmpty) {
         let (n = noextract!!) "noextract=('\(n.join("' '"))')"
       }
@@ -310,6 +336,12 @@ class Package {
       }
       when (sha512sums != null && !sha512sums.isEmpty) {
         let (s = sha512sums!!) "sha512sums=('\(s.join("' '"))')"
+      }
+      when (sha512sums_x86_64 != null && !sha512sums_x86_64.isEmpty) {
+        let (s = sha512sums_x86_64!!) "sha512sums_x86_64=('\(s.join("' '"))')"
+      }
+      when (sha512sums_aarch64 != null && !sha512sums_aarch64.isEmpty) {
+        let (s = sha512sums_aarch64!!) "sha512sums_aarch64=('\(s.join("' '"))')"
       }
       when (sha224sums != null && !sha224sums.isEmpty) {
         let (s = sha224sums!!) "sha224sums=('\(s.join("' '"))')"
