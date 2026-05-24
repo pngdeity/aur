@@ -25,6 +25,17 @@ handoffs/
 # nvchecker local state (not used by CI)
 nvc_versions.json
 
+# Python bytecode cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Background process output
+nohup.out
+
+# Tool config
+.opencode/
+
 # Generated wrapper artifacts
 packages/*/package.pkl
 packages/*/package.json
