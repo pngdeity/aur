@@ -22,6 +22,9 @@ logpipe.*
 # Handoff directory
 handoffs/
 
+# nvchecker local state (not used by CI)
+nvc_versions.json
+
 # Generated wrapper artifacts
 packages/*/package.pkl
 packages/*/package.json
