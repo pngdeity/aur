@@ -1,34 +1,30 @@
 #!/usr/bin/env bash
 # scripts/check-metadata.sh
-# Validates that .SRCINFO is in sync with PKGBUILD.
+# Validates that PKGBUILD can produce valid .SRCINFO metadata.
+# .SRCINFO is a build artifact (per SRCINFO-VERSION-CONTROL-POLICY.md) and is
+# not version-controlled. This script performs syntactic validation only.
 
 set -euo pipefail
 
 PKG_DIR=$1
 
 if [[ -z "$PKG_DIR" ]]; then
-    echo "Usage: $0 <package_dir>"
-    exit 1
+	echo "Usage: $0 <package_dir>"
+	exit 1
 fi
 
 cd "$PKG_DIR"
 
 if [[ ! -f PKGBUILD ]]; then
-    echo "::error::PKGBUILD not found in $PKG_DIR"
-    exit 1
+	echo "::error::PKGBUILD not found in $PKG_DIR"
+	exit 1
 fi
 
 echo "==> Validating metadata for $(basename "$PKG_DIR")"
 
-# Generate temporary .SRCINFO
-makepkg --printsrcinfo > .SRCINFO.tmp
-
-# Compare
-if ! diff -u .SRCINFO .SRCINFO.tmp; then
-    echo "::error::.SRCINFO is out of sync with PKGBUILD in $PKG_DIR! Run 'makepkg --printsrcinfo > .SRCINFO' locally."
-    rm .SRCINFO.tmp
-    exit 1
+if ! makepkg --printsrcinfo >/dev/null; then
+	echo "::error::PKGBUILD in $PKG_DIR fails to generate valid .SRCINFO metadata."
+	exit 1
 fi
 
-rm .SRCINFO.tmp
-echo "  -> .SRCINFO is valid."
+echo "  -> PKGBUILD produces valid .SRCINFO metadata."

@@ -3,7 +3,6 @@ on:
   schedule:
     - cron: '0 */12 * * *'
   workflow_dispatch:
-
 jobs:
   check:
     runs-on: ubuntu-latest
@@ -16,12 +15,10 @@ jobs:
       - name: Install dependencies
         run: |
           pacman -Syu --noconfirm nvchecker pacman-contrib jq git curl
-
       - name: Checkout
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
-
       - name: Consolidate, Run nvchecker, and Sync
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -34,7 +31,7 @@ jobs:
 
           echo "[__config__]" > master.toml
           echo "oldver = 'oldver.json'" >> master.toml
-          
+
           find . -maxdepth 2 -name ".nvchecker.toml" -not -path "./.nvchecker.toml" | while read -r config; do
             echo "" >> master.toml
             grep -v "^\[__config__\]" "$config" >> master.toml
@@ -43,7 +40,7 @@ jobs:
           if [ ! -f oldver.json ]; then echo "{}" > oldver.json; fi
 
           nvchecker -c master.toml --logger json | tee results.json
-          
+
           # Run intelligent synchronization for each updated package
           jq -c 'select(.event=="updated")' results.json | while read -r update; do
             NAME=$(echo "$update" | jq -r '.name')
@@ -51,66 +48,24 @@ jobs:
             # The sync script handles versioning, hashes, and changelogs
             bash scripts/sync-package.sh "$NAME" "$VER"
           done
-
       - name: Check pkgdesc Consistency
         run: |
           if ! bash scripts/check-pkgdesc-consistency.sh --ci; then
             echo "::error::Aborting discovery pipeline — pkgdesc consistency violations found."
             exit 1
           fi
-
       - name: Validate PKGBUILDs with Pkl
         run: |
           pacman -S --noconfirm python-yaml
-          curl -Lo /usr/local/bin/pkl https://github.com/apple/pkl/releases/download/0.25.3/pkl-linux-amd64
+          curl -Lo /usr/local/bin/pkl https://github.com/apple/pkl/releases/download/0.31.1/pkl-linux-amd64
           chmod +x /usr/local/bin/pkl
           if ! bash scripts/validate-pkgbuilds-pkl.sh; then
             echo "::error::Pkl validation failed — blocking push"
             exit 1
           fi
-
       - id: get-updates
         name: Filter and Push Updates
-        run: |
-          # Filter out packages with PREREVIEW markers (build logic changed, needs human review)
-          UPDATED_NAMES=$(jq -r 'select(.event=="updated") | .name' results.json | jq -R . | jq -s -c .)
-          BLOCKED_NAMES="[]"
-          if [ "$UPDATED_NAMES" != "[]" ]; then
-            BLOCKED=$(echo "$UPDATED_NAMES" | jq -r '.[]' | while read -r pkg; do
-              PKG_DIR=$(echo "$pkg" | sed 's/-arch$//;s/-aur$//')
-              if grep -q "^# PREREVIEW:" "packages/${PKG_DIR}/PKGBUILD" 2>/dev/null; then
-                echo "$pkg"
-              fi
-            done)
-            if [ -n "$BLOCKED" ]; then
-              BLOCKED_NAMES=$(echo "$BLOCKED" | jq -R . | jq -s -c .)
-              echo "::warning::Packages blocked from release (PREREVIEW markers present): ${BLOCKED_NAMES}"
-              UPDATED_NAMES=$(echo "$UPDATED_NAMES" | jq --argjson blocked "$BLOCKED_NAMES" '. - $blocked')
-            fi
-          fi
-          
-          if [ "$UPDATED_NAMES" != "[]" ]; then
-            # Chunk into an array of objects for matrix.include
-            CHUNKS_JSON=$(echo "$UPDATED_NAMES" | jq -c '[range(0; length; $n) as $i | {index: ($i/$n), list: .[$i:$i+$n]}]' --argjson n 50)
-            VERSION=$(jq -r 'select(.event=="updated") | .version' results.json | head -n 1)
-            
-            echo "chunks_json=$CHUNKS_JSON" >> $GITHUB_OUTPUT
-            echo "has_updates=true" >> $GITHUB_OUTPUT
-            echo "version=$VERSION" >> $GITHUB_OUTPUT
-            
-            nvtake -c master.toml --all
-            
-            git config --global --add safe.directory "$GITHUB_WORKSPACE"
-            git config --local user.email "action@github.com"
-            git config --local user.name "GitHub Action"
-            git add oldver.json packages/
-            git commit -m "chore: automated upstream update [skip ci]"
-            git push
-          else
-            echo "chunks_json=[]" >> $GITHUB_OUTPUT
-            echo "has_updates=false" >> $GITHUB_OUTPUT
-          fi
-
+        run: "# Filter out packages with PREREVIEW markers (build logic changed, needs human review)\nUPDATED_NAMES=$(jq -r 'select(.event==\"updated\") | .name' results.json | jq -R . | jq -s -c .)\nBLOCKED_NAMES=\"[]\"\nif [ \"$UPDATED_NAMES\" != \"[]\" ]; then\n  BLOCKED=$(echo \"$UPDATED_NAMES\" | jq -r '.[]' | while read -r pkg; do\n    PKG_DIR=$(echo \"$pkg\" | sed 's/-arch$//;s/-aur$//')\n    if grep -q \"^# PREREVIEW:\" \"packages/${PKG_DIR}/PKGBUILD\" 2>/dev/null; then\n      echo \"$pkg\"\n    fi\n  done)\n  if [ -n \"$BLOCKED\" ]; then\n    BLOCKED_NAMES=$(echo \"$BLOCKED\" | jq -R . | jq -s -c .)\n    echo \"::warning::Packages blocked from release (PREREVIEW markers present): ${BLOCKED_NAMES}\"\n    UPDATED_NAMES=$(echo \"$UPDATED_NAMES\" | jq --argjson blocked \"$BLOCKED_NAMES\" '. - $blocked')\n  fi\nfi\n\nif [ \"$UPDATED_NAMES\" != \"[]\" ]; then\n  # Chunk into an array of objects for matrix.include\n  CHUNKS_JSON=$(echo \"$UPDATED_NAMES\" | jq -c '[range(0; length; $n) as $i | {index: ($i/$n), list: .[$i:$i+$n]}]' --argjson n 50)\n  VERSION=$(jq -r 'select(.event==\"updated\") | .version' results.json | head -n 1)\n  \n  echo \"chunks_json=$CHUNKS_JSON\" >> $GITHUB_OUTPUT\n  echo \"has_updates=true\" >> $GITHUB_OUTPUT\n  echo \"version=$VERSION\" >> $GITHUB_OUTPUT\n  \n  nvtake -c master.toml --all\n  \n  git config --global --add safe.directory \"$GITHUB_WORKSPACE\"\n  git config --local user.email \"action@github.com\"\n  git config --local user.name \"GitHub Action\"\n  git add oldver.json packages/\n  git commit -m \"chore: automated upstream update [skip ci]\"\n  git push\nelse\n  echo \"chunks_json=[]\" >> $GITHUB_OUTPUT\n  echo \"has_updates=false\" >> $GITHUB_OUTPUT\nfi\n"
   release:
     needs: check
     if: needs.check.outputs.has_updates == 'true'

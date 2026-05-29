@@ -22,8 +22,9 @@ logpipe.*
 # Handoff directory
 handoffs/
 
-# nvchecker local state (not used by CI)
+# nvchecker local state
 nvc_versions.json
+newver.json
 
 # Python bytecode cache
 __pycache__/
@@ -43,3 +44,9 @@ manifest.json
 
 # SRCINFO as build artifact (per SRCINFO-VERSION-CONTROL-POLICY.md)
 packages/*/.SRCINFO
+
+# Ignore AUR .git metadata 
+packages/*/.git
+
+# Downloaded data artifacts (e.g. GeoIP databases)
+*.mmdb
