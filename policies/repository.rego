@@ -28,25 +28,39 @@ coalesce_checksums(pkg) := c if {
 is_vcs_url(url) if {
 	startswith(url, "git+")
 }
+
 is_vcs_url(url) if {
 	startswith(url, "svn+")
 }
+
 is_vcs_url(url) if {
 	startswith(url, "hg+")
 }
+
 is_vcs_url(url) if {
 	startswith(url, "bzr+")
+}
+
+is_pinned_source(url) if {
+	contains(url, "#tag=")
+}
+
+is_pinned_source(url) if {
+	contains(url, "#commit=")
 }
 
 is_empty_or_null(v) if {
 	v == null
 }
+
 is_empty_or_null(v) if {
 	v == ""
 }
+
 is_empty_or_null(v) if {
 	v == 0
 }
+
 is_empty_or_null(v) if {
 	count(v) == 0
 }
@@ -92,24 +106,31 @@ has_exception(pkg, rule) if {
 # Source URL protocols must be https:// or git+https://
 # FTP sources are valid per PKGBUILD(5)
 # ─────────────────────────────────────────────────────────────────────
+_all_source_arrays := {"source", "source_x86_64", "source_aarch64"}
+
 deny_enforce_https contains msg if {
 	pkg := input.packages[_]
 	not has_exception(pkg, "enforce_https")
-	src := pkg.source[_]
+	name := _all_source_arrays[_]
+	src := object.get(pkg, name, [])[_]
 	contains(src.url, "://")
 	not startswith(src.url, "https://")
 	not startswith(src.url, "git+https://")
 	not startswith(src.url, "ftp://")
-	msg := sprintf("%s: source URL '%s' must use HTTPS (enforce_https rule)",
-		[pkg.pkgname, src.url])
+	msg := sprintf(
+		"%s: source URL '%s' must use HTTPS (enforce_https rule)",
+		[pkg.pkgname, src.url],
+	)
 }
 
 deny_enforce_https contains msg if {
 	pkg := input.packages[_]
 	not has_exception(pkg, "enforce_https")
 	startswith(pkg.url, "http://")
-	msg := sprintf("%s: url field '%s' must use HTTPS (enforce_https rule)",
-		[pkg.pkgname, pkg.url])
+	msg := sprintf(
+		"%s: url field '%s' must use HTTPS (enforce_https rule)",
+		[pkg.pkgname, pkg.url],
+	)
 }
 
 # ─────────────────────────────────────────────────────────────────────
@@ -122,22 +143,26 @@ warn_privilege_escalation contains msg if {
 	not has_exception(pkg, "privilege_escalation")
 
 	func_fields := [pkg.prepare, pkg.build, pkg.check, pkg.packageFunc, pkg.pkgverFunc]
-	field_names  := ["prepare", "build", "check", "package", "pkgver_func"]
+	field_names := ["prepare", "build", "check", "package", "pkgver_func"]
 
 	func := func_fields[i]
 	func != null
 	regex.match(`\bsudo\b`, func)
 
-	msg := sprintf("%s: 'sudo' string found in %s() — use doas instead (privilege_escalation rule)",
-		[pkg.pkgname, field_names[i]])
+	msg := sprintf(
+		"%s: 'sudo' string found in %s() — use doas instead (privilege_escalation rule)",
+		[pkg.pkgname, field_names[i]],
+	)
 }
 
 warn_privilege_escalation contains msg if {
 	pkg := input.packages[_]
 	not has_exception(pkg, "privilege_escalation")
 	pkg.install != null
-	msg := sprintf("%s: has .install scriptlet '%s' — manually verify no sudo usage (privilege_escalation rule)",
-		[pkg.pkgname, pkg.install])
+	msg := sprintf(
+		"%s: has .install scriptlet '%s' — manually verify no sudo usage (privilege_escalation rule)",
+		[pkg.pkgname, pkg.install],
+	)
 }
 
 # ─────────────────────────────────────────────────────────────────────
@@ -154,8 +179,10 @@ warn_architecture_mismatch contains msg if {
 	dep := pkg.depends[_]
 	dep in arch_specific_deps
 
-	msg := sprintf("%s: arch='any' but depends on arch-specific package '%s' (architecture_mismatch rule)",
-		[pkg.pkgname, dep])
+	msg := sprintf(
+		"%s: arch='any' but depends on arch-specific package '%s' (architecture_mismatch rule)",
+		[pkg.pkgname, dep],
+	)
 }
 
 warn_architecture_mismatch contains msg if {
@@ -167,8 +194,10 @@ warn_architecture_mismatch contains msg if {
 	dep := pkg.makedepends[_]
 	dep in arch_specific_deps
 
-	msg := sprintf("%s: arch='any' but makedepends on arch-specific package '%s' (architecture_mismatch rule)",
-		[pkg.pkgname, dep])
+	msg := sprintf(
+		"%s: arch='any' but makedepends on arch-specific package '%s' (architecture_mismatch rule)",
+		[pkg.pkgname, dep],
+	)
 }
 
 warn_architecture_mismatch contains msg if {
@@ -176,14 +205,16 @@ warn_architecture_mismatch contains msg if {
 	not has_exception(pkg, "architecture_mismatch")
 	pkg.arch == ["any"]
 
-	funcs      := [pkg.prepare, pkg.build, pkg.check, pkg.packageFunc]
+	funcs := [pkg.prepare, pkg.build, pkg.check, pkg.packageFunc]
 	func_names := ["prepare", "build", "check", "package"]
 	func := funcs[i]
 	func != null
 	contains(func, "CARCH")
 
-	msg := sprintf("%s: arch='any' but %s() references CARCH (architecture_mismatch rule)",
-		[pkg.pkgname, func_names[i]])
+	msg := sprintf(
+		"%s: arch='any' but %s() references CARCH (architecture_mismatch rule)",
+		[pkg.pkgname, func_names[i]],
+	)
 }
 
 # ─────────────────────────────────────────────────────────────────────
@@ -197,8 +228,10 @@ deny_no_unprovided_conflicts contains msg if {
 	conflict := pkg.conflicts[_]
 	not conflict_in_provides(pkg, conflict)
 
-	msg := sprintf("%s: conflicts '%s' has no matching entry in provides (no_unprovided_conflicts rule)",
-		[pkg.pkgname, conflict])
+	msg := sprintf(
+		"%s: conflicts '%s' has no matching entry in provides (no_unprovided_conflicts rule)",
+		[pkg.pkgname, conflict],
+	)
 }
 
 deny_no_unprovided_conflicts contains msg if {
@@ -207,8 +240,10 @@ deny_no_unprovided_conflicts contains msg if {
 	replace := pkg.replaces[_]
 	not conflict_in_provides(pkg, replace)
 
-	msg := sprintf("%s: replaces '%s' has no matching entry in provides (no_unprovided_conflicts rule)",
-		[pkg.pkgname, replace])
+	msg := sprintf(
+		"%s: replaces '%s' has no matching entry in provides (no_unprovided_conflicts rule)",
+		[pkg.pkgname, replace],
+	)
 }
 
 # ─────────────────────────────────────────────────────────────────────
@@ -219,31 +254,28 @@ deny_no_self_reference contains msg if {
 	pkg := input.packages[_]
 	not has_exception(pkg, "no_self_reference")
 	pkg.provides[_] == pkg.pkgname
-	msg := sprintf("%s: self-reference — provides contains own pkgname '%s' (no_self_reference rule)",
-		[pkg.pkgname, pkg.pkgname])
+	msg := sprintf(
+		"%s: self-reference — provides contains own pkgname '%s' (no_self_reference rule)",
+		[pkg.pkgname, pkg.pkgname],
+	)
 }
 
 deny_no_self_reference contains msg if {
 	pkg := input.packages[_]
 	not has_exception(pkg, "no_self_reference")
 	pkg.conflicts[_] == pkg.pkgname
-	msg := sprintf("%s: self-reference — conflicts contains own pkgname '%s' (no_self_reference rule)",
-		[pkg.pkgname, pkg.pkgname])
+	msg := sprintf(
+		"%s: self-reference — conflicts contains own pkgname '%s' (no_self_reference rule)",
+		[pkg.pkgname, pkg.pkgname],
+	)
 }
 
 # ─────────────────────────────────────────────────────────────────────
-# Rule 6: deploy_aur_subarch_mutex (ERROR)
-# _deploy_aur=true and _repo_subarch set are mutually exclusive.
+# Rule 6: deploy_aur_subarch_mutex (moved to Pkl constraint)
+# Enforced natively by schemas/arch_pkg.pkl — the Rego version is retired.
+# Removed 2026-05-23: Pkl's local fixed constraint sees hidden fields
+# that OPA cannot access via JSON manifest.
 # ─────────────────────────────────────────────────────────────────────
-deny_deploy_aur_subarch_mutex contains msg if {
-	pkg := input.packages[_]
-	not has_exception(pkg, "deploy_aur_subarch_mutex")
-	pkg._deploy_aur == true
-	pkg._repo_subarch != null
-
-	msg := sprintf("%s: _deploy_aur=true is mutually exclusive with _repo_subarch='%s' — AUR packages cannot be sub-architecture variants (deploy_aur_subarch_mutex rule)",
-		[pkg.pkgname, pkg._repo_subarch])
-}
 
 # ─────────────────────────────────────────────────────────────────────
 # Rule 7: pkgdesc_consistency (ERROR)
@@ -260,24 +292,28 @@ deny_pkgdesc_consistency contains msg if {
 	pkg1._pkgname != null
 	pkg1.pkgdesc != pkg2.pkgdesc
 
-	msg := sprintf("_pkgname '%s': pkgdesc mismatch — '%s' (%s) vs '%s' (%s) (pkgdesc_consistency rule)",
-		[pkg1._pkgname, pkg1.pkgdesc, pkg1.pkgname, pkg2.pkgdesc, pkg2.pkgname])
+	msg := sprintf(
+		"_pkgname '%s': pkgdesc mismatch — '%s' (%s) vs '%s' (%s) (pkgdesc_consistency rule)",
+		[pkg1._pkgname, pkg1.pkgdesc, pkg1.pkgname, pkg2.pkgdesc, pkg2.pkgname],
+	)
 }
 
 # ─────────────────────────────────────────────────────────────────────
 # Rule 8: valid_architectures (ERROR)
-# Arch array values must be from the known set: x86_64, aarch64, any.
+# Arch array values must be from the known set (matching KnownArchitecture in Pkl schema).
 # ─────────────────────────────────────────────────────────────────────
 deny_valid_architectures contains msg if {
 	pkg := input.packages[_]
 	not has_exception(pkg, "valid_architectures")
-	valid_arches := {"x86_64", "aarch64", "any"}
+	valid_arches := {"x86_64", "aarch64", "i686", "armv7h", "arm", "any"}
 
 	arch := pkg.arch[_]
 	not valid_arches[arch]
 
-	msg := sprintf("%s: unknown architecture '%s' — must be one of: x86_64, aarch64, any (valid_architectures rule)",
-		[pkg.pkgname, arch])
+	msg := sprintf(
+		"%s: unknown architecture '%s' — must be one of: x86_64, aarch64, i686, armv7h, arm, any (valid_architectures rule)",
+		[pkg.pkgname, arch],
+	)
 }
 
 # ─────────────────────────────────────────────────────────────────────
@@ -290,26 +326,30 @@ deny_required_fields contains msg if {
 	not has_exception(pkg, "required_fields")
 	required := [
 		{"name": "pkgname", "value": pkg.pkgname},
-		{"name": "pkgver",  "value": pkg.pkgver},
-		{"name": "pkgrel",  "value": pkg.pkgrel},
+		{"name": "pkgver", "value": pkg.pkgver},
+		{"name": "pkgrel", "value": pkg.pkgrel},
 		{"name": "pkgdesc", "value": pkg.pkgdesc},
-		{"name": "arch",    "value": pkg.arch},
-		{"name": "url",     "value": pkg.url},
+		{"name": "arch", "value": pkg.arch},
+		{"name": "url", "value": pkg.url},
 		{"name": "license", "value": pkg.license},
 	]
 
 	field := required[i]
 	is_empty_or_null(field.value)
 
-	msg := sprintf("%s: required field '%s' is missing or empty (required_fields rule)",
-		[pkg.pkgname, field.name])
+	msg := sprintf(
+		"%s: required field '%s' is missing or empty (required_fields rule)",
+		[pkg.pkgname, field.name],
+	)
 }
 
 # ─────────────────────────────────────────────────────────────────────
 # Rule 10: source_integrity (ERROR)
-# If source[] is present, exactly one checksum array must be present
-# and its length must match source[] length.
+# If source[] (or arch-specific variant) is present, a matching
+# checksum array must be present and its length must match.
 # ─────────────────────────────────────────────────────────────────────
+
+# Generic source ↔ checksum
 deny_source_integrity contains msg if {
 	pkg := input.packages[_]
 	not has_exception(pkg, "source_integrity")
@@ -320,8 +360,10 @@ deny_source_integrity contains msg if {
 	not has_field(pkg, "sha384sums")
 	not has_field(pkg, "b2sums")
 
-	msg := sprintf("%s: source[] has %d entries but no checksum array present (source_integrity rule)",
-		[pkg.pkgname, count(pkg.source)])
+	msg := sprintf(
+		"%s: source[] has %d entries but no checksum array present (source_integrity rule)",
+		[pkg.pkgname, count(pkg.source)],
+	)
 }
 
 deny_source_integrity contains msg if {
@@ -330,8 +372,58 @@ deny_source_integrity contains msg if {
 	checksums := coalesce_checksums(pkg)
 	count(pkg.source) != count(checksums)
 
-	msg := sprintf("%s: source[] has %d entries but checksums has %d entries (source_integrity rule)",
-		[pkg.pkgname, count(pkg.source), count(checksums)])
+	msg := sprintf(
+		"%s: source[] has %d entries but checksums has %d entries (source_integrity rule)",
+		[pkg.pkgname, count(pkg.source), count(checksums)],
+	)
+}
+
+# Arch-specific source_x86_64 ↔ sha512sums_x86_64
+deny_source_integrity contains msg if {
+	pkg := input.packages[_]
+	not has_exception(pkg, "source_integrity")
+	count(pkg.source_x86_64) > 0
+	not has_field(pkg, "sha512sums_x86_64")
+
+	msg := sprintf(
+		"%s: source_x86_64[] has %d entries but no sha512sums_x86_64 present (source_integrity rule)",
+		[pkg.pkgname, count(pkg.source_x86_64)],
+	)
+}
+
+deny_source_integrity contains msg if {
+	pkg := input.packages[_]
+	not has_exception(pkg, "source_integrity")
+	count(pkg.source_x86_64) != count(pkg.sha512sums_x86_64)
+
+	msg := sprintf(
+		"%s: source_x86_64[] has %d entries but sha512sums_x86_64 has %d entries (source_integrity rule)",
+		[pkg.pkgname, count(pkg.source_x86_64), count(pkg.sha512sums_x86_64)],
+	)
+}
+
+# Arch-specific source_aarch64 ↔ sha512sums_aarch64
+deny_source_integrity contains msg if {
+	pkg := input.packages[_]
+	not has_exception(pkg, "source_integrity")
+	count(pkg.source_aarch64) > 0
+	not has_field(pkg, "sha512sums_aarch64")
+
+	msg := sprintf(
+		"%s: source_aarch64[] has %d entries but no sha512sums_aarch64 present (source_integrity rule)",
+		[pkg.pkgname, count(pkg.source_aarch64)],
+	)
+}
+
+deny_source_integrity contains msg if {
+	pkg := input.packages[_]
+	not has_exception(pkg, "source_integrity")
+	count(pkg.source_aarch64) != count(pkg.sha512sums_aarch64)
+
+	msg := sprintf(
+		"%s: source_aarch64[] has %d entries but sha512sums_aarch64 has %d entries (source_integrity rule)",
+		[pkg.pkgname, count(pkg.source_aarch64), count(pkg.sha512sums_aarch64)],
+	)
 }
 
 # ─────────────────────────────────────────────────────────────────────
@@ -346,21 +438,140 @@ warn_vcs_skip contains msg if {
 	checksums[i] == "SKIP"
 	not is_vcs_url(src.url)
 
-	msg := sprintf("%s: non-VCS source '%s' has SKIP checksum — should have integrity hash (vcs_skip rule)",
-		[pkg.pkgname, src.filename])
+	msg := sprintf(
+		"%s: non-VCS source '%s' has SKIP checksum — should have integrity hash (vcs_skip rule)",
+		[pkg.pkgname, src.filename],
+	)
+}
+
+warn_vcs_skip contains msg if {
+	pkg := input.packages[_]
+	not has_exception(pkg, "vcs_skip")
+	checksums := coalesce_checksums(pkg)
+	src := pkg.source[i]
+	checksums[i] == "SKIP"
+	is_pinned_source(src.url)
+
+	msg := sprintf(
+		"%s: pinned source '%s' has SKIP checksum — should have integrity hash (vcs_skip rule)",
+		[pkg.pkgname, src.filename],
+	)
+}
+
+warn_vcs_skip contains msg if {
+	pkg := input.packages[_]
+	not has_exception(pkg, "vcs_skip")
+	src := pkg.source_x86_64[i]
+	pkg.sha512sums_x86_64[i] == "SKIP"
+	not is_vcs_url(src.url)
+
+	msg := sprintf(
+		"%s: non-VCS source_x86_64 '%s' has SKIP checksum — should have integrity hash (vcs_skip rule)",
+		[pkg.pkgname, src.filename],
+	)
+}
+
+warn_vcs_skip contains msg if {
+	pkg := input.packages[_]
+	not has_exception(pkg, "vcs_skip")
+	src := pkg.source_aarch64[i]
+	pkg.sha512sums_aarch64[i] == "SKIP"
+	not is_vcs_url(src.url)
+
+	msg := sprintf(
+		"%s: non-VCS source_aarch64 '%s' has SKIP checksum — should have integrity hash (vcs_skip rule)",
+		[pkg.pkgname, src.filename],
+	)
 }
 
 # ─────────────────────────────────────────────────────────────────────
-# Rule 12: maintainer_present (WARN)
-# Every package should declare a maintainer. The KCL schema does not
-# model # Maintainer: comments — this emits a constant per-package
-# reminder for manual verification.
+# Rule 12: deny_missing_maintainer (FAIL)
+# Every package must declare a maintainer in "Name <email>" format.
+# The Pkl schema enforces format — this is a presence safety net.
 # ─────────────────────────────────────────────────────────────────────
-warn_maintainer_present contains msg if {
+deny_missing_maintainer contains msg if {
 	pkg := input.packages[_]
-	not has_exception(pkg, "maintainer_present")
-	msg := sprintf("%s: maintainer attribution not modeled in schema — verify manually (maintainer_present rule)",
-		[pkg.pkgname])
+	not has_exception(pkg, "missing_maintainer")
+	object.get(pkg, "maintainer", null) == null
+	msg := sprintf(
+		"%s: maintainer is missing (must be 'Name <email>')",
+		[pkg.pkgname],
+	)
+}
+
+# ─────────────────────────────────────────────────────────────────────
+# Rule 13: deny_arch_any_arch_specific (ERROR)
+# arch=('any') packages must not declare architecture-specific
+# source arrays — makepkg will never download them.
+# ─────────────────────────────────────────────────────────────────────
+deny_arch_any_arch_specific contains msg if {
+	pkg := input.packages[_]
+	not has_exception(pkg, "arch_any_arch_specific")
+	pkg.arch == ["any"]
+	count(pkg.source_x86_64) > 0
+	msg := sprintf(
+		"%s: arch='any' but source_x86_64[] has %d entries — arch-specific sources will never be downloaded (arch_any_arch_specific rule)",
+		[pkg.pkgname, count(pkg.source_x86_64)],
+	)
+}
+
+deny_arch_any_arch_specific contains msg if {
+	pkg := input.packages[_]
+	not has_exception(pkg, "arch_any_arch_specific")
+	pkg.arch == ["any"]
+	count(pkg.source_aarch64) > 0
+	msg := sprintf(
+		"%s: arch='any' but source_aarch64[] has %d entries — arch-specific sources will never be downloaded (arch_any_arch_specific rule)",
+		[pkg.pkgname, count(pkg.source_aarch64)],
+	)
+}
+
+# ─────────────────────────────────────────────────────────────────────
+# Rule 14: deny_vcs_without_skip (ERROR)
+# VCS source URLs (git+, svn+, hg+, bzr+) must have "SKIP" checksums.
+# Without SKIP, makepkg will checksum-verify a moving target.
+# ─────────────────────────────────────────────────────────────────────
+deny_vcs_without_skip contains msg if {
+	pkg := input.packages[_]
+	not has_exception(pkg, "vcs_without_skip")
+	checksums := coalesce_checksums(pkg)
+	src := pkg.source[i]
+	is_vcs_url(src.url)
+	not is_pinned_source(src.url)
+	checksums[i] != "SKIP"
+
+	msg := sprintf(
+		"%s: VCS source '%s' must have SKIP checksum (vcs_without_skip rule)",
+		[pkg.pkgname, object.get(src, "filename", src.url)],
+	)
+}
+
+deny_vcs_without_skip contains msg if {
+	pkg := input.packages[_]
+	not has_exception(pkg, "vcs_without_skip")
+	src := pkg.source_x86_64[i]
+	is_vcs_url(src.url)
+	not is_pinned_source(src.url)
+	pkg.sha512sums_x86_64[i] != "SKIP"
+
+	msg := sprintf(
+		"%s: VCS source_x86_64 '%s' must have SKIP checksum (vcs_without_skip rule)",
+		[pkg.pkgname, object.get(src, "filename", src.url)],
+	)
+}
+
+deny_vcs_without_skip contains msg if {
+	pkg := input.packages[_]
+	not has_exception(pkg, "vcs_without_skip")
+	src := pkg.source_aarch64[i]
+	is_vcs_url(src.url)
+	not is_pinned_source(src.url)
+	pkg.sha512sums_aarch64[i] != "SKIP"
+
+	msg := sprintf(
+		"%s: VCS source_aarch64 '%s' must have SKIP checksum (vcs_without_skip rule)",
+		[pkg.pkgname, object.get(src, "filename", src.url)],
+	)
 }
 
 # ─────────────────────────────────────────────────────────────────────

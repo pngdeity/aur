@@ -9,7 +9,8 @@ compatibility: Requires bash, git, patch, and updpkgsums. Designed for the pngde
 
 When a patch fails to apply (`.rej` files appear or `patch` exits non-zero):
 
-1. Identify the failing patch from the error output. Patches are listed in the `source` array of the `PKGBUILD`.
+1. Identify the failing patch from the error output. Patches are listed in the
+   `source` array of the `PKGBUILD`.
 
 2. Clone upstream at the target version:
    ```bash
@@ -23,14 +24,17 @@ When a patch fails to apply (`.rej` files appear or `patch` exits non-zero):
    patch -p1 < /path/to/failing.patch
    ```
 
-4. Resolve any `.rej` (reject) files by editing the affected source files. The `.rej` file shows the failed hunk in context. After resolving, delete all `.rej` files.
+4. Resolve any `.rej` (reject) files by editing the affected source files. The
+   `.rej` file shows the failed hunk in context. After resolving, delete all
+   `.rej` files.
 
 5. Generate a fresh patch:
    ```bash
    git diff > <package-dir>/<patch-name>.patch
    ```
 
-6. Update the `PKGBUILD` source array to reference the regenerated patch if the filename changed.
+6. Update the `PKGBUILD` source array to reference the regenerated patch if the
+   filename changed.
 
 7. Refresh checksums:
    ```bash
@@ -40,16 +44,23 @@ When a patch fails to apply (`.rej` files appear or `patch` exits non-zero):
 8. Run the full verification sequence:
    ```bash
    namcap PKGBUILD
-   makepkg --printsrcinfo > .SRCINFO
+   makepkg --printsrcinfo > /dev/null
    pkgctl build
    ```
 
 ## Gotchas
 
-- If the upstream source has been substantially refactored, the patch may be obsolete. Verify whether the patch's purpose (bug fix, feature) has been addressed upstream before spending time on regeneration.
-- For packages using `update.sh` for transformations rather than `.patch` files (e.g., `ranger-doas`), this workflow does not apply. Consult the package's local `AGENTS.md` instead.
-- If `updpkgsums` fails, the upstream tarball may have been re-rolled. Verify the file content manually before committing new hashes.
+- If the upstream source has been substantially refactored, the patch may be
+  obsolete. Verify whether the patch's purpose (bug fix, feature) has been
+  addressed upstream before spending time on regeneration.
+- For packages using `update.sh` for transformations rather than `.patch` files
+  (e.g., `ranger-doas`), this workflow does not apply. Consult the package's
+  local `AGENTS.md` instead.
+- If `updpkgsums` fails, the upstream tarball may have been re-rolled. Verify
+  the file content manually before committing new hashes.
 
 ## When to Escalate
 
-If a patch cannot be reconciled with upstream changes after 2-3 regeneration attempts, or if the patch addresses a security vulnerability, escalate to the user before proceeding.
+If a patch cannot be reconciled with upstream changes after 2-3 regeneration
+attempts, or if the patch addresses a security vulnerability, escalate to the
+user before proceeding.

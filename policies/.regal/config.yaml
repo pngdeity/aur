@@ -1,0 +1,41 @@
+rules:
+  bugs:
+    leaked-internal-reference:
+      level: ignore
+      # Our _deploy_aur, _repo_subarch, _pkgname fields are Pkl schema
+      # variables, not Rego internal rules. They're data from manifest.json.
+    var-shadows-builtin:
+      level: ignore
+      # The `replace` variable in deny_no_unprovided_conflicts is intentional —
+      # conflicts with OPA's builtin replace() but the rule predates it.
+  style:
+    prefer-some-in-iteration:
+      level: ignore
+      # We use the concise input.packages[_] iteration style consistently.
+    line-length:
+      level: ignore
+      # sprintf messages with descriptive field names naturally exceed 80 chars.
+    file-length:
+      level: ignore
+      # Single-file policy (377+ lines) by design — see Phase 2 spec.
+  performance:
+    non-loop-expression:
+      level: ignore
+      # Inline array literals in rule bodies are deliberate for readability.
+  idiomatic:
+    directory-package-mismatch:
+      level: ignore
+      # policies/ directory contains repository.rego, not main.rego. Conftest compatible.
+    prefer-equals-comparison:
+      level: ignore
+      # First variable binding via `=` is required in else-chain bodies.
+      # Using `==` makes the compiler treat c as unsafe. See coalesce_checksums.
+    equals-pattern-matching:
+      level: ignore
+      # is_empty_or_null uses explicit v == null checks for clarity.
+    use-some-for-output-vars:
+      level: ignore
+      # Consistent iteration style with inline variable declaration.
+    use-in-operator:
+      level: ignore
+      # Explicit equality checks preferred for cross-field rule clarity.

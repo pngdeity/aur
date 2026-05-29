@@ -1,13 +1,11 @@
 [__config__]
+oldver = "oldver.json"
+newver = "newver.json"
 
 [opencode-git]
 source = "git"
 git = "https://github.com/anomalyco/opencode.git"
 prefix = "v"
-
-[context7-cli]
-source = "npm"
-npm = "ctx7"
 
 [dnstwist]
 source = "pypi"
@@ -47,6 +45,15 @@ source = "github"
 github = "Duncaen/OpenDoas"
 use_latest_tag = true
 
+[go-regal-bin]
+source = "github"
+github = "StyraInc/regal"
+use_latest_tag = true
+prefix = "v"
+
+[clash-geoip]
+source = "git"
+git = "https://github.com/Loyalsoldier/geoip.git"
 [pkl-lsp-bin]
 source = "github"
 github = "colelawrence/pkl-lsp"
