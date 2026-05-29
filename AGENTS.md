@@ -157,7 +157,7 @@ quality controls:
 - **[Creating packages](https://wiki.archlinux.org/title/Creating_packages)**:
   The foundation for all new package development.
 - **[VCS package guidelines](https://wiki.archlinux.org/title/VCS_package_guidelines)**:
-  Mandatory for `*-git` packages (e.g., `gemini-cli-git`).
+  Mandatory for `*-git` packages (e.g., `amass-git`).
 - **[Patching packages](https://wiki.archlinux.org/title/Patching_packages)**:
   Critical when a package carries out-of-tree `.patch` files.
 - **[.SRCINFO Wiki](https://wiki.archlinux.org/title/.SRCINFO)**: Guidelines for
@@ -332,13 +332,12 @@ distinct target and responsibility boundary:
   processing. Variant PKGBUILDs themselves are never AUR-deployed.
 - **Shared pkgdesc**: All packages sharing the same `_pkgname` value MUST use an
   identical `pkgdesc` string. This ensures consistent presentation across
-  variant package listings (e.g., `gemini-cli`, `gemini-cli-git`,
-  `gemini-cli-preview`, `gemini-cli-nightly`). The `_pkgname` variable is the
-  authoritative discriminator for variant groups. Run
-  `scripts/check-pkgdesc-consistency.sh` to validate. The convention: `_pkgname`
-  present and equal to `pkgname` signals the base package (variants exist);
-  `_pkgname` present and unequal signals a variant sibling; `_pkgname` absent
-  signals a standalone package with no variants.
+  variant package listings (e.g., `apm`, `apm-bin`, `pkl-lsp`, `pkl-lsp-bin`).
+  The `_pkgname` variable is the authoritative discriminator for variant groups.
+  Run `scripts/check-pkgdesc-consistency.sh` to validate. The convention:
+  `_pkgname` present and equal to `pkgname` signals the base package (variants
+  exist); `_pkgname` present and unequal signals a variant sibling; `_pkgname`
+  absent signals a standalone package with no variants.
 
 - **provides/conflicts convention**: Per the Arch Wiki
   [PKGBUILD#conflicts netbeans example](https://wiki.archlinux.org/title/PKGBUILD#conflicts),
@@ -411,7 +410,8 @@ PKGBUILD metadata patches), you MUST NOT perform these edits manually in the
 1. **Declarative (preferred)**: For authorship demotion, set
    `_demote_upstream_maintainer=true` in the `PKGBUILD`. The sync script handles
    this centrally during both bootstrap and update. For asset synchronization
-   across variants, use `_use_common_gemini_settings=true`.
+   across variants, use `_use_common_gemini_settings=true` (aspirational — no
+   current packages use this).
 
 2. **Imperative (`update.sh`)**: For genuinely unique per-package
    transformations that cannot be expressed declaratively (e.g., regenerating

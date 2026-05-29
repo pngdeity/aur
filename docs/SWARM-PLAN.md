@@ -3,12 +3,15 @@
 **Generated:** 2026-05-15 **Target Repository:** pngdeity/aur **Orchestration:**
 opencode Task subagents **Total Estimated Time:** ~15 hours of agent work
 
+**Status:** Executed 2026-05-15 to 2026-05-29. All S1–S7 tasks completed.
+Remaining: chroot builds (human), CI secrets provisioning (human).
+
 ---
 
 ## Repository State
 
-**Branch:** `main` (clean, up to date with origin/main) **Packages:** 8 (11
-ghost directories removed in prep)
+**Branch:** `main` (clean, up to date with origin/main) **Packages:** 27 (as of
+2026-05-29; swarm started with 8, 19 packages added post-swarm)
 
 | Package      | Current Version        | Upstream                                   |
 | ------------ | ---------------------- | ------------------------------------------ |
