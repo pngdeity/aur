@@ -4,7 +4,6 @@
 
 _githubname="Loyalsoldier/geoip"
 _deploy_aur=true
-_attestation_id=28200339
 
 pkgname=clash-geoip
 pkgver=202605210051
@@ -13,37 +12,11 @@ pkgdesc="GeoIP files for Clash"
 arch=(any)
 url="https://github.com/Loyalsoldier/geoip"
 license=(CC-BY-SA-4.0 GPL-3.0-or-later)
-makedepends=(cosign github-cli)
 source=(
     "${pkgname}-${pkgver}.mmdb::${url}/releases/download/${pkgver}/Country.mmdb"
-    "attestation-${pkgver}.sigstore.json::${url}/attestations/${_attestation_id}/download"
 )
-sha256sums=('12bb95152b349818de5d5166d9866e99dcc9979fafc74add7a86a6325bda4d32'
-            '3965f021cf6fe7875e00727acdb7d2f60111feac078494d2f5551b2e16c73d6f')
-
-verify() {
-    local src="$SRCDEST/${pkgname}-${pkgver}.mmdb"
-    local bundle="$SRCDEST/attestation-${pkgver}.sigstore.json"
-    local trusted_root
-
-    trusted_root=$(mktemp)
-    gh attestation trusted-root | sed -n '2p' > "$trusted_root"
-
-    cosign verify-blob-attestation \
-        --bundle "$bundle" \
-        --new-bundle-format \
-        --certificate-identity https://dotcom.releases.github.com \
-        --certificate-oidc-issuer-regexp '.*' \
-        --trusted-root "$trusted_root" \
-        --insecure-ignore-sct \
-        --insecure-ignore-tlog \
-        --type https://in-toto.io/attestation/release/v0.2 \
-        "$src"
-
-    rm -f "$trusted_root"
-}
+sha256sums=('12bb95152b349818de5d5166d9866e99dcc9979fafc74add7a86a6325bda4d32')
 
 package() {
-    cd "$srcdir"
     install -Dm0644 "${pkgname}-${pkgver}.mmdb" "${pkgdir}/etc/clash/Country.mmdb"
 }
