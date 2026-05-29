@@ -17,11 +17,11 @@ replaces=(doas)
 install=opendoas.install
 source=(
     "${pkgname}::git+https://github.com/Duncaen/OpenDoas.git#tag=v${pkgver}"
-    "change-PATH.patch"
+    "change-path.patch"
     "rowhammer.patch"
     "retry.patch"
-    "arg-handling.patch"
-    "post-release-v6.8.2.patch"
+    "fix-gid-max.patch"
+    "post-release-fixes.patch"
 )
 backup=(etc/pam.d/doas)
 sha256sums=('43b4c2de1aaa31aac1d322b98883334b864c606783c4dfb3ddbfa0d88af9332b'
@@ -40,7 +40,7 @@ prepare() {
   cd "$pkgname"
   
   # Alpine PATH patch
-  patch -Np1 -i ../change-PATH.patch
+  patch -Np1 -i ../change-path.patch
   
   # GitHub PR #124: Rowhammer resistance
   patch -Np1 -i ../rowhammer.patch
@@ -48,11 +48,11 @@ prepare() {
   # GitHub PR #123: Retry 3 times
   patch -Np1 -i ../retry.patch
   
-  # GitHub PR #130: Argument handling
-  patch -Np1 -i ../arg-handling.patch
+  # GitHub PR #130 / Issue #129: Fix GID_MAX assignment
+  patch -Np1 -i ../fix-gid-max.patch
 
-  # Post-release 6.8.2 commits (HEAD)
-  patch -Np1 -i ../post-release-v6.8.2.patch
+  # Post-release fixes (HEAD after 6.8.2)
+  patch -Np1 -i ../post-release-fixes.patch
 }
 
 build() {
