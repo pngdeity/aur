@@ -1,0 +1,3 @@
+[python-sqlite-fts4]
+source = "git"
+git = "https://github.com/simonw/sqlite-fts4.git"

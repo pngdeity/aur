@@ -1,0 +1,180 @@
+From 40e01c3a74b91c9fb61b29ac76dd6ea7edc8f175 Mon Sep 17 00:00:00 2001
+From: Finlay Davidson <finlay.davidson@coderclass.nl>
+Date: Thu, 23 Dec 2021 02:06:26 +0100
+Subject: [PATCH 1/3] Add bash-completion support
+
+Loosely based on bash-completion's sudo support
+---
+ GNUmakefile     | 10 +++++++---
+ configure       |  4 ++++
+ doas.completion | 19 +++++++++++++++++++
+ 3 files changed, 30 insertions(+), 3 deletions(-)
+ create mode 100644 doas.completion
+
+diff --git a/GNUmakefile b/GNUmakefile
+index 2eef88e..b32e417 100644
+--- a/GNUmakefile
++++ b/GNUmakefile
+@@ -1,7 +1,8 @@
+-PROG=	doas
+-MAN=	doas.1 doas.conf.5
++PROG=		doas
++MAN=		doas.1 doas.conf.5
++COMPLETION=	doas.completion
+ 
+-SRCS=	parse.y doas.c env.c
++SRCS=		parse.y doas.c env.c
+ 
+ include config.mk
+ 
+@@ -19,17 +20,20 @@ install: ${PROG} ${MAN}
+ 	mkdir -p -m 0755 ${DESTDIR}${BINDIR}
+ 	mkdir -p -m 0755 ${DESTDIR}${MANDIR}/man1
+ 	mkdir -p -m 0755 ${DESTDIR}${MANDIR}/man5
++	mkdir -p -m 0755 ${DESTDIR}${COMPDIR}/completions
+ 	cp -f ${PROG} ${DESTDIR}${BINDIR}
+ 	chown ${BINOWN}:${BINGRP} ${DESTDIR}${BINDIR}/${PROG}
+ 	chmod ${BINMODE} ${DESTDIR}${BINDIR}/${PROG}
+ 	cp -f doas.1 ${DESTDIR}${MANDIR}/man1
+ 	cp -f doas.conf.5 ${DESTDIR}${MANDIR}/man5
++	cp -f doas.completion ${DESTDIR}$(COMPDIR)/completions/doas
+ 
+ uninstall:
+ 	rm -f ${DESTDIR}${BINDIR}/${PROG}
+ 	rm -f ${DESTDIR}${PAMDIR}/doas
+ 	rm -f ${DESTDIR}${MANDIR}/man1/doas.1
+ 	rm -f ${DESTDIR}${MANDIR}/man5/doas.conf.5
++	rm -f ${DESTDIR}${COMPDIR}/completions/doas
+ 
+ clean:
+ 	rm -f ${PROG} ${OBJS} ${OBJS:.o=.d} parse.c
+diff --git a/configure b/configure
+index 1f92f01..62e4503 100755
+--- a/configure
++++ b/configure
+@@ -14,6 +14,7 @@ usage: configure [options]
+   --bindir=DIR           user executables [PREFIX/bin]
+   --datadir=DIR          architecture-independent data files [PREFIX/share]
+   --mandir=DIR           manual pages [DATADIR/man]
++  --compdir=DIR          bash completions [DATADIR/bash-completion]
+   --sysconfdir=DIR       directory for configuration files [/etc]
+ 
+   --build=build-alias    a cpu-vendor-opsys for the system where the application will be built
+@@ -50,6 +51,7 @@ for x; do
+ 	--bindir) BINDIR=$var ;;
+ 	--datadir) SHAREDIR=$var ;;
+ 	--mandir) MANDIR=$var ;;
++	--compdir) COMPDIR=$var ;;
+ 	--sysconfdir) SYSCONFDIR=$var ;;
+ 	--build) BUILD=$var ;;
+ 	--host) HOST=$var ;;
+@@ -131,6 +133,7 @@ esac
+ : ${BINDIR:=${PREFIX}/bin}
+ : ${SHAREDIR:=${PREFIX}/share}
+ : ${MANDIR:=${SHAREDIR}/man}
++: ${COMPDIR:=${SHAREDIR}/bash-completion}
+ : ${SYSCONFDIR:=/etc}
+ : ${BINMODE:=4755}
+ : ${BINOWN:=root}
+@@ -142,6 +145,7 @@ EPREFIX  ?=	${EPREFIX}
+ BINDIR   ?=	${BINDIR}
+ SHAREDIR ?=	${SHAREDIR}
+ MANDIR   ?=	${MANDIR}
++COMPDIR  ?=	${COMPDIR}
+ SYSCONFDIR?=	${SYSCONFDIR}
+ BINMODE  ?=	${BINMODE}
+ BINOWN  ?=	${BINOWN}
+diff --git a/doas.completion b/doas.completion
+new file mode 100644
+index 0000000..420e2cf
+--- /dev/null
++++ b/doas.completion
+@@ -0,0 +1,19 @@
++# bash completion for doas(1)                              -*- shell-script -*-
++
++_doas() {
++    local cur prev words cword split
++    _init_completion -s || return
++
++    for ((i = 1; i <= cword; i++)); do
++        if [[ ${words[i]} != -* ]]; then
++            local PATH=$PATH:/sbin:/usr/sbin:/usr/local/sbin
++            local root_command=${words[i]}
++            _command_offset $i
++            return
++        fi
++
++	[[ ${words[i]} == -@(u|C) ]] && ((i++))
++    done
++} && complete -F _doas doas
++
++# ex: filetype=sh
+
+From 4cafc18047077c8bd4246081493d13fe8ecbb469 Mon Sep 17 00:00:00 2001
+From: Finlay Davidson <finlay.davidson@coderclass.nl>
+Date: Thu, 23 Dec 2021 11:31:55 +0100
+Subject: [PATCH 2/3] Fix indentation in bash completion
+
+---
+ doas.completion | 22 +++++++++++-----------
+ 1 file changed, 11 insertions(+), 11 deletions(-)
+
+diff --git a/doas.completion b/doas.completion
+index 420e2cf..e11c3d6 100644
+--- a/doas.completion
++++ b/doas.completion
+@@ -1,19 +1,19 @@
+ # bash completion for doas(1)                              -*- shell-script -*-
+ 
+ _doas() {
+-    local cur prev words cword split
+-    _init_completion -s || return
++	local cur prev words cword split
++	_init_completion -s || return
+ 
+-    for ((i = 1; i <= cword; i++)); do
+-        if [[ ${words[i]} != -* ]]; then
+-            local PATH=$PATH:/sbin:/usr/sbin:/usr/local/sbin
+-            local root_command=${words[i]}
+-            _command_offset $i
+-            return
+-        fi
++	for ((i = 1; i <= cword; i++)); do
++		if [[ ${words[i]} != -* ]]; then
++			local PATH=$PATH:/sbin:/usr/sbin:/usr/local/sbin
++			local root_command=${words[i]}
++			_command_offset $i
++			return
++		fi
+ 
+-	[[ ${words[i]} == -@(u|C) ]] && ((i++))
+-    done
++		[[ ${words[i]} == -@(u|C) ]] && ((i++))
++	done
+ } && complete -F _doas doas
+ 
+ # ex: filetype=sh
+
+From 51f126a9a56cda5a291d5652b0685967133d7b90 Mon Sep 17 00:00:00 2001
+From: Finlay Davidson <finlay.davidson@coderclass.nl>
+Date: Mon, 17 Jan 2022 13:04:36 +0100
+Subject: [PATCH 3/3] Fix inconsistent use of parentheses and braces in
+ GNUmakefile
+
+---
+ GNUmakefile | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/GNUmakefile b/GNUmakefile
+index b32e417..d1be774 100644
+--- a/GNUmakefile
++++ b/GNUmakefile
+@@ -26,7 +26,7 @@ install: ${PROG} ${MAN}
+ 	chmod ${BINMODE} ${DESTDIR}${BINDIR}/${PROG}
+ 	cp -f doas.1 ${DESTDIR}${MANDIR}/man1
+ 	cp -f doas.conf.5 ${DESTDIR}${MANDIR}/man5
+-	cp -f doas.completion ${DESTDIR}$(COMPDIR)/completions/doas
++	cp -f doas.completion ${DESTDIR}${COMPDIR}/completions/doas
+ 
+ uninstall:
+ 	rm -f ${DESTDIR}${BINDIR}/${PROG}

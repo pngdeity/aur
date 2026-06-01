@@ -1,0 +1,18 @@
+# Maintainer: pngdeity <pngdeity@tutanota.com>
+# Contributor: Finlay Davidson <finlay.davidson@coderclass.nl>
+
+pkgname=doas-bash-completion
+pkgver=1.0.0
+pkgrel=1
+pkgdesc="Bash completion for opendoas"
+arch=('any')
+url="https://github.com/aarchetype/bash-completion"
+license=('GPL-2.0-only')
+depends=('bash-completion')
+source=("doas.bash")
+sha256sums=('f0468b61107b9ac9400def64b03b7588da784c7a3b1db6bd75ae14a36f356f27')
+
+package() {
+  install -Dm644 "doas.bash" \
+    "$pkgdir/usr/share/bash-completion/completions/doas"
+}

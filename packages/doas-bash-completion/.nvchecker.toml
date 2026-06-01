@@ -1,0 +1,4 @@
+[doas-bash-completion]
+source = "github"
+github = "aarchetype/bash-completion"
+use_latest_tag = true
