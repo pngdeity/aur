@@ -1,0 +1,4 @@
+[python-pytest-recording]
+source = "git"
+git = "https://github.com/kiwicom/pytest-recording.git"
+prefix = "v"

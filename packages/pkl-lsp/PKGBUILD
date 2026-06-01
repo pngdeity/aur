@@ -1,0 +1,35 @@
+# Maintainer: pngdeity <pngdeity@tutanota.com>
+
+_pkgname=pkl-lsp
+pkgname=$_pkgname
+_deploy_aur=true
+_githubname="apple/pkl-lsp"
+
+pkgver=0.7.0
+pkgrel=1
+pkgdesc="Language Server Protocol implementation for Pkl"
+arch=('any')
+url="https://github.com/apple/pkl-lsp"
+license=('Apache-2.0')
+depends=('java-runtime')
+makedepends=('git' 'gradle' 'java-environment' 'zig')
+source=("${pkgname}-${pkgver}.tar.gz::${url}/archive/refs/tags/${pkgver}.tar.gz")
+sha256sums=('046098107e0c22c932fe46dd550b02e1474c9b9be8a592a6f9161b9c3413157d')
+provides=('pkl-lsp-bin')
+conflicts=('pkl-lsp-bin')
+
+build() {
+    cd "${pkgname}-${pkgver}"
+    export GRADLE_USER_HOME="${srcdir}/.gradle"
+    ./gradlew shadowJar --no-daemon
+}
+
+package() {
+    cd "${pkgname}-${pkgver}"
+    install -Dm644 "build/libs/${pkgname}-${pkgver}.jar" \
+        "${pkgdir}/usr/share/java/${pkgname}/${pkgname}.jar"
+    install -Dm755 /dev/stdin "${pkgdir}/usr/bin/pkl-lsp" <<'EOF'
+#!/bin/sh
+exec /usr/bin/java -jar '/usr/share/java/pkl-lsp/pkl-lsp.jar' "$@"
+EOF
+}

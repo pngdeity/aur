@@ -62,6 +62,30 @@ git = "https://github.com/Loyalsoldier/geoip.git"
 [pkl-lsp-bin]
 source = "github"
 github = "colelawrence/pkl-lsp"
+
+[pkl-lsp]
+source = "git"
+git = "https://github.com/apple/pkl-lsp.git"
+
+[doas-bash-completion]
+source = "github"
+github = "aarchetype/bash-completion"
+use_latest_tag = true
+
+[seiche]
+source = "github"
+github = "SeicheAcoustics/Seiche"
+use_latest_release = true
+prefix = "v"
+
+[python-pytest-recording]
+source = "git"
+git = "https://github.com/kiwicom/pytest-recording.git"
+prefix = "v"
+
+[python-sqlite-fts4]
+source = "git"
+git = "https://github.com/simonw/sqlite-fts4.git"
 use_latest_tag = true
 
 [apm-go-git]
