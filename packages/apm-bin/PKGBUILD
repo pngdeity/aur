@@ -13,7 +13,7 @@ pkgdesc="Agent Package Manager by Microsoft"
 arch=('x86_64' 'aarch64')
 url="https://github.com/microsoft/apm"
 license=('MIT')
-depends=('git' 'glibc>=2.35')
+depends=('git' 'glibc')
 options=('!strip')
 provides=("apm=$pkgver")
 conflicts=('apm')

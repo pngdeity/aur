@@ -10,8 +10,6 @@ pkgdesc="Agent Package Manager by Microsoft"
 arch=('any')
 url="https://github.com/microsoft/apm"
 license=('MIT')
-provides=("${_pkgname}")
-conflicts=("${_pkgname}")
 
 # AUTOMATED METADATA
 _githubname="microsoft/apm"

@@ -153,11 +153,24 @@ Outstanding architectural and documentation items requiring completion.
      invocation per variable per PKGBUILD is O(n²) — batch resolution (source
      once, dump all vars) should be evaluated against `declare -p` overhead.
      Profile across the full 30+ package corpus.
-  5. **Prior work**: Survey existing tools — `namcap` rule architecture, Arch
-     `devtools` (checkpkg, diffpkg), AUR helpers with analysis features, and any
-     prior art in PKGBUILD static analysis or Bash sandboxing libraries — to
-     avoid reinventing the wheel and to identify reusable patterns. (Due:
-     Indeterminate)
+
+5. **Prior work**: Survey existing tools — `namcap` rule architecture, Arch
+   `devtools` (checkpkg, diffpkg), AUR helpers with analysis features, and any
+   prior art in PKGBUILD static analysis or Bash sandboxing libraries — to avoid
+   reinventing the wheel and to identify reusable patterns. (Due: Indeterminate)
+
+- [ ] **OPA/Rego Policy — `no_version_constraints` (ERROR)**: Add a Rego rule to
+      deny version operators (`>=`, `<=`, `>`, `<`, `=`) embedded in `depends`,
+      `makedepends`, and `checkdepends` strings. Pacman does not enforce version
+      ranges — they are non-functional noise. Example violation:
+      `depends=('glibc>=2.35')`. Pkl pipeline preserves literal dep strings,
+      making this a straightforward `re_match` check.
+
+- [ ] **OPA/Rego Policy — `prefer_strong_hash` (WARN)**: Add a Rego rule to warn
+      when `md5sums` is populated but `sha256sums`, `sha512sums`, or `b2sums`
+      are not. `md5` is cryptographically broken per Arch Wiki guidelines; the
+      standard is at least SHA-256. Example violation: `md5sums=('f0d26bc...')`
+      with no `sha256sums` array present.
 
 - [x] **.SRCINFO Version Control Policy**: Research the feasibility of treating
       `.SRCINFO` as a build artifact — generated on-demand by `aur-deploy.sh`

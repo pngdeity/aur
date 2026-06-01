@@ -4,6 +4,7 @@ _demote_upstream_maintainer=true
 # Contributor: Felix Yan <felixonmars@archlinux.org>
 
 pkgname=python-click-default-group
+_name=${pkgname#python-}
 pkgver=1.2.4
 pkgrel=3
 pkgdesc="Extends click.Group to invoke a command without explicit subcommand name"
@@ -17,22 +18,22 @@ source=("https://github.com/click-contrib/click-default-group/archive/v$pkgver/$
 sha512sums=('0239e703421e693399e8e54e4a6bdc4a74e6f16307f008ee742788ce3e8040f633de2b1bf12997a5c448b70cb55f77ccd4f42c5b4abe3b6a05df18908daf61da')
 
 prepare() {
-  cd click-default-group-$pkgver
+  cd "${_name}-${pkgver}"
   sed -i 's/flit_core >=3.2,<4/flit_core >=3.2/' pyproject.toml
 }
 
 build() {
-  cd click-default-group-$pkgver
+  cd "${_name}-${pkgver}"
   python -m build --wheel --no-isolation
 }
 
 check() {
-  cd click-default-group-$pkgver
+  cd "${_name}-${pkgver}"
   python -m pytest
 }
 
 package() {
-  cd click-default-group-$pkgver
+  cd "${_name}-${pkgver}"
   python -m installer -d "$pkgdir" dist/*.whl
   install -Dm644 LICENSE -t "$pkgdir"/usr/share/licenses/$pkgname/
 }

@@ -28,7 +28,7 @@ makedepends=(
 )
 checkdepends=(
   'python-pytest'
-  'python-pytest-recording'
+  # 'python-pytest-recording'  # AUR-only; uncomment when merged into this repo
   'python-pytest-asyncio'
 )
 
