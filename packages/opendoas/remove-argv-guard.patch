@@ -1,0 +1,26 @@
+From: pngdeity <pngdeity@tutanota.com>
+Date: 2026-04-04 22:37:39 -0500
+Subject: [PATCH] doas: remove redundant argv null check in main()
+
+The kernel guarantees argv is non-null and argc >= 0.
+Provenance: project-authored — no upstream OpenDoas commit.
+---
+ doas.c | 5 -----
+ 1 file changed, 5 deletions(-)
+
+diff --git a/doas.c b/doas.c
+index 0ea380a..ac3a42a 100644
+--- a/doas.c
++++ b/doas.c
+@@ -260,11 +260,6 @@ main(int argc, char **argv)
+ 	const char *cwd;
+ 	char **envp;
+
+-	if (argc <= 0 || argv == NULL || argv[0] == NULL) {
+-		fprintf(stderr, "doas: executed without argv\n");
+-		exit(1);
+-	}
+-
+ 	setprogname("doas");
+
+ 	closefrom(STDERR_FILENO + 1);

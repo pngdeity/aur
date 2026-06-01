@@ -1,13 +1,13 @@
-# Maintainer: Nathan Somers <pngdeity@tutanota.com>
+# Maintainer: pngdeity <pngdeity@tutanota.com>
 # Contributor: alive4ever <alive4ever at live.com>
 # Contributor: Earnest
 
 pkgname=opendoas
 pkgver=6.8.2
 pkgrel=1
-pkgdesc='Run commands as super user or another user (patched version)'
+pkgdesc='Run commands as super user or another user'
 url='https://github.com/Duncaen/OpenDoas'
-license=(custom:ISC)
+license=('custom:ISC')
 arch=(x86_64)
 makedepends=(git)
 depends=(pam)
@@ -22,19 +22,17 @@ source=(
     "retry.patch"
     "fix-gid-max.patch"
     "post-release-fixes.patch"
+    "remove-argv-guard.patch"
+    "doas.bash"
 )
-backup=(etc/pam.d/doas)
 sha256sums=('43b4c2de1aaa31aac1d322b98883334b864c606783c4dfb3ddbfa0d88af9332b'
-            'd1784db14976a9988666d27c96cd3ab09f91c3435eb06efd01374712982ff8f8'
+            '6adb42ac2005d0a1d3f8b24e4e319ce6aebb078861ded7904ddcd8f5e1f5592b'
             '80c9ebdb373c552730e13f6c562820a80540a96f0471f2c96170f69fba052d0a'
             'cae34e452f63dec782fe2e0a3b2ca73045a7a7f21468e7dd1ea84a11296ce8c2'
             '3e86c2601377aa0ffdf132365838caa4bdcb4c6e6b6ffddb2070e43157337b5e'
-            'dab653136a5adb37991b215963157588a14e16be8aa32d33c37590e86c763477')
-
-pkgver() {
-  cd "$pkgname"
-  git describe --long --tags | sed 's,^v,,; s|-\(.*\)-g|.r\1.g|'
-}
+            '3b6affe9ecfa9859efc2b27fef8593ce77b75d5c434723175e49fda1d6818591'
+            '7e4032bf16d0d03215941b70edc05a5d3c263cad4200664ab76b0c41b49110b5'
+            '6ed5aec95cb659eda7776a04873ea12368d09ba1c93c18663e1bef00533cecdb')
 
 prepare() {
   cd "$pkgname"
@@ -53,6 +51,9 @@ prepare() {
 
   # Post-release fixes (HEAD after 6.8.2)
   patch -Np1 -i ../post-release-fixes.patch
+
+  # Remove redundant argv null check (project-authored, no upstream commit)
+  patch -Np1 -i ../remove-argv-guard.patch
 }
 
 build() {
@@ -65,4 +66,5 @@ package() {
   cd "$pkgname"
   make DESTDIR="$pkgdir" install
   install -Dm644 LICENSE -t "$pkgdir/usr/share/licenses/$pkgname"
+  install -Dm644 "$srcdir/doas.bash" "$pkgdir/usr/share/bash-completion/completions/doas"
 }
