@@ -26,6 +26,12 @@ source = "git"
 git = "https://github.com/microsoft/apm.git"
 prefix = "v"
 
+[apm]
+source = "github"
+github = "microsoft/apm"
+use_latest_tag = true
+prefix = "v"
+
 [python-whois]
 source = "pypi"
 pypi = "python-whois"
@@ -58,3 +64,45 @@ git = "https://github.com/Loyalsoldier/geoip.git"
 source = "github"
 github = "colelawrence/pkl-lsp"
 use_latest_tag = true
+
+[apm-go-git]
+source = "git"
+git = "https://github.com/githubnext/apm.git"
+
+[python-frontmatter]
+source = "pypi"
+pypi = "python-frontmatter"
+
+[python-llm]
+source = "git"
+git = "https://github.com/simonw/llm.git"
+
+[python-llm-github-models]
+source = "pypi"
+pypi = "llm-github-models"
+
+[python-click-default-group]
+source = "git"
+git = "https://github.com/click-contrib/click-default-group.git"
+prefix = "v"
+
+[python-condense-json]
+source = "pypi"
+pypi = "condense-json"
+
+[sqlite-utils]
+source = "pypi"
+pypi = "sqlite-utils"
+
+[python-sqlite-migrate]
+source = "git"
+git = "https://github.com/simonw/sqlite-migrate.git"
+
+[python-azure-ai-inference]
+source = "pypi"
+pypi = "azure-ai-inference"
+
+[python-azure-core]
+source = "git"
+git = "https://github.com/Azure/azure-sdk-for-python.git"
+prefix = "v"

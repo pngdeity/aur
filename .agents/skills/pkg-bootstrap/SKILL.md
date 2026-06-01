@@ -25,8 +25,41 @@ When adding a new package to `packages/`:
    - For CPU-optimization variants, set `_repo_subarch` (e.g., `"x86_64_v3"`) —
      mutually exclusive with `_deploy_aur` If the package is entirely custom and
      does not mirror any upstream PKGBUILD, omit the `_upstream_*` variables and
-     define a standard `source` array directly. In this case, skip step 2 and
-     proceed to step 3.
+     define a standard `source` array directly. In this case, perform step 1a
+     below, then skip step 2 and proceed to step 3.
+
+1a. **Verify upstream dependencies** against the PKGBUILD `depends` and
+`makedepends` arrays. For packages that do not mirror an existing Arch/AUR
+PKGBUILD (no `_upstream_aur_pkg` or `_upstream_arch_repo` set), you MUST inspect
+the upstream project's dependency manifest to ensure all runtime dependencies
+are captured. The manifest type depends on the language — these are common
+examples, not an exhaustive list:
+
+    | Language | Manifest file |
+    |----------|--------------|
+    | Python   | `pyproject.toml` (`project.dependencies`) or `setup.cfg` |
+    | Go       | `go.mod` (`require` directives; only cgo-linked C libs need `depends`) |
+    | Rust     | `Cargo.toml` (`[dependencies]`) |
+
+    For any other language, consult the upstream project's build
+    documentation to identify its dependency manifest. For each dependency,
+    map the upstream package name to its corresponding Arch Linux package
+    name (e.g., `websockets` → `python-websockets`, `GitPython` →
+    `python-gitpython`). Omit build-only/test-only dependencies from
+    `depends` and Python stdlib modules. Add any missing entries to
+    `depends` or `makedepends` as appropriate. Conditional dependencies
+    (e.g., `tomli; python_version < "3.11"`) should use the Arch Python
+    version as the reference — skip those gated behind an older Python
+    version than Arch ships. For dependencies with version range constraints
+    (e.g., `websockets>=12,<17`), verify that the packaged Arch version
+    satisfies the constraint (`pacman -Si <arch-package>`). If a future
+    Arch package update could breach an upper bound (e.g., `<17`), note
+    the ceiling in a comment above the `depends` array so a maintainer is
+    alerted during version bumps.
+
+    If the upstream PKGBUILD already exists on the AUR or Arch GitLab,
+    this check is handled automatically by `sync-package.sh` in the
+    next step — skip to step 2.
 
 2. For mirrored packages, run the bootstrap script. Look up the upstream version
    from the source repository (AUR web interface, Arch GitLab tags, or release

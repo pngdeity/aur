@@ -1,0 +1,61 @@
+# Maintainer: pngdeity <pngdeity@tutanota.com>
+
+_pkgname=apm
+pkgname=$_pkgname
+changelog=apm.changelog
+pkgver=0.16.0
+pkgrel=1
+pkgdesc="Agent Package Manager by Microsoft"
+arch=('any')
+url="https://github.com/microsoft/apm"
+license=('MIT')
+provides=("${_pkgname}")
+conflicts=("${_pkgname}")
+
+# AUTOMATED METADATA
+_githubname="microsoft/apm"
+
+depends=(
+  'python'
+  'python-click'
+  'python-colorama'
+  'python-yaml'
+  'python-requests'
+  'python-frontmatter'
+  'python-llm'
+  'python-llm-github-models'
+  'python-toml'
+  'python-rich'
+  'python-rich-click'
+  'python-watchdog'
+  'python-gitpython'
+  'python-ruamel-yaml'
+  'python-filelock'
+  'python-websockets'
+)
+makedepends=(
+  'python-build'
+  'python-installer'
+  'python-setuptools'
+  'python-wheel'
+  'python-pytest'
+)
+
+source=("${_pkgname}-${pkgver}.tar.gz::${url}/archive/v${pkgver}.tar.gz")
+sha256sums=('4e76efb0b21b081a1faacc6147ba6fd6d6beebfd5a5dba83937faea07244f4b3')
+
+build() {
+  cd "${_pkgname}-${pkgver}"
+  python -m build --wheel --no-isolation
+}
+
+package() {
+  cd "${_pkgname}-${pkgver}"
+  python -m installer --destdir="$pkgdir" dist/*.whl
+  install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}
+
+check() {
+  cd "${_pkgname}-${pkgver}"
+  python -m pytest
+}

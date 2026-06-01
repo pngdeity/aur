@@ -1,11 +1,13 @@
-# Maintainer: Nathan Somers <pngdeity@tutanota.com>
+# Maintainer: pngdeity <pngdeity@tutanota.com>
 # Contributor: Mohamed Hisham Abdelzaher <mohamed.hisham.abdelzaher@gmail.com>
 _upstream_aur_pkg="apm-bin"
 _demote_upstream_maintainer=true
 _githubname="microsoft/apm"
+_pkgname="apm"
 
 pkgname=apm-bin
-pkgver=0.14.1
+changelog=apm-bin.changelog
+pkgver=0.16.0
 pkgrel=1
 pkgdesc="Agent Package Manager by Microsoft"
 arch=('x86_64' 'aarch64')
@@ -19,8 +21,8 @@ source_x86_64=("${url}/releases/download/v${pkgver}/apm-linux-x86_64.tar.gz")
 source_aarch64=("${url}/releases/download/v${pkgver}/apm-linux-arm64.tar.gz")
 source=("LICENSE::https://raw.githubusercontent.com/microsoft/apm/v${pkgver}/LICENSE")
 sha512sums=('b5abd9f896a468d8d5459c1a475c973e4d16c7df52f11edae95ad5af0886885e87d5cc626f40fcc844f1288a47e923101e0c88f620d4215769286b367044b510')
-sha512sums_x86_64=('8f45f05d92ae2d5d94e949719c855b350a0b84d433f5eaed4f1696a07503941e4028cc64525286d39c98e35e80fdc5394b337339066f10554d14488466aa1c0a')
-sha512sums_aarch64=('3c593a455599924aa96a7cffcc417e67bcf775ab22176c85689691c4b1f55513ae5c9d5f9305094213fc43d76fc9bbf04c3a2835126e069463d5f88c9fdba01b')
+sha512sums_x86_64=('d249268a97b057aa8f5a37d6adec156c7922f1e4615c5c724e7666ec0379dd9deb94867d9989c1bafcbff2ac700f388e7576b1733bfe22bc541ae2e6a5ee4b3e')
+sha512sums_aarch64=('ebd20cb9c33062be73cd3b41b4d56417eca7e4f5667c0b806141781998ca9a6a58df8aee578979635616bbc1651e821125c99e976e61ab2e90a0c648efc79772')
 
 package() {
     install -d "${pkgdir}/usr/lib/apm"

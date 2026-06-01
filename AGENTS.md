@@ -398,8 +398,14 @@ distinct target and responsibility boundary:
 ### New Package Initialization (Bootstrap Workflow)
 
 To add a new package, activate the `pkg-bootstrap` skill. It handles skeleton
-creation, `sync-package.sh` bootstrapping, `pkgctl version setup`, conditional
-local `AGENTS.md` creation, and `.nvchecker.toml` registration.
+creation, upstream dependency verification (for non-mirrored packages),
+`sync-package.sh` bootstrapping, `pkgctl version setup`, conditional local
+`AGENTS.md` creation, and `.nvchecker.toml` registration.
+
+**Critical**: For packages that do not mirror an existing Arch/AUR PKGBUILD (no
+`_upstream_aur_pkg` or `_upstream_arch_repo`), all runtime dependencies MUST be
+verified manually against the upstream project's dependency manifest. See the
+`pkg-bootstrap` skill for the per-language manifest checklist.
 
 ### Hybrid Import & Cleanup SOP
 

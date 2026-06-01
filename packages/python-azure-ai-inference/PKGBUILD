@@ -1,0 +1,40 @@
+# Maintainer: pngdeity <pngdeity@tutanota.com>
+
+pkgname=python-azure-ai-inference
+_name=${pkgname#python-}
+pkgver=1.0.0b9
+pkgrel=1
+pkgdesc="Azure AI Inference client library for Python"
+arch=('any')
+url="https://github.com/Azure/azure-sdk-for-python/tree/main/sdk/ai/azure-ai-inference"
+license=('MIT')
+
+depends=(
+  'python'
+  'python-isodate'
+  'python-azure-core'
+  'python-typing_extensions'
+)
+makedepends=(
+  'python-build'
+  'python-installer'
+  'python-setuptools'
+  'python-wheel'
+)
+
+source=("${pkgname}-${pkgver}.tar.gz::https://files.pythonhosted.org/packages/source/a/$_name/${_name//-/_}-$pkgver.tar.gz")
+sha256sums=('1feb496bd84b01ee2691befc04358fa25d7c344d8288e99364438859ad7cd5a4')
+
+build() {
+  cd "${_name//-/_}-${pkgver}"
+  python -m build --wheel --no-isolation
+}
+
+# Tests ignored, as the internal devtools_testutils package is not supposed to be released/published
+# (see https://bugs.freebsd.org/bugzilla/show_bug.cgi?id=261305) and azure-sdk-for-python relies on it.
+
+package() {
+  cd "${_name//-/_}-${pkgver}"
+  python -m installer --destdir="$pkgdir" dist/*.whl
+  install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}
