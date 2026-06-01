@@ -1,22 +1,26 @@
-[//]: # (This file is subordinate to AGENTS.md for all automated packaging and engineering workflows.)
-
 # pngdeity's Arch Linux User Repository (AUR)
 
-This repository contains Arch Linux package sources for packages I maintain, co-maintain, or host modified versions of.
+This repository contains Arch Linux package sources for packages I maintain,
+co-maintain, or host modified versions of.
 
 ## Automated Updates & CI/CD
 
 This repository utilizes a CI/CD pipeline powered by GitHub Actions:
 
-- **Upstream Monitoring:** `nvchecker` tracks upstream releases for all packages.
-- **Automated Builds:** Packages are automatically built in an isolated Arch Linux chroot environment upon upstream updates.
-- **Matrix Parallelism:** Multiple package updates are processed in parallel using GitHub Actions matrix builds.
-- **Custom Build Environment:** A specialized Docker image (`ghcr.io/pngdeity/aur/arch-builder`) is used to ensure consistent and fast build environments.
-- **Repository Management:** Built packages are automatically added to the custom Pacman repository and deployed.
+- **Upstream Monitoring:** `nvchecker` tracks upstream releases for all
+  packages.
+- **Automated Builds:** Packages are automatically built in a containerized Arch
+  Linux environment upon upstream updates.
+- **Custom Build Environment:** A specialized Docker image
+  (`ghcr.io/pngdeity/aur/arch-builder`) is used to ensure consistent and fast
+  build environments.
+- **Repository Management:** Built packages are automatically added to the
+  custom Pacman repository and deployed.
 
 ## Usage
 
-To use this Pacman package repository, first add the GPG key to your Pacman keyring:
+To use this Pacman package repository, first add the GPG key to your Pacman
+keyring:
 
 ```bash
 sudo pacman-key --recv-keys 63CC496475267693
@@ -26,7 +30,7 @@ sudo pacman-key --lsign-key 63CC496475267693
 Then add the following repository configuration to your `/etc/pacman.conf`:
 
 ```ini
-[my_private_repo]
+[pngdeity]
 SigLevel = Optional TrustAll
 Server = https://aur.pngdeity.ru/x86_64
 ```

@@ -1,6 +1,5 @@
 [__config__]
 oldver = "oldver.json"
-newver = "newver.json"
 
 [opencode-git]
 source = "git"

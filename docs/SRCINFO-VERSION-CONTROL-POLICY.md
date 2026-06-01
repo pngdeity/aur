@@ -13,13 +13,14 @@ is the canonical format consumed by AUR helpers (`yay`, `paru`, etc.) and the
 AUR web interface for dependency resolution, conflict detection, and package
 discovery without executing `PKGBUILD` code.
 
-In this repository, `.SRCINFO` files currently exist in 6 of 8 package
+In this repository, `.SRCINFO` files were committed in early package
 directories. The AGENTS.md mandatory verification workflow (§3, step 3) requires
-regeneration after every `PKGBUILD` change. The `build.yml` CI pipeline runs
-`scripts/check-metadata.sh` — a diff-based validator that compares the committed
-`.SRCINFO` against a freshly generated copy and fails if they diverge. The
-`discovery.yml` pipeline commits `.SRCINFO` alongside automated `PKGBUILD`
-updates.
+a syntactic `makepkg --printsrcinfo > /dev/null` metadata pass (no committed
+`.SRCINFO` baseline). The `build.yml` CI pipeline runs Pkl schema validation and
+`check-pkgdesc-consistency.sh` — no diff-based `.SRCINFO` comparison.
+`scripts/check-metadata.sh` exists as a syntactic-only validator but is not
+invoked by any workflow. The `discovery.yml` pipeline opens a PR for automated
+`PKGBUILD` updates without committing `.SRCINFO`.
 
 Meanwhile, `scripts/aur-deploy.sh` independently generates `.SRCINFO` from a
 _processed_ `PKGBUILD` (after inlining `source` directives, stripping repo-local
@@ -48,9 +49,9 @@ repository's version control, given this architecture.
 
 ### Key Architectural Insight
 
-The committed `.SRCINFO` in this repository has exactly **one** functional
-consumer: `scripts/check-metadata.sh`, which diffs it against a fresh
-generation. It is not consumed by:
+The committed `.SRCINFO` in this repository had exactly **one** historical
+consumer: `scripts/check-metadata.sh`, which performed a diff-based comparison.
+It is not consumed by:
 
 - **AUR helpers** — they read `.SRCINFO` from `aur.archlinux.org/<pkg>.git`, not
   from this repo
@@ -132,12 +133,13 @@ committed copy provides no additional safety.
 - **`discovery.yml`**: Safe — `git add packages/` excludes `.SRCINFO` via
   `.gitignore`.
 
-### Phase 4: Keep local convenience generation
+### Phase 4: Remove `.SRCINFO` from sync-package.sh — **Completed 2026-06-01**
 
-`sync-package.sh` may continue to run `makepkg --printsrcinfo > .SRCINFO` for
-local developer convenience (e.g., `namcap`-like tooling, manual inspection).
-The `.gitignore` rule ensures it never reaches version control again. This is
-zero-cost to retain.
+`sync-package.sh` no longer generates `.SRCINFO` at all. The `.SRCINFO` metadata
+file is exclusively a deployment artifact, generated on-the-fly by
+`scripts/aur-deploy.sh` during the AUR push step. This ensures a single point of
+generation — at the deployment boundary, from the processed (inlined, stripped)
+PKGBUILD — with zero risk of committed `.SRCINFO` desync.
 
 ### Exceptions
 

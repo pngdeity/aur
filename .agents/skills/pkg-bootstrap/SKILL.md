@@ -20,6 +20,7 @@ When adding a new package to `packages/`:
      ALL packages in a variant family, including the base). If the package is
      standalone with no variants, omit `_pkgname`.
    - For `gemini-cli` variants, add `_use_common_gemini_settings=true`
+     (aspirational — no current packages use this)
    - `_deploy_aur=true` if this package should be published to the AUR by the
      CI/CD pipeline
    - For CPU-optimization variants, set `_repo_subarch` (e.g., `"x86_64_v3"`) —

@@ -23,8 +23,6 @@ logpipe.*
 handoffs/
 
 # nvchecker local state
-nvc_versions.json
-newver.json
 
 # Python bytecode cache
 __pycache__/
