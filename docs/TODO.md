@@ -209,6 +209,11 @@ Outstanding architectural and documentation items requiring completion.
       (S8.1): all 10 missing docs added to table (18 entries total, aligned with
       actual files). Ongoing: add every new doc, remove entries for deleted
       docs.
+- [ ] **manual.archlinux.page Reference**: Add
+      [manual.archlinux.page](https://manual.archlinux.page/) to AGENTS.md
+      foundational documentation section as the browsable reference for all
+      Arch Linux manual pages (man 1/5/7/8). Serves as the web-accessible
+      complement to local `man` invocations. (Due: Indeterminate)
 - [x] **pkgvar Array Support Documentation**: Resolved 2026-05-15 swarm (S8.5):
       `docs/PKGBUILD-CUSTOM-VARIABLES-REFERENCE.md` now documents array variable
       support via `declare -p`, with single/multi-element examples and JSON mode
