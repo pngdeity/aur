@@ -291,7 +291,7 @@ distinct target and responsibility boundary:
 | Artifact                             | Produced By                                                         | Target                                                                                                                   | Responsibility                                                                                    |
 | ------------------------------------ | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------- |
 | **AUR PKGBUILDs**                    | CI/CD pipeline (`release.yml` → `scripts/aur-deploy.sh` → git push) | `aur.archlinux.org` — the Arch User Repository hosts these PKGBUILDs for end users and AUR helpers to download and build | **This repository** processes and pushes AUR-compatible PKGBUILDs to their respective AUR remotes |
-| **Binary packages** (`.pkg.tar.zst`) | `build.yml` → `arch-builder.sh` → `makepkg`                         | Apache host (`/var/www/html/repo/nightly/`) — serves a pacman-compatible repository database                             | **Release pipeline** (`release.yml`) handles database generation, signing, and `rsync` deployment |
+| **Binary packages** (`.pkg.tar.zst`) | `release.yml` → `makepkg`                                           | Apache host (`/var/www/html/repo/nightly/`) — serves a pacman-compatible repository database                             | **Release pipeline** (`release.yml`) handles database generation, signing, and `rsync` deployment |
 | **Builder image**                    | `builder-image.yml` → Docker build                                  | `ghcr.io/<org>/<repo>/arch-builder`                                                                                      | **CI/CD pipeline** builds and pushes on Dockerfile changes                                        |
 
 - **The Interface**: The primary publishing interface is the CI/CD pipeline. For
@@ -398,8 +398,14 @@ distinct target and responsibility boundary:
 ### New Package Initialization (Bootstrap Workflow)
 
 To add a new package, activate the `pkg-bootstrap` skill. It handles skeleton
-creation, `sync-package.sh` bootstrapping, `pkgctl version setup`, conditional
-local `AGENTS.md` creation, and `.nvchecker.toml` registration.
+creation, upstream dependency verification (for non-mirrored packages),
+`sync-package.sh` bootstrapping, `pkgctl version setup`, conditional local
+`AGENTS.md` creation, and `.nvchecker.toml` registration.
+
+**Critical**: For packages that do not mirror an existing Arch/AUR PKGBUILD (no
+`_upstream_aur_pkg` or `_upstream_arch_repo`), all runtime dependencies MUST be
+verified manually against the upstream project's dependency manifest. See the
+`pkg-bootstrap` skill for the per-language manifest checklist.
 
 ### Hybrid Import & Cleanup SOP
 
