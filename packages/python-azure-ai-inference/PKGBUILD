@@ -1,4 +1,5 @@
 # Maintainer: pngdeity <pngdeity@tutanota.com>
+_deploy_aur=true
 
 pkgname=python-azure-ai-inference
 _name=${pkgname#python-}

@@ -1,4 +1,5 @@
 # Maintainer: pngdeity <pngdeity@tutanota.com>
+_deploy_aur=true
 
 _pkgname=apm
 pkgname=$_pkgname
