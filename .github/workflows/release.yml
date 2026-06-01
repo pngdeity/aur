@@ -1,128 +1,131 @@
 name: Release
 on:
-  workflow_call:
-    inputs:
-      version:
-        required: true
-        type: string
-      chunks_json:
-        required: true
-        type: string # JSON array of objects: [{"index": 0, "list": [...]}, ...]
-
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+concurrency: release-${{ github.ref }}
 jobs:
-  # Matrix-based orchestration calling the executor
-  run-builds:
-    strategy:
-      fail-fast: false
-      matrix:
-        include: ${{ fromJson(inputs.chunks_json) }}
-    uses: ./.github/workflows/build.yml
-    with:
-      version: ${{ inputs.version }}
-      package_list: ${{ toJson(matrix.list) }}
-      chunk_index: ${{ matrix.index }}
-    secrets: inherit
-
-  # Final collection and professional repository publishing
-  publish:
-    needs: run-builds
+  build:
+    name: Build packages
+    if: github.repository == 'pngdeity/aur'
     runs-on: ubuntu-latest
-    # Using Arch container for native repo-add tool
-    container: archlinux:latest
+    container: archlinux:base-devel@sha256:6d08b7067286234b755a28340b6bd89f3a2289233dbca3c361464f27ecae8f08
+    timeout-minutes: 120
+    permissions:
+      contents: read
+    env:
+      SOURCE_DATE_EPOCH: '1693526400'
     steps:
-      - name: Install dependencies
+      - name: Install devtools and git
+        run: pacman -Syu --noconfirm devtools git
+      - uses: actions/checkout@v6
+      - name: Build packages
         run: |
-          pacman -Syu --noconfirm pacman-contrib rsync openssh nodejs gnupg findutils
-
-      - name: Download all artifacts
+          set -euo pipefail
+          PKGS=$(find packages -mindepth 2 -maxdepth 2 -name PKGBUILD -exec dirname {} \; | sort)
+          for PKG_DIR in $PKGS; do
+            echo "==> Building $PKG_DIR"
+            pushd "$PKG_DIR" > /dev/null
+            makepkg --syncdeps --noconfirm --noprogressbar --clean
+            mkdir -p "$GITHUB_WORKSPACE/dist"
+            cp ./*.pkg.tar.zst "$GITHUB_WORKSPACE/dist/" 2>/dev/null || true
+            popd > /dev/null
+            MAKEDEPS=$(makepkg --printsrcinfo "$PKG_DIR/PKGBUILD" 2>/dev/null | grep -oP '^\s*makedepends = \K.*' | tr '\n' ' ' || true)
+            [ -n "$MAKEDEPS" ] && pacman -Rsn --noconfirm $MAKEDEPS 2>/dev/null || true
+          done
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: chroot-packages-${{ github.run_id }}
+          path: dist/*.pkg.tar.zst
+  publish-binary:
+    needs: build
+    if: github.repository == 'pngdeity/aur'
+    runs-on: ubuntu-latest
+    container: ghcr.io/pngdeity/aur/arch-builder:latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      GPG_KEY: ${{ secrets.REPO_GPG_KEY }}
+      HOST: ${{ secrets.REPO_HOST }}
+      USER: ${{ secrets.REPO_USER }}
+      SSH_KEY: ${{ secrets.REPO_SSH_PRIVATE_KEY }}
+    steps:
+      - name: Download artifacts
         uses: actions/download-artifact@v8
         with:
-          path: final-dist
-          pattern: packages-batch-*
-          merge-multiple: true
-
-      - name: Configure SSH and GPG
-        env:
-          SSH_KEY: ${{ secrets.REPO_SSH_PRIVATE_KEY }}
-          HOST: ${{ secrets.REPO_HOST }}
-          GPG_KEY: ${{ secrets.REPO_GPG_KEY }}
+          name: chroot-packages-${{ github.run_id }}
+          path: dist
+      - name: Publish to binary repository
         run: |
-          # Configure SSH for automated transport
-          mkdir -p ~/.ssh
+          set -euo pipefail
+          if [ -z "${HOST:-}" ] || [ -z "${USER:-}" ] || [ -z "${SSH_KEY:-}" ]; then
+            echo "::warning::Binary publish secrets not configured. Skipping."
+            exit 0
+          fi
+
+          if ! compgen -G "dist/*.pkg.tar.zst" > /dev/null; then
+            echo "No packages built. Skipping publish."
+            exit 0
+          fi
+
+          mkdir -p ~/.ssh repo-root/x86_64
           echo "$SSH_KEY" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -H "$HOST" >> ~/.ssh/known_hosts
-          
-          # Configure GPG for database signing
+
           if [ -n "$GPG_KEY" ]; then
-            echo "$GPG_KEY" | gpg --import
+            printf '%s' "$GPG_KEY" | gpg --batch --import --no-tty 2>/dev/null
           fi
 
-      - name: Sync Existing Repository and Prune
-        env:
-          HOST: ${{ secrets.REPO_HOST }}
-          USER: ${{ secrets.REPO_USER }}
-        run: |
-          mkdir -p repo-root/x86_64/
-          # Pull existing repository to manage retention
-          rsync -avz -e "ssh" "$USER@$HOST:/var/www/html/repo/nightly/" repo-root/ || echo "First run or failed to fetch remote repo."
-          
-          # Automated Retention & Pruning: Delete packages older than 7 days
+          rsync -avz -e "ssh" "$USER@$HOST:/var/www/html/repo/nightly/" repo-root/ || echo "First run — no remote repo."
+
           find repo-root/x86_64/ -name "*.pkg.tar.zst" -type f -mtime +7 -delete
+          cp dist/*.pkg.tar.zst repo-root/x86_64/
 
-      - name: Add New Packages and Generate Database
-        env:
-          GPG_KEY: ${{ secrets.REPO_GPG_KEY }}
-        run: |
-          # Populate with all newly built packages
-          cp final-dist/*.pkg.tar.zst repo-root/x86_64/
-          
           cd repo-root/x86_64/
-          # Remove old database to ensure pruned packages are fully removed
-          rm -f nightly.db.tar.gz nightly.db nightly.files.tar.gz nightly.files
-          
-          # Generate the mandatory pacman repository database and sign it if a key is provided
-          # Note: We must avoid using the glob if no packages are found, though final-dist should have some.
-          if ls *.pkg.tar.zst >/dev/null 2>&1; then
-            if [ -n "$GPG_KEY" ]; then
-              repo-add --sign nightly.db.tar.gz *.pkg.tar.zst
-            else
-              repo-add nightly.db.tar.gz *.pkg.tar.zst
-            fi
-          else
-            echo "No packages found to add to repository."
+          PKG_COUNT=$(ls -1 *.pkg.tar.zst 2>/dev/null | wc -l)
+          if [ "$PKG_COUNT" -eq 0 ]; then
+            echo "::error::No packages in repo-root after copy. Aborting rsync --delete."
+            exit 1
           fi
-          cd ../..
 
-      - name: Upload to External Apache Host
-        env:
-          HOST: ${{ secrets.REPO_HOST }}
-          USER: ${{ secrets.REPO_USER }}
-        run: |
-          # Atomic sync of the repository structure to the web root with deletion of pruned packages
+          rm -f nightly.db.tar.gz nightly.db nightly.files.tar.gz nightly.files
+          if [ -n "$GPG_KEY" ]; then
+            repo-add --sign nightly.db.tar.gz ./*.pkg.tar.zst
+          else
+            repo-add nightly.db.tar.gz ./*.pkg.tar.zst
+          fi
+
+          cd "$OLDPWD"
           rsync -avz --delete -e "ssh" repo-root/ "$USER@$HOST:/var/www/html/repo/nightly/"
-
-  # AUR PKGBUILD publication — runs in parallel with binary publish, gated on build success
   deploy-aur:
-    needs: run-builds
-    if: always() && !failure() && !cancelled()
+    needs: build
+    if: |
+      github.repository == 'pngdeity/aur' &&
+      !failure() &&
+      !cancelled() &&
+      needs.build.result == 'success'
     runs-on: ubuntu-latest
-    container: archlinux:latest
+    container: ghcr.io/pngdeity/aur/arch-builder:latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
     steps:
-      - name: Install dependencies
-        run: pacman -Syu --noconfirm git openssh jq
-
       - name: Checkout
         uses: actions/checkout@v6
-
-      - name: Configure SSH and Deploy to AUR
+      - name: Deploy to AUR
         env:
           AUR_SSH_PRIVATE_KEY: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
         run: |
+          set -euo pipefail
           if [ -z "${AUR_SSH_PRIVATE_KEY:-}" ]; then
-            echo "::warning::AUR_SSH_PRIVATE_KEY secret not configured. Skipping AUR deployment."
+            echo "::warning::AUR_SSH_PRIVATE_KEY not configured. Skipping."
             exit 0
           fi
+
           mkdir -p ~/.ssh
           echo "$AUR_SSH_PRIVATE_KEY" > ~/.ssh/id_aur
           chmod 600 ~/.ssh/id_aur
@@ -133,9 +136,17 @@ jobs:
               IdentitiesOnly yes
           SSHCONF
 
-          PACKAGES=$(echo '${{ toJson(inputs.chunks_json) }}' | jq -r '.[].list[]')
-          for PKG in $PACKAGES; do
-            if [ -d "$PKG" ]; then
-              bash scripts/aur-deploy.sh "$PKG" || echo "::warning::$PKG AUR deployment failed (see above)"
+          FAILURES=0
+          for PKG_DIR in $(find packages -mindepth 2 -maxdepth 2 -name PKGBUILD -exec dirname {} \; | sort); do
+            if [ -f "$PKG_DIR/PKGBUILD" ]; then
+              if ! bash scripts/aur-deploy.sh "$PKG_DIR"; then
+                echo "::warning::$PKG_DIR AUR deployment failed"
+                FAILURES=$((FAILURES + 1))
+              fi
             fi
           done
+
+          if [ "$FAILURES" -gt 0 ]; then
+            echo "::error::$FAILURES AUR deployment(s) failed"
+            exit 1
+          fi

@@ -288,9 +288,6 @@ fi
 echo "  -> Updating checksums"
 updpkgsums
 
-# 4. Metadata Update
-echo "  -> Regenerating .SRCINFO"
-makepkg --printsrcinfo > .SRCINFO
 
 # 5. Variant pkgdesc Consistency Check
 # Warn if this package's pkgdesc differs from other variants sharing the same _pkgname

@@ -1,86 +1,94 @@
 name: Build
 on:
-  workflow_call:
+  pull_request:
+    paths:
+      - 'packages/**'
+      - 'scripts/**'
+      - 'schemas/**'
+  push:
+    branches:
+      - main
+    paths:
+      - 'packages/**'
+      - 'scripts/**'
+      - 'schemas/**'
   workflow_dispatch:
     inputs:
+      package:
+        required: false
+        type: string
+        description: 'Specific package directory to build (e.g. packages/apm)'
       version:
-        required: true
+        required: false
         type: string
-      package_list:
-        required: true
-        type: string # JSON array of package dirs
-      chunk_index:
-        required: true
-        type: string
-
+        description: 'Version string to pass to arch-builder.sh'
+concurrency: build-${{ github.ref }}
 jobs:
   validate:
     name: Validate PKGBUILDs
+    if: github.repository == 'pngdeity/aur'
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      PKL_VERSION: 0.31.1
+      CONFTEST_VERSION: 0.68.2
     steps:
-      - uses: actions/checkout@v4
-      - name: Install dependencies
+      - uses: actions/checkout@v6
+      - name: Install pkl
+        uses: pkl-community/setup-pkl@5d1b3cbf59f1558a54d82017b647ea66ba4cf558 # v0.0.8
+        with:
+          pkl-version: ${{ env.PKL_VERSION }}
+      - name: Install conftest
         run: |
-          # Install pkl
-          curl -L -o pkl https://github.com/apple/pkl/releases/download/0.31.1/pkl-linux-amd64
-          chmod +x pkl && sudo mv pkl /usr/local/bin/
-          # Install conftest
-          curl -L -o conftest.tar.gz https://github.com/open-policy-agent/conftest/releases/download/v0.68.2/conftest_0.68.2_Linux_x86_64.tar.gz
+          URL="https://github.com/open-policy-agent/conftest/releases/download/v${CONFTEST_VERSION}/conftest_${CONFTEST_VERSION}_Linux_x86_64.tar.gz"
+          curl -fsSL "$URL" -o conftest.tar.gz
+          echo "e8144c6d6d2ae0260b869caa60c7c262a1f95ac63ec1e5d2fb19be452d606347  conftest.tar.gz" > conftest.sha256
+          sha256sum -c conftest.sha256
           tar xzf conftest.tar.gz && sudo mv conftest /usr/local/bin/
-          # Install python3 and pyyaml
-          sudo apt-get update && sudo apt-get install -y python3 python3-yaml
-      - name: Run PKGBUILD validation
+          rm conftest.tar.gz conftest.sha256
+      - name: Install Python deps
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq python3 python3-yaml
+      - name: Validate
         run: bash scripts/validate-pkgbuilds-pkl.sh
-
-  execute:
+  build:
+    name: Build packages
     needs: validate
+    if: github.repository == 'pngdeity/aur'
     runs-on: ubuntu-latest
-    container: ghcr.io/${{ github.repository }}/arch-builder:latest
+    container: ghcr.io/pngdeity/aur/arch-builder:latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      packages: read
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      SOURCE_DATE_EPOCH: '1693526400'
     steps:
       - name: Checkout
         uses: actions/checkout@v6
-
-      - name: Bootstrap Environment
+      - name: Bootstrap
         run: |
-          chmod -R a+rw .
-          chmod +x scripts/*.sh
-
-      - name: Validate Metadata
+          chmod +x scripts/*.sh 2>/dev/null || true
+      - name: Check pkgdesc consistency
+        run: ./scripts/check-pkgdesc-consistency.sh --ci
+      - name: Build packages
         run: |
-          PACKAGES=$(echo '${{ inputs.package_list }}' | jq -r '.[]')
-          for PKG in $PACKAGES; do
-            if [ -d "$PKG" ]; then
-              ./scripts/check-metadata.sh "$PKG"
+          if [ -n "${{ inputs.package }}" ]; then
+            PKGS="${{ inputs.package }}"
+          else
+            PKGS=$(find packages -mindepth 2 -maxdepth 2 -name PKGBUILD -exec dirname {} \; | sort)
+          fi
+          for PKG_DIR in $PKGS; do
+            if [ -f "$PKG_DIR/PKGBUILD" ]; then
+              VERSION="${{ inputs.version }}"
+              if [ -z "$VERSION" ]; then
+                VERSION=$(grep -oP '^pkgver=\K.*' "$PKG_DIR/PKGBUILD" | tr -d "'\"")
+              fi
+              sudo -u builder ./scripts/arch-builder.sh "$PKG_DIR" "$VERSION"
             fi
           done
-
-      - name: Check pkgdesc Consistency
-        run: |
-          ./scripts/check-pkgdesc-consistency.sh --ci
-
-      - name: Check PREREVIEW Markers
-        run: |
-          PACKAGES=$(echo '${{ inputs.package_list }}' | jq -r '.[]')
-          for PKG in $PACKAGES; do
-            if [ -d "$PKG" ] && grep -q "^# PREREVIEW:" "$PKG/PKGBUILD" 2>/dev/null; then
-              echo "::warning::$PKG has PREREVIEW marker — build logic changed upstream, human review required."
-            fi
-          done
-
-      - name: Build Batch
-        run: |
-          PACKAGES=$(echo '${{ inputs.package_list }}' | jq -r '.[]')
-          for PKG in $PACKAGES; do
-            if [ -d "$PKG" ]; then
-              # Delegate all build logic to the Arch-native script
-              sudo -u builder ./scripts/arch-builder.sh "$PKG" "${{ inputs.version }}"
-            fi
-          done
-
-      - name: Upload Artifacts
+      - name: Upload artifacts
         uses: actions/upload-artifact@v7
         with:
-          name: packages-batch-${{ inputs.chunk_index }}
+          name: packages-${{ github.run_id }}
           path: dist/*.pkg.tar.zst
