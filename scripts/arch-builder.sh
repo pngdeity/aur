@@ -29,6 +29,9 @@ export PKGDEST="${PKGDEST:-/tmp/makepkg-pkg}"
 export SRCDEST="${SRCDEST:-/tmp/makepkg-src}"
 mkdir -p "$BUILDDIR" "$PKGDEST" "$SRCDEST"
 
+# Refresh package DB before syncdeps (container image may be stale)
+sudo pacman -Syu --noconfirm
+
 cd "$PKG_DIR"
 
 # 1. PGP Key Management
