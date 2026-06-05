@@ -6,7 +6,7 @@ _pkgname=opencode
 pkgname=${_pkgname}-git
 changelog=opencode-git.changelog
 _githubname=anomalyco/opencode
-pkgver=1.15.0
+pkgver=1.16.2
 pkgrel=1
 pkgdesc="The open source coding agent"
 url="https://github.com/${_githubname}"
@@ -14,9 +14,11 @@ arch=(aarch64 x86_64)
 license=(MIT)
 provides=("$_pkgname")
 conflicts=("$_pkgname")
-depends=(curl fzf git glibc icu ripgrep)
+depends=(curl glibc icu ripgrep tar)
 makedepends=(bun git)
-optdepends=('wl-clipboard: clipboard support on Wayland'
+optdepends=('fzf: fuzzy search in TUI'
+            'git: version control integration'
+            'wl-clipboard: clipboard support on Wayland'
             'xclip: clipboard support on X11')
 options=('!debug' '!strip')
 source=(
@@ -26,7 +28,7 @@ source=(
   'models.dev-api.json::https://models.dev/api.json'
 )
 sha256sums=('SKIP'
-            'a93b1d2c9903c430faf0f335aa2222612c40400ef6a5d000977dea480d043af1')
+            '424473cffefa75cab1b241b95fac45046fac23b0901632d2f6f4564fcbbc93ad')
 
 _target_arch() {
   case "${CARCH}" in
