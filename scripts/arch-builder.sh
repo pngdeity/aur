@@ -13,8 +13,8 @@ PKG_DIR="$1"
 NEW_VER="$2"
 
 if [[ -z "$PKG_DIR" || -z "$NEW_VER" ]]; then
-    echo "Usage: $0 <package_dir> <version>"
-    exit 1
+	echo "Usage: $0 <package_dir> <version>"
+	exit 1
 fi
 
 echo "==> Building package in: $PKG_DIR"
@@ -23,6 +23,10 @@ echo "==> Building package in: $PKG_DIR"
 # otherwise fall back to current timestamp.
 export SOURCE_DATE_EPOCH="${SOURCE_DATE_EPOCH:-$(date +%s)}"
 
+# Use a writable build directory (repo checkout may be read-only in CI)
+export BUILDDIR="${BUILDDIR:-/tmp/makepkg-build}"
+mkdir -p "$BUILDDIR"
+
 cd "$PKG_DIR"
 
 # 1. PGP Key Management
@@ -30,8 +34,8 @@ cd "$PKG_DIR"
 # This remains in the builder as keys are environment-specific (keyring)
 KEYS=$(makepkg --printsrcinfo | grep -oP '^\s*validpgpkeys = \K.*' || true)
 for KEY in $KEYS; do
-    echo "  -> Importing PGP Key: $KEY"
-    gpg --recv-keys "$KEY" || echo "    ! Warning: Failed to fetch PGP key $KEY"
+	echo "  -> Importing PGP Key: $KEY"
+	gpg --recv-keys "$KEY" || echo "    ! Warning: Failed to fetch PGP key $KEY"
 done
 
 # 2. Build
