@@ -23,9 +23,11 @@ echo "==> Building package in: $PKG_DIR"
 # otherwise fall back to current timestamp.
 export SOURCE_DATE_EPOCH="${SOURCE_DATE_EPOCH:-$(date +%s)}"
 
-# Use a writable build directory (repo checkout may be read-only in CI)
+# Use writable build directories (repo checkout may be read-only in CI)
 export BUILDDIR="${BUILDDIR:-/tmp/makepkg-build}"
-mkdir -p "$BUILDDIR"
+export PKGDEST="${PKGDEST:-/tmp/makepkg-pkg}"
+export SRCDEST="${SRCDEST:-/tmp/makepkg-src}"
+mkdir -p "$BUILDDIR" "$PKGDEST" "$SRCDEST"
 
 cd "$PKG_DIR"
 
