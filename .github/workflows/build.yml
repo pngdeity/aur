@@ -35,7 +35,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - name: Install pkl
-        uses: pkl-community/setup-pkl@5d1b3cbf59f1558a54d82017b647ea66ba4cf558 # v0.0.8
+        uses: pkl-community/setup-pkl@f483589a41b22e0e96261163109f87fca35cea61 # v0.0.8
         with:
           pkl-version: ${{ env.PKL_VERSION }}
       - name: Install conftest
