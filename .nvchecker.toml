@@ -105,3 +105,8 @@ pypi = "azure-ai-inference"
 source = "git"
 git = "https://github.com/Azure/azure-sdk-for-python.git"
 prefix = "v"
+
+[bifrost]
+source = "git"
+git = "https://github.com/maximhq/bifrost.git"
+prefix = "transports/v"
