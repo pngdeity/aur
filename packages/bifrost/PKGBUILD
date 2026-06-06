@@ -1,42 +1,50 @@
 # Maintainer: pngdeity <pngdeity@tutanota.com>
-_deploy_aur=true
+_deploy_aur=false
+_githubname="maximhq/bifrost"
+_tag="transports/v${pkgver}"
 
 pkgname=bifrost
 pkgver=1.5.8
 pkgrel=1
 pkgdesc="The Fastest LLM Gateway with built in OTel observability and MCP gateway"
-arch=('x86_64')
+arch=('x86_64' 'aarch64')
 url="https://github.com/maximhq/bifrost"
 license=('Apache-2.0')
 replaces=("nodejs-${pkgname}")
+provides=("nodejs-${pkgname}")
+conflicts=("nodejs-${pkgname}")
 depends=('glibc')
 makedepends=('go' 'npm' 'nodejs')
-source=("${pkgname}-${pkgver}.tar.gz::https://github.com/maximhq/bifrost/archive/refs/tags/transports/v${pkgver}.tar.gz"
-        "LICENSE-${pkgver}::https://raw.githubusercontent.com/maximhq/bifrost/refs/tags/transports/v${pkgver}/LICENSE")
-b2sums=('b2a5a7e69b54b84f4dcdae0248dfbc32d7ce1e78c954d439afbe42c81109ec9ec4d5f5159db3256e64c9fe709c1a89c01cf624e8038c74ffac50d2f7101f34c3'
-        'fa356314d0a2e4fa028b5980c1b64295a17524ee8fea5b8f4dfa40eedeb59637b3ad99d5a647c9d7a8e284ff9344b29a0a45764156381c0b68d9cb9bc6556068')
+source=("${pkgname}-${pkgver}.tar.gz::${url}/archive/refs/tags/transports/v${pkgver}.tar.gz")
+b2sums=('b2a5a7e69b54b84f4dcdae0248dfbc32d7ce1e78c954d439afbe42c81109ec9ec4d5f5159db3256e64c9fe709c1a89c01cf624e8038c74ffac50d2f7101f34c3')
 
 prepare() {
-  cd "${srcdir}/bifrost-transports-${pkgver}"
+    cd "${srcdir}/bifrost-transports-v${pkgver}"
 
-  cd ui
-  npm ci
-  npm run build
+    cd ui
+    npm ci
+    npm run build
 }
 
 build() {
-  cd "${srcdir}/bifrost-transports-${pkgver}/transports"
+    cd "${srcdir}/bifrost-transports-v${pkgver}/transports/bifrost-http"
 
-  export CGO_ENABLED=1
-  go build \
-    -trimpath \
-    -tags "sqlite_static" \
-    -ldflags="-w -s -X main.Version=v${pkgver}" \
-    -o "${srcdir}/bifrost" \
-    ./bifrost-http
+    export CGO_CPPFLAGS="${CPPFLAGS}"
+    export CGO_CFLAGS="${CFLAGS}"
+    export CGO_CXXFLAGS="${CXXFLAGS}"
+    export CGO_LDFLAGS="${LDFLAGS}"
+    export GOFLAGS="-buildmode=pie -trimpath -ldflags=-linkmode=external -mod=readonly -modcacherw"
+    export GOPATH="${srcdir}"
+
+    go build \
+        -a \
+        -tags "sqlite_static" \
+        -ldflags="-compressdwarf=false -X main.Version=v${pkgver}" \
+        -o "${srcdir}/bifrost" \
+        .
 }
 
 package() {
-  install -Dm755 "${srcdir}/bifrost" "${pkgdir}/usr/bin/bifrost"
-  install -Dm644 "${srcdir}/LICENSE-${pkgver}" "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
+    install -Dm755 "${srcdir}/bifrost" "${pkgdir}/usr/bin/bifrost"
+    install -Dm644 "${srcdir}/bifrost-transports-v${pkgver}/LICENSE" "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
 }
