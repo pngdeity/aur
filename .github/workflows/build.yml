@@ -52,7 +52,6 @@ jobs:
         run: bash scripts/validate-pkgbuilds-pkl.sh
   build:
     name: Build packages
-    needs: validate
     if: github.repository == 'pngdeity/aur'
     runs-on: ubuntu-latest
     container: ghcr.io/pngdeity/aur/arch-builder:latest
