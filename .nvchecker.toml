@@ -1,5 +1,6 @@
 [__config__]
 oldver = "oldver.json"
+newver = "newver.json"
 
 [opencode-git]
 source = "git"
@@ -106,7 +107,7 @@ source = "git"
 git = "https://github.com/Azure/azure-sdk-for-python.git"
 prefix = "v"
 
-[bifrost]
+[go-bifrost]
 source = "git"
 git = "https://github.com/maximhq/bifrost.git"
 prefix = "transports/v"

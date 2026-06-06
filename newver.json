@@ -1,0 +1,83 @@
+{
+  "version": 2,
+  "data": {
+    "amass-bin": {
+      "version": "5.1.1",
+      "gitref": "refs/tags/v5.1.1",
+      "revision": "79299dce87b0085db0f2f4ef3e9c52cccb49f514"
+    },
+    "amass-git": {
+      "version": "5.1.1",
+      "gitref": "refs/tags/v5.1.1",
+      "revision": "79299dce87b0085db0f2f4ef3e9c52cccb49f514"
+    },
+    "apm-bin": {
+      "version": "0.18.0",
+      "gitref": "refs/tags/v0.18.0",
+      "revision": "c7e286cec82bea9d569fc5809958d49b05ab07c1"
+    },
+    "clash-geoip": {
+      "version": "202606040101",
+      "gitref": "refs/tags/202606040101",
+      "revision": "e1988aaea9ebf01db4927331a92ea6a4ab08df29"
+    },
+    "dnstwist": {
+      "version": "20250130",
+      "url": "https://pypi.org/project/dnstwist/20250130/"
+    },
+    "go-bifrost": {
+      "version": "1.5.8",
+      "gitref": "refs/tags/transports/v1.5.8",
+      "revision": "386f5147e670b504655443d4b18b4ca324e3067f"
+    },
+    "jules-tools": {
+      "version": "0.1.42",
+      "url": "https://www.npmjs.com/package/@google/jules/v/0.1.42"
+    },
+    "opencode-git": {
+      "version": "1.16.2",
+      "gitref": "refs/tags/v1.16.2",
+      "revision": "76c631d198f9ff620e15468e45f3457d50481b57"
+    },
+    "python-azure-core": {
+      "version": "269401",
+      "gitref": "refs/tags/269401",
+      "revision": "a6e0a617678746a0c35a3da38b75c4b97a96566a"
+    },
+    "python-click-default-group": {
+      "version": "1.2.4",
+      "gitref": "refs/tags/v1.2.4",
+      "revision": "429c066978162c2cfabb14ea287aa6131413c324"
+    },
+    "python-condense-json": {
+      "version": "0.1.3",
+      "url": "https://pypi.org/project/condense-json/0.1.3/"
+    },
+    "python-frontmatter": {
+      "version": "1.3.0",
+      "url": "https://pypi.org/project/python-frontmatter/1.3.0/"
+    },
+    "python-llm": {
+      "version": "0.32a2",
+      "gitref": "refs/tags/0.32a2",
+      "revision": "8aba606447dc2fb0e7a31aa942a6477c7ac4d088"
+    },
+    "python-llm-github-models": {
+      "version": "0.18.0",
+      "url": "https://pypi.org/project/llm-github-models/0.18.0/"
+    },
+    "python-sqlite-migrate": {
+      "version": "0.1b0",
+      "gitref": "refs/tags/0.1b0",
+      "revision": "613ecd5c4aa8493525879d2db7363fa5bfbe4ffb"
+    },
+    "python-whois": {
+      "version": "0.9.6",
+      "url": "https://pypi.org/project/python-whois/0.9.6/"
+    },
+    "sqlite-utils": {
+      "version": "3.39",
+      "url": "https://pypi.org/project/sqlite-utils/3.39/"
+    }
+  }
+}

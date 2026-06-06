@@ -4,6 +4,11 @@
     "clash-geoip": {
       "version": "202605210051"
     },
+    "go-bifrost": {
+      "version": "1.5.8",
+      "gitref": "refs/tags/transports/v1.5.8",
+      "revision": "386f5147e670b504655443d4b18b4ca324e3067f"
+    },
     "opencode-git": {
       "version": "1.16.2"
     }

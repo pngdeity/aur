@@ -1,4 +1,4 @@
-[bifrost]
+[go-bifrost]
 source = "git"
 git = "https://github.com/maximhq/bifrost.git"
 prefix = "transports/v"

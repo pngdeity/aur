@@ -1,18 +1,18 @@
 # Maintainer: pngdeity <pngdeity@tutanota.com>
-_deploy_aur=false
+_deploy_aur=true
 _githubname="maximhq/bifrost"
 _tag="transports/v${pkgver}"
 
-pkgname=bifrost
+pkgname=go-bifrost
 pkgver=1.5.8
 pkgrel=1
 pkgdesc="The Fastest LLM Gateway with built in OTel observability and MCP gateway"
 arch=('x86_64')
 url="https://github.com/maximhq/bifrost"
 license=('Apache-2.0')
-replaces=("nodejs-${pkgname}")
-provides=("nodejs-${pkgname}")
-conflicts=("nodejs-${pkgname}")
+replaces=("bifrost" "nodejs-bifrost")
+provides=("bifrost" "nodejs-bifrost")
+conflicts=("bifrost" "nodejs-bifrost")
 depends=('glibc')
 makedepends=('go' 'npm' 'nodejs')
 source=("${pkgname}-${pkgver}.tar.gz::${url}/archive/refs/tags/transports/v${pkgver}.tar.gz")
