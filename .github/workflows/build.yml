@@ -90,4 +90,4 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: packages-${{ github.run_id }}
-          path: dist/*.pkg.tar.zst
+          path: /tmp/makepkg-dist/*.pkg.tar.zst
