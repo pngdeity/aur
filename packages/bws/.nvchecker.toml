@@ -1,0 +1,4 @@
+[bws]
+source = "git"
+git = "https://github.com/bitwarden/sdk-sm.git"
+prefix = "bws-v"
