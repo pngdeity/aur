@@ -1,0 +1,36 @@
+# Maintainer: pngdeity <pngdeity@tutanota.com>
+_deploy_aur=true
+
+_pkgname=bws
+pkgname=$_pkgname
+_githubname="bitwarden/sdk-sm"
+_tag="bws-v\${pkgver}"
+pkgver=2.1.0
+pkgrel=1
+pkgdesc="Bitwarden Secrets Manager CLI"
+arch=('x86_64' 'aarch64')
+url="https://github.com/bitwarden/sdk-sm"
+license=('custom:BITWARDEN SOFTWARE DEVELOPMENT KIT LICENSE AGREEMENT')
+makedepends=('cargo' 'rust')
+depends=('gcc-libs')
+provides=('bws-bin')
+conflicts=('bws-bin')
+source=("${pkgname}-${pkgver}.tar.gz::${url}/archive/refs/tags/bws-v${pkgver}.tar.gz")
+sha256sums=('SKIP')
+
+build() {
+	cd "sdk-sm-bws-v${pkgver}"
+	export RUSTUP_TOOLCHAIN=stable
+	cargo build --release --locked -p bws
+}
+
+check() {
+	cd "sdk-sm-bws-v${pkgver}"
+	cargo test --release --locked -p bws
+}
+
+package() {
+	cd "sdk-sm-bws-v${pkgver}"
+	install -Dm755 "target/release/bws" "${pkgdir}/usr/bin/bws"
+	install -Dm644 LICENSE "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
+}
