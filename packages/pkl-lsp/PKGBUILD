@@ -5,7 +5,7 @@ pkgname=$_pkgname
 _deploy_aur=true
 _githubname="apple/pkl-lsp"
 
-pkgver=0.7.0
+pkgver=0.7.1
 pkgrel=1
 pkgdesc="Language Server Protocol implementation for Pkl"
 arch=('any')
@@ -14,9 +14,7 @@ license=('Apache-2.0')
 depends=('java-runtime')
 makedepends=('git' 'gradle' 'java-environment' 'zig')
 source=("${pkgname}-${pkgver}.tar.gz::${url}/archive/refs/tags/${pkgver}.tar.gz")
-sha256sums=('046098107e0c22c932fe46dd550b02e1474c9b9be8a592a6f9161b9c3413157d')
-provides=('pkl-lsp-bin')
-conflicts=('pkl-lsp-bin')
+sha256sums=('0ae41e518b52fcc27aa02fd638e6443ef53b88b14182c0aea574d5bbc1a80f79')
 
 build() {
     cd "${pkgname}-${pkgver}"

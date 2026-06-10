@@ -1,23 +1,26 @@
-# Maintainer: Nathan Somers <pngdeity@tutanota.com>
-# Contributor: colelawrence <https://github.com/colelawrence/pkl-lsp>
-_githubname="colelawrence/pkl-lsp"
+# Maintainer: pngdeity <pngdeity@tutanota.com>
 _deploy_aur=true
 
-pkgname=pkl-lsp-bin
-pkgver=0.6.0
+_pkgname=pkl-lsp
+pkgname=${_pkgname}-bin
+_githubname="apple/pkl-lsp"
+pkgver=0.7.1
 pkgrel=1
-pkgdesc="Language Server Protocol implementation for Pkl (GraalVM native binary)"
-arch=('x86_64' 'aarch64')
-url="https://github.com/colelawrence/pkl-lsp"
+pkgdesc="Language Server Protocol implementation for Pkl"
+arch=('any')
+url="https://github.com/apple/pkl-lsp"
 license=('Apache-2.0')
-depends=('glibc' 'zlib')
-provides=('pkl-lsp')
-conflicts=('pkl-lsp')
-source_x86_64=("${url}/releases/download/${pkgver}-native.20260518.5/pkl-lsp-${pkgver}-native.20260518.5-linux-x64.tar.gz")
-source_aarch64=("${url}/releases/download/${pkgver}-native.20260518.5/pkl-lsp-${pkgver}-native.20260518.5-linux-arm64.tar.gz")
-sha512sums_x86_64=('922dfac283b844dfdbb30809bcbfd9b125a7f97d7c41ec476f73800653f4975098e0d546bae3f608e71b800212b5c8c8e7d6676cc9007da16019f2d9da87e39c')
-sha512sums_aarch64=('8c9deb8dbe28de75383947cff3584f2248ae5a3c60bf582d24cdb2f464ab0dde8e841ff83e6b572f2ecee0fce0c9e03844addab497b00cface8dbb131046ab3d')
+depends=('java-runtime')
+provides=("$_pkgname")
+conflicts=("$_pkgname")
+source=("${_pkgname}-${pkgver}.jar::${url}/releases/download/${pkgver}/${_pkgname}-${pkgver}.jar")
+sha256sums=('4e84450537c1b5e0eddf6f64fc93ae6f884ff45ee3ed4296b5c061e7a7c7f34e')
 
 package() {
-    install -Dm755 pkl-lsp "${pkgdir}/usr/bin/pkl-lsp"
+	install -Dm644 "${_pkgname}-${pkgver}.jar" \
+		"${pkgdir}/usr/share/java/${_pkgname}/${_pkgname}.jar"
+	install -Dm755 /dev/stdin "${pkgdir}/usr/bin/${_pkgname}" <<'EOF'
+#!/bin/sh
+exec /usr/bin/java -jar '/usr/share/java/pkl-lsp/pkl-lsp.jar' "$@"
+EOF
 }

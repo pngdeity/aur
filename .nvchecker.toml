@@ -61,7 +61,8 @@ source = "git"
 git = "https://github.com/Loyalsoldier/geoip.git"
 [pkl-lsp-bin]
 source = "github"
-github = "colelawrence/pkl-lsp"
+github = "apple/pkl-lsp"
+use_latest_tag = true
 
 [pkl-lsp]
 source = "git"
