@@ -4,10 +4,8 @@
 language per [`PKL-CROSS-PHASE-EVALUATION.md`](PKL-CROSS-PHASE-EVALUATION.md).
 KCL references in this document are historical. The Python renderer (§2) is
 replaced by Pkl's `output.text`. The CI workflow topology (§4) and round-trip
-testing strategy remain valid. **Parent:**
-[`docs/KCL-OPA-VALIDATION-IMPLEMENTATION-PLAN.md`](KCL-OPA-VALIDATION-IMPLEMENTATION-PLAN.md)
-§5 **Previous:**
-[`docs/KCL-OPA-PHASE2-POLICY-ENGINE.md`](KCL-OPA-PHASE2-POLICY-ENGINE.md)
+testing strategy remain valid.
+**Previous:** [`docs/REGO-POLICY-ENGINE.md`](REGO-POLICY-ENGINE.md)
 
 ---
 

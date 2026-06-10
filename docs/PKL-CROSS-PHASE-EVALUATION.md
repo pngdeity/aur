@@ -1,16 +1,15 @@
 # Pkl Cross-Phase Evaluation — PKGBUILD Validation Architecture
 
 **Date:** 2026-05-13
-**Status:** Proposed
-**Parent:** [`docs/KCL-OPA-VALIDATION-IMPLEMENTATION-PLAN.md`](KCL-OPA-VALIDATION-IMPLEMENTATION-PLAN.md)
-**Sibling:** [`docs/KCL-OPA-PHASE1-PKL-SCHEMA-DESIGN.md`](KCL-OPA-PHASE1-PKL-SCHEMA-DESIGN.md) (Phase 1 only — schema design)
+**Status:** Adopted — Pkl is the canonical schema language
+**Sibling:** [`docs/PKL-SCHEMA-DESIGN.md`](PKL-SCHEMA-DESIGN.md)
 **Language Evaluated:** Pkl v0.31.1 ([pkl-lang.org](https://pkl-lang.org))
 
 ---
 
 ## 0. Executive Summary
 
-This document evaluates Pkl against the full set of functional requirements defined in the KCL+OPA validation architecture (Phases 1–3), complementing the Phase-1-only schema design already documented in `KCL-OPA-PHASE1-PKL-SCHEMA-DESIGN.md`.
+This document evaluates Pkl against the full set of functional requirements defined in the KCL+OPA validation architecture (Phases 1–3), complementing the Phase-1-only schema design already documented in `PKL-SCHEMA-DESIGN.md`.
 
 **Verdict per phase:**
 
@@ -20,7 +19,7 @@ This document evaluates Pkl against the full set of functional requirements defi
 | Phase 2 (Policy) | Adequate — still needs OPA | Pkl type constraints cover 3 of 12 rules natively (vs. KCL's 2) |
 | Phase 3 (Renderer) | Strong — simplifies | `output.text` eliminates Python renderer script |
 
-**Decision:** Pkl is selected over KCL and CUE (see §7 for rationale). The Pkl schema design in `KCL-OPA-PHASE1-PKL-SCHEMA-DESIGN.md` becomes the canonical Phase 1 reference. KCL and CUE variant documents are retained as design alternatives and rationale artifacts.
+**Decision:** Pkl is selected over KCL and CUE (see §7 for rationale). The Pkl schema design in `PKL-SCHEMA-DESIGN.md` becomes the canonical Phase 1 reference. The Phase 2 (OPA policy engine) and Phase 3 (renderer/CI) designs remain valid — only the schema language changes; the OPA policy engine, exception mechanism, and CI topology are unchanged. The Python renderer (`kcl_to_pkgbuild.py`) is replaced by Pkl's `output.text` — all other Phase 3 content (pre-commit hook, CI workflows, round-trip tests) applies without modification.
 
 **Architectural impact:** Pkl reduces the toolchain from 3 languages (KCL + OPA/Rego + Python renderer) to 2 (Pkl + OPA/Rego). The Python import script remains necessary for bootstrapping but the renderer is eliminated.
 
@@ -494,7 +493,7 @@ Both Pkl and KCL:
 
 The CNCF governance advantage of KCL is acknowledged but does not produce functional value for this repo. For a packaging repository shipping to the AUR, technical fit outweighs governance alignment. The Pkl binary (~40MB) is installed once in CI and cached — size is immaterial.
 
-**Impact on existing documents:** The `KCL-OPA-PHASE1-SCHEMA-DESIGN.md` (KCL schema) is superseded. The `KCL-OPA-PHASE1-PKL-SCHEMA-DESIGN.md` becomes the canonical Phase 1 reference. The Phase 2 (OPA policy engine) and Phase 3 (renderer/CI) designs in the KCL documents remain valid — only the schema language changes; the OPA policy engine, exception mechanism, and CI topology are unchanged. The `KCL-OPA-PHASE3-RENDERER-CI.md` `kcl_to_pkgbuild.py` renderer is replaced by Pkl's `output.text` — all other Phase 3 content (pre-commit hook, CI workflows, round-trip tests) applies without modification.
+**Impact on existing documents:** The KCL schema design document is superseded and removed. `PKL-SCHEMA-DESIGN.md` is the canonical Phase 1 reference. The Phase 2 (OPA policy engine) and Phase 3 (renderer/CI) designs remain valid — only the schema language changes; the OPA policy engine, exception mechanism, and CI topology are unchanged. The `kcl_to_pkgbuild.py` Python renderer is replaced by Pkl's `output.text` — all other Phase 3 content (pre-commit hook, CI workflows, round-trip tests) applies without modification.
 
 ---
 
@@ -502,9 +501,6 @@ The CNCF governance advantage of KCL is acknowledged but does not produce functi
 
 | Document | Relationship |
 |----------|-------------|
-| `KCL-OPA-VALIDATION-IMPLEMENTATION-PLAN.md` | Parent — defines the architecture this evaluation measures against |
-| `KCL-OPA-PHASE1-SCHEMA-DESIGN.md` | Sibling — KCL schema design (Phase 1 only) |
-| `KCL-OPA-PHASE1-CUE-SCHEMA-DESIGN.md` | Sibling — CUE schema design (Phase 1 only) |
-| `KCL-OPA-PHASE1-PKL-SCHEMA-DESIGN.md` | Sibling — Pkl schema design (Phase 1 only); this document extends the evaluation to Phases 2 and 3 |
-| `KCL-OPA-PHASE2-POLICY-ENGINE.md` | Evaluated against — OPA policy rules remain required regardless of schema language |
-| `KCL-OPA-PHASE3-RENDERER-CI.md` | Evaluated against — Pkl's `output.text` replaces the Python renderer |
+| `PKL-SCHEMA-DESIGN.md` | Sibling — Pkl schema design (Phase 1 only); this document extends the evaluation to Phases 2 and 3 |
+| `REGO-POLICY-ENGINE.md` | Evaluated against — OPA policy rules remain required regardless of schema language |
+| `PKGBUILD-RENDERER-CI.md` | Evaluated against — Pkl's `output.text` replaces the Python renderer |

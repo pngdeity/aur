@@ -1,9 +1,8 @@
 # Phase 1 (Pkl) — Pkl PKGBUILD Schema Design
 
 **Date:** 2026-05-11
-**Status:** Proposed
-**Parent:** [`docs/KCL-OPA-VALIDATION-IMPLEMENTATION-PLAN.md`](KCL-OPA-VALIDATION-IMPLEMENTATION-PLAN.md) §3 (Pkl variant)
-**Sibling:** [`docs/KCL-OPA-PHASE1-SCHEMA-DESIGN.md`](KCL-OPA-PHASE1-SCHEMA-DESIGN.md) (KCL variant), [`docs/KCL-OPA-PHASE1-CUE-SCHEMA-DESIGN.md`](KCL-OPA-PHASE1-CUE-SCHEMA-DESIGN.md) (CUE variant)
+**Status:** Active — implemented in `schemas/arch_pkg.pkl`
+**Sibling:** [`docs/PKL-CROSS-PHASE-EVALUATION.md`](PKL-CROSS-PHASE-EVALUATION.md) (language selection rationale)
 **Language:** Pkl ([pkl-lang.org](https://pkl-lang.org/main/current/index.html))
 
 ---
@@ -201,7 +200,7 @@ Models entries like `'wl-clipboard: clipboard support on Wayland'`:
 class OptDependsEntry {
     /// The package name (before the ": ")
     name: String
-    
+
     /// The description (after the ": ")
     desc: String = ""
 }
@@ -215,10 +214,10 @@ Models entries like `"${pkgname}::git+https://github.com/...git#tag=v${pkgver}"`
 class SourceEntry {
     /// Full URL including VCS fragments (#tag=, #commit=, #branch=)
     url: String
-    
+
     /// Local filename this source will be saved as
     filename: String
-    
+
     /// Raw unexpanded text from PKGBUILD (for rendering fidelity)
     raw_url: String?
 }
@@ -280,10 +279,10 @@ module schemas.arch_pkg
 class SourceEntry {
     /// Full URL including VCS fragments (#tag=, #commit=, #branch=)
     url: String
-    
+
     /// Local filename this source will be saved as
     filename: String
-    
+
     /// Raw unexpanded text from PKGBUILD source array (for rendering fidelity).
     /// Set when the import script detects `${VAR}` references before Bash expansion.
     raw_url: String?
@@ -294,7 +293,7 @@ class SourceEntry {
 class OptDependsEntry {
     /// Package name (before the ": ")
     name: String
-    
+
     /// Description (after the ": ")
     desc: String = ""
 }
@@ -312,150 +311,150 @@ typealias KnownArchitecture = "x86_64"|"aarch64"|"any"
 /// Closed by default — no undeclared properties are permitted.
 class Package {
     // ── Identity & Versioning (PKGBUILD(5) §7.1-7.5, 7.16) ──
-    
+
     /// Package name matching PKGBUILD(5) pattern
     pkgname: String(matches(Regex(#"^[a-z0-9@._+\-]+$"#)))
-    
+
     /// Software version number
     pkgver: String
-    
+
     /// Packaging revision index. Positive number, floats allowed for variant builds (e.g., 1.1).
     pkgrel: Number(this > 0)
-    
+
     /// Epoch (only set when version numbering changes)
     epoch: Int(this >= 0)?
-    
+
     /// Package description
     pkgdesc: String
-    
+
     /// Changelog filename
     changelog: String?
-    
+
     // ── Architecture & Metadata (PKGBUILD(5) §7.7, 7.8, 7.12, 7.13) ──
-    
+
     /// Target architectures
     arch: Listing<KnownArchitecture>
-    
+
     /// Upstream URL
     url: String
-    
+
     /// Software licenses
     license: Listing<String>
-    
+
     /// Package groups (rarely used)
     groups: Listing<String>?
-    
+
     // ── Package Relationships (PKGBUILD(5) §7.14, 7.15) ──
-    
+
     /// Runtime dependencies
     depends: Listing<String>?
-    
+
     /// Build-time dependencies
     makedepends: Listing<String>?
-    
+
     /// Test-only dependencies
     checkdepends: Listing<String>?
-    
+
     /// Optional dependencies with descriptions
     optdepends: Listing<OptDependsEntry>?
-    
+
     /// Virtual packages provided
     provides: Listing<String>?
-    
+
     /// Conflicting packages
     conflicts: Listing<String>?
-    
+
     /// Replaced packages
     replaces: Listing<String>?
-    
+
     // ── Source & Integrity (PKGBUILD(5) §7.9, 7.10, 7.17) ──
-    
+
     /// Download sources
     source: Listing<SourceEntry>?
-    
+
     sha256sums: Listing<String>?
     sha512sums: Listing<String>?
     sha224sums: Listing<String>?
     sha384sums: Listing<String>?
     b2sums:     Listing<String>?
-    
+
     /// Valid PGP key fingerprints
     validpgpkeys: Listing<String>?
-    
+
     /// Source files to not extract
     noextract: Listing<String>?
-    
+
     // ── Install & Config (PKGBUILD(5) §7.11, 7.18, 7.19) ──
-    
+
     /// .install scriptlet filename
     install: String?
-    
+
     /// Configuration files to preserve on upgrade
     backup: Listing<String>?
-    
+
     /// makepkg option flags
     options: Listing<KnownOption>?
-    
+
     // ── Lifecycle Functions (PKGBUILD(5) §8.8-8.9) ──
     // Stored as raw Bash text. Named with "Func" suffix to avoid Pkl keyword conflicts.
-    
+
     /// pkgver() dynamic version function (VCS packages only)
     pkgverFunc: String?
-    
+
     /// prepare() — source preparation
     prepare: String?
-    
+
     /// build() — compilation
     build: String?
-    
+
     /// check() — test suite
     check: String?
-    
+
     /// package() — packaging. Named "packageFunc" because "package" is a Pkl keyword.
     packageFunc: String?
-    
+
     // ── Custom Variables (Repository-Specific) ──
     // Declared as "hidden" — accessible within the class, omitted from JSON output.
     // These drive build system behavior but are not part of the rendered PKGBUILD.
-    
+
     /// AUR deployment gate. Mutually exclusive with _repo_subarch.
     hidden _deploy_aur: Boolean = false
-    
+
     /// Canonical software name (without variant suffix). Discriminator for variant groups.
     hidden _pkgname: String?
-    
+
     /// GitHub owner/repo for changelog generation
     hidden _githubname: String(matches(Regex(#"^[a-zA-Z0-9_.-]+/[a-zA-Z0-9_.-]+$"#)))?
-    
+
     /// AUR package name for upstream merge
     hidden _upstream_aur_pkg: String?
-    
+
     /// Arch GitLab repo path for upstream merge
     hidden _upstream_arch_repo: String?
-    
+
     /// Convert upstream maintainer to contributor
     hidden _demote_upstream_maintainer: Boolean = false
-    
+
     /// Auto-adopt upstream build logic changes
     hidden _auto_merge_build: Boolean = false
-    
+
     /// Synchronize shared gemini settings asset
     hidden _use_common_gemini_settings: Boolean = false
-    
+
     /// Sub-architecture target (variant builds only)
     hidden _repo_subarch: ("x86_64_v3"|"x86_64_v4")?
-    
+
     /// Custom tag pattern for changelog generation
     hidden _tag: String?
-    
+
     // ── Package-Local Conventions ──
-    
+
     /// npm package scope (e.g., "@google")
     hidden _npmscope: String?
-    
+
     /// npm package name
     hidden _npmname: String?
-    
+
     /// npm pinned version
     hidden _npmver: String?
 }
@@ -582,7 +581,7 @@ pkgverFunc = """
     """
 prepare = """
     cd "$pkgname"
-    
+
     patch -Np1 -i ../change-PATH.patch
     patch -Np1 -i ../rowhammer.patch
     // ...
@@ -737,10 +736,7 @@ exit 0
 │   │   └── ...                     # existing files unchanged
 │   └── ...                         # other packages unchanged
 ├── docs/
-│   ├── KCL-OPA-VALIDATION-IMPLEMENTATION-PLAN.md
-│   ├── KCL-OPA-PHASE1-SCHEMA-DESIGN.md             # KCL variant
-│   ├── KCL-OPA-PHASE1-CUE-SCHEMA-DESIGN.md         # CUE variant
-│   ├── KCL-OPA-PHASE1-PKL-SCHEMA-DESIGN.md         # NEW — Pkl variant (this document)
+│   ├── PKL-SCHEMA-DESIGN.md         # Pkl variant (this document)
 │   └── ...
 └── .pre-commit-config.yaml         # updated in Phase 3
 ```

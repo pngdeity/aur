@@ -40,7 +40,7 @@ published.
 tag formats (e.g., tags without a 'v' prefix or nightly-specific tags).
 
 **_github_api_version** (string) : Sets the GitHub API version header used by
-`scripts/generate-changelog.sh` when fetching release notes. Defaults to
+`scripts/generate-changelog.py` when fetching release notes. Defaults to
 `2026-03-10` if not set. : **Typical Usage**: Set when the upstream GitHub
 repository requires a specific API version for changelog generation.
 
@@ -67,7 +67,8 @@ exist. (2) If `_pkgname` is present and differs from `pkgname`, this is a
 **variant sibling** of the base. (3) If `_pkgname` is absent, the package is
 **standalone** — no variant family is declared. : **Constraint**: All packages
 sharing the same `_pkgname` value MUST use identical `pkgdesc` strings. Run
-`scripts/check-pkgdesc-consistency.sh` to validate. : **Typical Usage**:
+`python3 scripts/validate-pkgbuilds-pkl.py` to validate (conftest Rule 7 —
+`deny_pkgdesc_consistency`). : **Typical Usage**:
 Essential for monorepo environments where multiple variants of the same software
 exist, allowing shared scripts and CI checks to reference the base product and
 detect siblings correctly.
@@ -75,14 +76,14 @@ detect siblings correctly.
 ### AUR Deployment
 
 **_deploy_aur** (boolean) : When `true`, the CI/CD pipeline (`release.yml` →
-`scripts/aur-deploy.sh`) processes this package's PKGBUILD into AUR-compatible
+`scripts/aur-deploy.py`) processes this package's PKGBUILD into AUR-compatible
 output and pushes it to `aur.archlinux.org`. The processing step strips
 repo-local `_`-prefixed variables, `# PREREVIEW:` markers, and inlines
 `source "../..."` directives before push. : **Typical Usage**: Set on base
 packages that serve as the canonical upstream for an AUR publication. Variant
 packages (those with `_repo_subarch` set) MUST NOT set `_deploy_aur=true` — the
 script enforces this with a hard error. : **Mutual Exclusion**: Setting both
-`_deploy_aur=true` and `_repo_subarch` will cause `aur-deploy.sh` to exit with
+`_deploy_aur=true` and `_repo_subarch` will cause `aur-deploy.py` to exit with
 an error.
 
 ### Authorship Management
@@ -98,7 +99,7 @@ contributors rather than maintainers.
 ### Variant Builds
 
 **_repo_subarch** (string) : Defines the deployment sub-architecture for variant
-package builds (e.g., `x86_64_v3`, `x86_64_v4`). Read by `arch-builder.sh` to
+package builds (e.g., `x86_64_v3`, `x86_64_v4`). Read by `arch-builder.py` to
 inject corresponding CFLAGS and by `release.yml` to route `.pkg.tar.zst`
 artifacts to the correct repository directory. : **Typical Usage**: Set only on
 variant PKGBUILDs (e.g., `packages/mypkg-v3/PKGBUILD`). Base packages must not
@@ -141,7 +142,7 @@ where `curl`, `wget`, `git`, `gpg`, `pip` are no-ops and `set -eu` is disabled.
 **Cost**: ~0.8ms per variable per PKGBUILD. Safe for CI and pre-commit hooks.
 
 **Remaining grep patterns**: Five extraction points in `sync-package.sh` (lines
-176, 177, 264, 268, 273) and two in `aur-deploy.sh` (lines 96, 97) use `grep`
+176, 177, 264, 268, 273) and two in `aur-deploy.py` (lines 96, 97) use `grep`
 for variables that are currently always string literals (`_upstream_arch_repo`,
 `_upstream_aur_pkg`, `_githubname`, `_tag`, `_github_api_version`, `pkgver`,
 `pkgrel`). These work correctly today but would silently fail if any PKGBUILD
@@ -197,7 +198,8 @@ enforcement topology has four layers:
 | CI discovery gate | `.github/workflows/discovery.yml` | Aborts pipeline before `git push`        |
 | CI build gate     | `.github/workflows/build.yml`     | Blocks build of inconsistent packages    |
 
-To validate manually: `bash scripts/check-pkgdesc-consistency.sh [--ci]`.
+All four layers enforce via `python3 scripts/validate-pkgbuilds-pkl.py` (conftest
+Rule 7 — `deny_pkgdesc_consistency` in `policies/repository.rego`).
 
 ---
 

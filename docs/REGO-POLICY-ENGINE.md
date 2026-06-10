@@ -1,13 +1,11 @@
 # Phase 2 — OPA/Rego Policy Engine
 
-**Date:** 2026-05-11 **Status:** Proposed **Note:** Pkl selected as schema
-language per [`PKL-CROSS-PHASE-EVALUATION.md`](PKL-CROSS-PHASE-EVALUATION.md).
+**Date:** 2026-05-11 **Status:** Active — implemented in `policies/repository.rego`
+**Note:** Pkl selected as schema language per [`PKL-CROSS-PHASE-EVALUATION.md`](PKL-CROSS-PHASE-EVALUATION.md).
 KCL references in this document are historical. The OPA/Rego policy rules and
-engine architecture remain valid. **Parent:**
-[`docs/KCL-OPA-VALIDATION-IMPLEMENTATION-PLAN.md`](KCL-OPA-VALIDATION-IMPLEMENTATION-PLAN.md)
-§4 **Previous:**
-[`docs/KCL-OPA-PHASE1-SCHEMA-DESIGN.md`](KCL-OPA-PHASE1-SCHEMA-DESIGN.md)
-**Next:** [`docs/KCL-OPA-PHASE3-RENDERER-CI.md`](KCL-OPA-PHASE3-RENDERER-CI.md)
+engine architecture remain valid.
+**Previous:** [`docs/PKL-SCHEMA-DESIGN.md`](PKL-SCHEMA-DESIGN.md)
+**Next:** [`docs/PKGBUILD-RENDERER-CI.md`](PKGBUILD-RENDERER-CI.md)
 
 ---
 

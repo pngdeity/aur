@@ -202,24 +202,26 @@ relevant to the current task.
 
 | File                                                                                        | Purpose                                                                                                                                  |
 | ------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| [ABS-FUNDAMENTALS.md](docs/ABS-FUNDAMENTALS.md)                                             | Core ABS concepts: PKGBUILD lifecycle, makepkg, AUR structure                                                                            |
-| [AUTOMATED-SYSTEM-ARCHITECTURE.md](docs/AUTOMATED-SYSTEM-ARCHITECTURE.md)                   | Conceptual model: Lifecycle phases, concern taxonomy, review gates                                                                       |
-| [AUTOMATED-SYSTEM-DESIGN-IMPLEMENTATION.md](docs/AUTOMATED-SYSTEM-DESIGN-IMPLEMENTATION.md) | Technical design: Engine logic, classification regex, CI/CD workflows                                                                    |
-| [BASH-COMPLETION-CONVENTIONS.md](docs/BASH-COMPLETION-CONVENTIONS.md)                       | Shared bash-completion conventions (`_comp_` namespace, `_comp_compgen_help`)                                                            |
-| [KCL-OPA-PHASE1-CUE-SCHEMA-DESIGN.md](docs/KCL-OPA-PHASE1-CUE-SCHEMA-DESIGN.md)             | **Status: SUPERSEDED by Pkl.** Retained as rationale artifact.                                                                           |
-| [KCL-OPA-PHASE1-PKL-SCHEMA-DESIGN.md](docs/KCL-OPA-PHASE1-PKL-SCHEMA-DESIGN.md)             | Pkl PKGBUILD schema design (Phase 1)                                                                                                     |
-| [KCL-OPA-PHASE1-SCHEMA-DESIGN.md](docs/KCL-OPA-PHASE1-SCHEMA-DESIGN.md)                     | **Status: SUPERSEDED by Pkl.** Retained as rationale artifact.                                                                           |
-| [KCL-OPA-PHASE2-POLICY-ENGINE.md](docs/KCL-OPA-PHASE2-POLICY-ENGINE.md)                     | OPA/Conftest policy engine design (Phase 2). **Note:** References KCL (historical); OPA rules remain valid. Schema language now Pkl.     |
-| [KCL-OPA-PHASE3-RENDERER-CI.md](docs/KCL-OPA-PHASE3-RENDERER-CI.md)                         | Renderer and CI integration design (Phase 3). **Note:** References KCL (historical); CI topology remains valid. Schema language now Pkl. |
-| [KCL-OPA-VALIDATION-IMPLEMENTATION-PLAN.md](docs/KCL-OPA-VALIDATION-IMPLEMENTATION-PLAN.md) | **Note:** Pkl selected. KCL references are historical.                                                                                   |
-| [LANGUAGE-PACKAGING-GUIDELINES.md](docs/LANGUAGE-PACKAGING-GUIDELINES.md)                   | Catalog of 35 language/framework Arch Wiki guidelines indexed by `makedepends`                                                           |
-| [PKGBUILD-CUSTOM-VARIABLES-REFERENCE.md](docs/PKGBUILD-CUSTOM-VARIABLES-REFERENCE.md)       | Repository-specific PKGBUILD variables (`_upstream_*`, `_githubname`, `_tag`) and the `scripts/pkgvar` extraction utility                |
-| [PKL-CROSS-PHASE-EVALUATION.md](docs/PKL-CROSS-PHASE-EVALUATION.md)                         | Decision: Pkl selected over KCL/CUE                                                                                                      |
-| [SRCINFO-VERSION-CONTROL-POLICY.md](docs/SRCINFO-VERSION-CONTROL-POLICY.md)                 | Policy: `.SRCINFO` is a build artifact, not version-controlled                                                                           |
-| [SWARM-PLAN.md](docs/SWARM-PLAN.md)                                                         | Autonomous agent swarm execution plan                                                                                                    |
-| [TESTING_ARCHITECTURE_PLAN.md](docs/TESTING_ARCHITECTURE_PLAN.md)                           | **Status: Reference** — refactoring Bash scripts into Python                                                                             |
-| [TODO.md](docs/TODO.md)                                                                     | Outstanding work items (architecture, skills, pkgvar migration, docs)                                                                    |
-| [WIKI-REFERENCE.md](docs/WIKI-REFERENCE.md)                                                 | Catalog of 17 general Arch Wiki articles organized by task domain                                                                        |
+| [ABS-FUNDAMENTALS.md](docs/ABS-FUNDAMENTALS.md)                                             | Core ABS concepts: PKGBUILD lifecycle, makepkg, AUR structure                                                            |
+| [AUTOMATED-SYSTEM-ARCHITECTURE.md](docs/AUTOMATED-SYSTEM-ARCHITECTURE.md)                   | Conceptual model: Lifecycle phases, concern taxonomy, review gates                                                       |
+| [AUTOMATED-SYSTEM-DESIGN-IMPLEMENTATION.md](docs/AUTOMATED-SYSTEM-DESIGN-IMPLEMENTATION.md) | Technical design: Engine logic, classification regex, CI/CD workflows                                                    |
+| [BASH-COMPLETION-CONVENTIONS.md](docs/BASH-COMPLETION-CONVENTIONS.md)                       | Shared bash-completion conventions (``_comp_`` namespace, ``_comp_compgen_help``)                                        |
+| [LANGUAGE-PACKAGING-GUIDELINES.md](docs/LANGUAGE-PACKAGING-GUIDELINES.md)                   | Catalog of 35 language/framework Arch Wiki guidelines indexed by `makedepends`                                           |
+| [PKGBUILD-CUSTOM-VARIABLES-REFERENCE.md](docs/PKGBUILD-CUSTOM-VARIABLES-REFERENCE.md)       | Repository-specific PKGBUILD variables (``_upstream_*``, ``_githubname``, ``_tag``) and the `scripts/pkgvar` utility    |
+| [PKGBUILD-RENDERER-CI.md](docs/PKGBUILD-RENDERER-CI.md)                                     | PKGBUILD renderer and CI integration design                                                                              |
+| [PKL-CROSS-PHASE-EVALUATION.md](docs/PKL-CROSS-PHASE-EVALUATION.md)                         | Decision: Pkl selected over KCL/CUE                                                                                      |
+| [PKL-SCHEMA-DESIGN.md](docs/PKL-SCHEMA-DESIGN.md)                                           | Pkl PKGBUILD schema design                                                                                               |
+| [REGO-POLICY-ENGINE.md](docs/REGO-POLICY-ENGINE.md)                                         | OPA/Conftest policy engine design                                                                                        |
+| [SRCINFO-VERSION-CONTROL-POLICY.md](docs/SRCINFO-VERSION-CONTROL-POLICY.md)                 | Policy: `.SRCINFO` is a build artifact, not version-controlled                                                           |
+| [TODO.md](docs/TODO.md)                                                                     | Outstanding work items                                                                                                   |
+| [WIKI-REFERENCE.md](docs/WIKI-REFERENCE.md)                                                 | Catalog of 17 general Arch Wiki articles organized by task domain                                                        |
+
+### `docs/archive/` — Retained Reasoning Artifacts
+
+| File                                                                   | Purpose                                           |
+| ---------------------------------------------------------------------- | ------------------------------------------------- |
+
+(No archived documents. Superseded design artifacts are removed — git history preserves prior versions.)
 
 ### Package Context Discovery
 
@@ -290,7 +292,7 @@ distinct target and responsibility boundary:
 
 | Artifact                             | Produced By                                                         | Target                                                                                                                   | Responsibility                                                                                    |
 | ------------------------------------ | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------- |
-| **AUR PKGBUILDs**                    | CI/CD pipeline (`release.yml` → `scripts/aur-deploy.sh` → git push) | `aur.archlinux.org` — the Arch User Repository hosts these PKGBUILDs for end users and AUR helpers to download and build | **This repository** processes and pushes AUR-compatible PKGBUILDs to their respective AUR remotes |
+| **AUR PKGBUILDs**                    | CI/CD pipeline (`release.yml` → `scripts/aur-deploy.py` → git push) | `aur.archlinux.org` — the Arch User Repository hosts these PKGBUILDs for end users and AUR helpers to download and build | **This repository** processes and pushes AUR-compatible PKGBUILDs to their respective AUR remotes |
 | **Binary packages** (`.pkg.tar.zst`) | `release.yml` → `makepkg`                                           | Apache host (`/var/www/html/repo/nightly/`) — serves a pacman-compatible repository database                             | **Release pipeline** (`release.yml`) handles database generation, signing, and `rsync` deployment |
 | **Builder image**                    | `builder-image.yml` → Docker build                                  | `ghcr.io/<org>/<repo>/arch-builder`                                                                                      | **CI/CD pipeline** builds and pushes on Dockerfile changes                                        |
 
@@ -307,12 +309,12 @@ distinct target and responsibility boundary:
 
 - **_deploy_aur Flag**: Packages intended for AUR publication must set
   `_deploy_aur=true` in the PKGBUILD. The `release.yml` pipeline runs
-  `scripts/aur-deploy.sh` for each flagged package after successful builds. The
+  `scripts/aur-deploy.py` for each flagged package after successful builds. The
   script processes the repo PKGBUILD (inlines `source` directives, strips
   repo-local `_`-prefixed variables and `# PREREVIEW:` markers, generates
   `.SRCINFO`) and pushes to `aur.archlinux.org`.
 - **Mutual Exclusion**: `_deploy_aur=true` and `_repo_subarch` are mutually
-  exclusive. `aur-deploy.sh` hard-blocks this combination. Variant packages are
+  exclusive. `aur-deploy.py` hard-blocks this combination. Variant packages are
   build targets only — never AUR-deployed.
 
 ### Variant Builds (Sub-Architecture Optimization)
@@ -324,17 +326,18 @@ distinct target and responsibility boundary:
   variant `pkgrel=1.1`). Pacman resolves the correct variant via repository
   priority in `pacman.conf`.
 - **Variable**: `_repo_subarch` defines the deployment sub-architecture (e.g.,
-  `x86_64_v3`) and controls CFLAGS injection in `arch-builder.sh` and artifact
+  `x86_64_v3`) and controls CFLAGS injection in `arch-builder.py` and artifact
   routing in `release.yml`.
 - **Thin PKGBUILDs**: Variant PKGBUILDs may use
   `source "../mypkg/PKGBUILD.common"` to share definitions with the base
-  package. These are repo-local idioms that `aur-deploy.sh` inlines during AUR
+  package. These are repo-local idioms that `aur-deploy.py` inlines during AUR
   processing. Variant PKGBUILDs themselves are never AUR-deployed.
 - **Shared pkgdesc**: All packages sharing the same `_pkgname` value MUST use an
   identical `pkgdesc` string. This ensures consistent presentation across
   variant package listings (e.g., `apm`, `apm-bin`, `pkl-lsp`, `pkl-lsp-bin`).
   The `_pkgname` variable is the authoritative discriminator for variant groups.
-  Run `scripts/check-pkgdesc-consistency.sh` to validate. The convention:
+  Run `python3 scripts/validate-pkgbuilds-pkl.py` to validate (includes conftest
+  Rule 7 — `deny_pkgdesc_consistency`). The convention:
   `_pkgname` present and equal to `pkgname` signals the base package (variants
   exist); `_pkgname` present and unequal signals a variant sibling; `_pkgname`
   absent signals a standalone package with no variants.
@@ -347,8 +350,9 @@ distinct target and responsibility boundary:
   unnecessary. Two additional rules apply universally: (1) every entry in
   `conflicts` or `replaces` must have a matching entry in `provides` (no
   unprovided conflicts); (2) `provides` and `conflicts` must not contain the
-  package's own `pkgname` (self-reference). See the quality rules engine TODO
-  (`docs/TODO.md`) for planned automation of these checks.
+  package's own `pkgname` (self-reference). These are enforced by conftest Rules
+  4–5 (`no_unprovided_conflicts`, `no_self_reference`) in
+  `policies/repository.rego`.
 
 ### Tool Supremacy & Precision
 
@@ -371,7 +375,9 @@ distinct target and responsibility boundary:
   (`.pre-commit-config.yaml`) blocks commits of inconsistent PKGBUILDs; (2)
   `sync-package.sh` §5 warns during automated sync; (3) CI `discovery.yml` gate
   aborts the pipeline before `git push`; (4) CI `build.yml` gate blocks build of
-  inconsistent packages. All four call `scripts/check-pkgdesc-consistency.sh`.
+  inconsistent packages. All four call `python3 scripts/validate-pkgbuilds-pkl.py`
+  (which runs conftest Rule 7 — `deny_pkgdesc_consistency` in
+  `policies/repository.rego`).
 
 ### Semantic Commit Standards
 
