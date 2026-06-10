@@ -38,7 +38,7 @@ jobs:
           jq -c 'select(.event == "updated")' results.json | while read -r row; do
             name=$(echo "$row" | jq -r .name)
             ver=$(echo "$row" | jq -r .version)
-            bash scripts/sync-package.sh "$name" "$ver"
+            python3 scripts/sync-package.py "$name" "$ver"
             echo "true" > /tmp/has_changes
           done
 
@@ -51,6 +51,26 @@ jobs:
           else
             echo "changed=false" >> "$GITHUB_OUTPUT"
           fi
+      - name: Validate
+        if: steps.sync.outputs.changed == 'true'
+        env:
+          PKL_VERSION: 0.31.1
+          CONFTEST_VERSION: 0.68.2
+        run: |
+          set -euo pipefail
+
+          if ! command -v pkl &>/dev/null; then
+            curl -fsSL "https://github.com/apple/pkl/releases/download/v${PKL_VERSION}/pkl-linux-amd64" -o /usr/local/bin/pkl
+            chmod +x /usr/local/bin/pkl
+          fi
+
+          if ! command -v conftest &>/dev/null; then
+            curl -fsSL "https://github.com/open-policy-agent/conftest/releases/download/v${CONFTEST_VERSION}/conftest_${CONFTEST_VERSION}_Linux_x86_64.tar.gz" | tar xz -C /usr/local/bin
+          fi
+
+          pacman -Sy --noconfirm python-yaml 2>/dev/null || true
+
+          python3 scripts/validate-pkgbuilds-pkl.py
       - name: Open PR
         if: steps.sync.outputs.changed == 'true'
         run: |

@@ -124,16 +124,14 @@ Outstanding architectural and documentation items requiring completion.
       rule engine plans are superseded — `load_pkgbuild()` + Rego is the
       resolver + rules engine respectively. (Due: Indeterminate)
 
-- [ ] **Port `sync-package.sh` → `sync-package.py`**: Replace the last remaining
-      Bash script (317 lines) with a structured-data Python implementation.
-      Design is complete (13 internal methods, `load_pkgbuild()` replaces all
-      `pkgvar`/`grep`/`sed`, `hashlib`+`urllib` replaces `updpkgsums`+`makepkg -g`,
-      `pkl eval` gate before final write). Overlaps with 7 concerns: upstream
-      resolution, fetch/cache, concern classification, protected merge,
-      declarative rules/PREREVIEW, version bump, post-sync finalization.
-      - Update `discovery.yml:41` caller: `python3 scripts/sync-package.py`.
-      - Remove `build.yml:71` `chmod +x scripts/*.sh` (no .sh scripts remain).
-      - Delete `scripts/sync-package.sh` after validation. (Due: 4-part plan)
+- [x] **Port `sync-package.sh` → `sync-package.py`**: Replaced the last remaining
+      Bash script (317 lines) with a structured-data Python implementation
+      (669 lines, `scripts/sync-package.py`). Uses `load_pkgbuild()` for variable
+      resolution, `hashlib`+`urllib` for checksums, `pkl eval` for schema
+      validation, and Python PKGBUILD renderer for final output.
+      - ~~Update `discovery.yml:41` caller: `python3 scripts/sync-package.py`.~~ Done.
+      - ~~Remove `build.yml:71` `chmod +x scripts/*.sh`.~~ Done (no .sh scripts remain).
+      - ~~Delete `scripts/sync-package.sh` after validation.~~ Done. (Due: 4-part plan)
 
 - [x] **Retire `check-pkgdesc-consistency.py`**: Conftest Rule 7
       (`deny_pkgdesc_consistency` in `policies/repository.rego`) already
@@ -144,24 +142,24 @@ Outstanding architectural and documentation items requiring completion.
       - ~~Remove call from `build.yml:73`.~~ Done.
       - ~~Update `AGENTS.md` references to point at conftest Rule 7.~~ Done. (Due: 4-part plan)
 
-- [ ] **Wire `discovery.yml` Pkl+conftest validation gate**: After the
-      `sync-package.py` call loop, install pkl + conftest and run
-      `validate-pkgbuilds-pkl.py`. If validation fails, abort before
-      `git commit`/`git push` — no PR is created. Requires static binary
-      downloads in the archlinux builder container. (Due: 4-part plan)
+- [x] **Wire `discovery.yml` Pkl+conftest validation gate**: After the
+      `sync-package.py` call loop, install pkl + conftest (static binaries)
+      and run `validate-pkgbuilds-pkl.py`. If validation fails, abort before
+      `git commit`/`git push` — no PR is created. Gated on `steps.sync.outputs.changed
+      == 'true'` so validation only runs when updates were detected.
+      Installs `python-yaml` via pacman in the archlinux builder container. (Due: 4-part plan)
 
-- [x] **OPA/Rego Policy — `no_version_constraints` (ERROR)**: Add a Rego rule to
-      deny version operators (`>=`, `<=`, `>`, `<`, `=`) embedded in `depends`,
-      `makedepends`, and `checkdepends` strings. Pacman does not enforce version
-      ranges — they are non-functional noise. Example violation:
-      `depends=('glibc>=2.35')`. Pkl pipeline preserves literal dep strings,
-      making this a straightforward `re_match` check.
+- [x] **OPA/Rego Policy — `no_version_constraints` (ERROR)**: Added Rule 15 to
+      `policies/repository.rego` (commit `a1305e1`). Flags version operators
+      (`>=`, `<=`, `>`, `<`, `=\d`) in `depends`, `makedepends`, `checkdepends`.
+      Two clause blocks: comparison operators and bare `=version`. Verified with
+      synthetic manifest and full 24-package production validation.
 
-- [x] **OPA/Rego Policy — `prefer_strong_hash` (WARN)**: Add a Rego rule to warn
-      when `md5sums` is populated but `sha256sums`, `sha512sums`, or `b2sums`
-      are not. `md5` is cryptographically broken per Arch Wiki guidelines; the
-      standard is at least SHA-256. Example violation: `md5sums=('f0d26bc...')`
-      with no `sha256sums` array present.
+- [x] **OPA/Rego Policy — `prefer_strong_hash` (WARN)**: Added Rule 16 to
+      `policies/repository.rego` (commit `a1305e1`). Flags when `md5sums` is
+      populated but no `sha256sums`, `sha512sums`, or `b2sums` present. Uses
+      `has_field()` check. Verified with synthetic manifest and full 24-package
+      production validation.
 
 - [x] **.SRCINFO Version Control Policy**: Research the feasibility of treating
       `.SRCINFO` as a build artifact — generated on-demand by `aur-deploy.py`
