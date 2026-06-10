@@ -21,7 +21,7 @@ on:
       version:
         required: false
         type: string
-        description: 'Version string to pass to arch-builder.sh'
+        description: 'Version string to pass to arch-builder.py'
 concurrency: build-${{ github.ref }}
 jobs:
   validate:
@@ -49,7 +49,7 @@ jobs:
       - name: Install Python deps
         run: sudo apt-get update -qq && sudo apt-get install -y -qq python3 python3-yaml
       - name: Validate
-        run: bash scripts/validate-pkgbuilds-pkl.sh
+        run: python3 scripts/validate-pkgbuilds-pkl.py
   build:
     name: Build packages
     needs: validate
@@ -70,7 +70,7 @@ jobs:
         run: |
           chmod +x scripts/*.sh 2>/dev/null || true
       - name: Check pkgdesc consistency
-        run: ./scripts/check-pkgdesc-consistency.sh --ci
+        run: python3 ./scripts/check-pkgdesc-consistency.py --ci
       - name: Build packages
         run: |
           if [ -n "${{ inputs.package }}" ]; then
@@ -84,7 +84,7 @@ jobs:
               if [ -z "$VERSION" ]; then
                 VERSION=$(grep -oP '^pkgver=\K.*' "$PKG_DIR/PKGBUILD" | tr -d "'\"")
               fi
-              sudo -u builder ./scripts/arch-builder.sh "$PKG_DIR" "$VERSION"
+              sudo -u builder python3 ./scripts/arch-builder.py "$PKG_DIR" "$VERSION"
             fi
           done
       - name: Upload artifacts

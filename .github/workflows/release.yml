@@ -139,7 +139,7 @@ jobs:
           FAILURES=0
           for PKG_DIR in $(find packages -mindepth 2 -maxdepth 2 -name PKGBUILD -exec dirname {} \; | sort); do
             if [ -f "$PKG_DIR/PKGBUILD" ]; then
-              if ! bash scripts/aur-deploy.sh "$PKG_DIR"; then
+              if ! python3 scripts/aur-deploy.py "$PKG_DIR"; then
                 echo "::warning::$PKG_DIR AUR deployment failed"
                 FAILURES=$((FAILURES + 1))
               fi
