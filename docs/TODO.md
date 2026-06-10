@@ -135,14 +135,14 @@ Outstanding architectural and documentation items requiring completion.
       - Remove `build.yml:71` `chmod +x scripts/*.sh` (no .sh scripts remain).
       - Delete `scripts/sync-package.sh` after validation. (Due: 4-part plan)
 
-- [ ] **Retire `check-pkgdesc-consistency.py`**: Conftest Rule 7
+- [x] **Retire `check-pkgdesc-consistency.py`**: Conftest Rule 7
       (`deny_pkgdesc_consistency` in `policies/repository.rego`) already
       enforces this across all packages via `validate-pkgbuilds-pkl.py`. The
       standalone script is fully redundant.
-      - Delete `scripts/check-pkgdesc-consistency.py`.
-      - Remove hook from `.pre-commit-config.yaml` (`pkl-validate` covers it).
-      - Remove call from `build.yml:73`.
-      - Update `AGENTS.md` references to point at conftest Rule 7. (Due: 4-part plan)
+      - ~~Delete `scripts/check-pkgdesc-consistency.py`.~~ Done.
+      - ~~Remove hook from `.pre-commit-config.yaml` (`pkl-validate` covers it).~~ Done.
+      - ~~Remove call from `build.yml:73`.~~ Done.
+      - ~~Update `AGENTS.md` references to point at conftest Rule 7.~~ Done. (Due: 4-part plan)
 
 - [ ] **Wire `discovery.yml` Pkl+conftest validation gate**: After the
       `sync-package.py` call loop, install pkl + conftest and run

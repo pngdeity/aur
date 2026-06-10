@@ -373,7 +373,7 @@ distinct target and responsibility boundary:
   needed. Run `scripts/pkgvar --help` for the full interface.
 - **pkgdesc Enforcement Topology** (4-layer): (1) Pre-commit hook
   (`.pre-commit-config.yaml`) blocks commits of inconsistent PKGBUILDs; (2)
-  `sync-package.sh` §5 warns during automated sync; (3) CI `discovery.yml` gate
+  `sync-package.py` §5 warns during automated sync; (3) CI `discovery.yml` gate
   aborts the pipeline before `git push`; (4) CI `build.yml` gate blocks build of
   inconsistent packages. All four call `python3 scripts/validate-pkgbuilds-pkl.py`
   (which runs conftest Rule 7 — `deny_pkgdesc_consistency` in
