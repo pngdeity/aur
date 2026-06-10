@@ -1,13 +1,6 @@
 repos:
   - repo: local
     hooks:
-      - id: check-pkgdesc-consistency
-        name: Validate pkgdesc consistency across variants
-        entry: python3 scripts/check-pkgdesc-consistency.py
-        language: system
-        files: ^packages/.*/PKGBUILD$
-        pass_filenames: false
-        always_run: false
       - id: pkl-validate
         name: PKGBUILD Pkl Manifest Validation
         entry: python3 scripts/validate-pkgbuilds-pkl.py

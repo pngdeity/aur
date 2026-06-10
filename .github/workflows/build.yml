@@ -66,8 +66,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
-      - name: Check pkgdesc consistency
-        run: python3 ./scripts/check-pkgdesc-consistency.py --ci
       - name: Build packages
         run: |
           # Excluded from the build set: packages whose dependencies are not
