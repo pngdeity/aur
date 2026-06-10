@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import hashlib
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -63,6 +64,28 @@ _CONCERN_GROUPS = {
 
 # Checksum array priority for coalescing
 _CHECKSUM_KEYS = ("sha256sums", "sha512sums", "sha224sums", "sha384sums", "b2sums")
+
+# Each source array paired with the checksum array that covers it. The arch
+# variants are separate entries because two of them may declare the same local
+# name while pointing at different artifacts, so each must be hashed from its
+# own URL rather than collapsing into one array. The plain source= array uses
+# whichever checksum key the package already declares (see _CHECKSUM_KEYS).
+_SOURCE_CHECKSUM_PAIRS = (
+    ("source", "sha256sums"),
+    ("source_x86_64", "sha512sums_x86_64"),
+    ("source_aarch64", "sha512sums_aarch64"),
+)
+
+# checksum array -> hashlib algorithm name
+_HASH_ALGO_MAP = {
+    "sha256sums": "sha256",
+    "sha512sums": "sha512",
+    "sha224sums": "sha224",
+    "sha384sums": "sha384",
+    "b2sums": "blake2b",
+    "sha512sums_x86_64": "sha512",
+    "sha512sums_aarch64": "sha512",
+}
 
 
 # ── helpers ──────────────────────────────────────────────────────────────
@@ -322,52 +345,132 @@ def _generate_changelog(
         vars_["changelog"] = changelog_file.name
 
 
-def _compute_checksums(vars_: dict, pkg_dir: Path) -> None:
-    _log("  -> Computing checksums")
-    sources = vars_.get("source", [])
-    if not sources:
+def _disambiguate_source_names(pkg_dir: Path) -> None:
+    """Rename colliding source entries to the file actually downloaded for them.
+
+    Two source arrays may declare the same local name while pointing at
+    different artifacts -- regal's per-arch entries are both named
+    ``regal_Linux`` but fetch ``regal_Linux_x86_64`` and ``regal_Linux_arm64``.
+    Sharing one filename makes the checksum step hash whichever file won the
+    race for every architecture.
+
+    Must run on the MERGED PKGBUILD: the merge resolves ``source=`` lines in
+    favour of the local PKGBUILD, so a rewrite applied to PKGBUILD.new
+    beforehand is overwritten.
+    """
+    pkgbuild = pkg_dir / "PKGBUILD"
+    text = pkgbuild.read_text()
+
+    # name -> list of URLs that declare it
+    by_name: dict[str, list[str]] = {}
+    for entry in _iter_source_entries(text):
+        by_name.setdefault(entry["filename"], []).append(entry["url"])
+
+    colliding = {
+        name: urls for name, urls in by_name.items() if len(urls) > 1
+    }
+    if not colliding:
         return
 
-    # Use existing checksum type or default to sha256
-    checksum_key = None
-    for key in _CHECKSUM_KEYS:
-        if key in vars_:
-            checksum_key = key
-            break
-    if checksum_key is None:
-        checksum_key = "sha256sums"
+    _log("  -> Disambiguating colliding source names...")
+    changed = False
+    for name, urls in colliding.items():
+        for url in urls:
+            base = url.rstrip("/").rsplit("/", 1)[-1].split("?", 1)[0]
+            if not base or base == name:
+                continue
+            needle = f"{name}::{url}"
+            if needle not in text:
+                continue
+            text = text.replace(needle, f"{base}::{url}")
+            changed = True
 
-    hashes = []
-    for src in sources:
-        filename = src.get("filename", "")
-        url = src.get("url", "")
-        if _is_vcs_url(url) and not _is_pinned(url):
-            hashes.append("SKIP")
+    if changed:
+        _log("    -> Renamed colliding source entries to their downloaded files")
+        pkgbuild.write_text(text)
+
+
+def _iter_source_entries(text: str):
+    """Yield {filename, url} for every entry in every source*= array."""
+    in_array = False
+    for raw in text.split("\n"):
+        line = raw.strip()
+        if not in_array:
+            if re.match(r"^source(_[A-Za-z0-9_]+)?=\(", line):
+                in_array = True
+                line = re.sub(r"^source(_[A-Za-z0-9_]+)?=\(", "", line)
+            else:
+                continue
+        line = re.sub(r"\)\s*$", "", line).strip()
+        for token in re.findall(r'"([^"]*)"|\'([^\']*)\'', line):
+            value = token[0] or token[1]
+            if not value:
+                continue
+            if "::" in value:
+                filename, url = value.split("::", 1)
+            else:
+                filename = url = value
+                if "://" not in url:
+                    continue  # repo-local file, never fetched
+            yield {"filename": filename, "url": url}
+
+
+def _compute_checksums(vars_: dict, pkg_dir: Path) -> None:
+    """Compute checksums for every source array, per-arch included.
+
+    ``source``/``source_x86_64``/``source_aarch64`` each get their own
+    checksum array. Two arch variants may declare the same local name while
+    pointing at different artifacts, so each is hashed independently from its
+    own URL rather than from a shared file on disk.
+    """
+    _log("  -> Computing checksums")
+
+    for source_key, checksum_key in _SOURCE_CHECKSUM_PAIRS:
+        sources = vars_.get(source_key) or []
+        if not sources:
             continue
 
-        # Local file (filename is not a URL)
-        if not filename.startswith(
-            ("http://", "https://", "git+", "svn+", "hg+", "bzr+")
-        ):
-            filepath = pkg_dir / filename
-            if filepath.is_file():
-                h = hashlib.sha256(filepath.read_bytes()).hexdigest()
-                hashes.append(h)
+        # The plain source= array is covered by whichever checksum key the
+        # package already declares; the arch variants have a fixed pairing.
+        if source_key == "source":
+            key = None
+            for candidate in _CHECKSUM_KEYS:
+                if candidate in vars_:
+                    key = candidate
+                    break
+            checksum_key = key or "sha256sums"
+
+        algo = _HASH_ALGO_MAP.get(checksum_key, "sha256")
+        hasher = getattr(hashlib, algo)
+        hashes = []
+        for src in sources:
+            filename = src.get("filename", "")
+            url = src.get("url", "")
+            if _is_vcs_url(url) and not _is_pinned(url):
+                hashes.append("SKIP")
                 continue
 
-        # URL source — download and hash in memory
-        try:
-            req = urllib.request.Request(
-                url, headers={"User-Agent": "sync-package/1.0"}
-            )
-            with urllib.request.urlopen(req, timeout=60) as resp:
-                h = hashlib.sha256(resp.read()).hexdigest()
-                hashes.append(h)
-        except Exception as e:
-            _log(f"    -> WARN: cannot fetch {url}: {e}")
-            hashes.append("SKIP")
+            # Local file (filename is not a URL)
+            if not filename.startswith(
+                ("http://", "https://", "git+", "svn+", "hg+", "bzr+")
+            ):
+                filepath = pkg_dir / filename
+                if filepath.is_file():
+                    hashes.append(hasher(filepath.read_bytes()).hexdigest())
+                    continue
 
-    vars_[checksum_key] = hashes
+            # URL source — download and hash in memory
+            try:
+                req = urllib.request.Request(
+                    url, headers={"User-Agent": "sync-package/1.0"}
+                )
+                with urllib.request.urlopen(req, timeout=60) as resp:
+                    hashes.append(hasher(resp.read()).hexdigest())
+            except Exception as e:
+                _log(f"    -> WARN: cannot fetch {url}: {e}")
+                hashes.append("SKIP")
+
+        vars_[checksum_key] = hashes
 
 
 # ── validation & render ───────────────────────────────────────────────────
@@ -470,9 +573,11 @@ def _render_pkgbuild(vars_: dict, funcs: dict) -> str:
     if vars_.get("changelog"):
         lines.append(f"changelog={vars_['changelog']}")
 
-    # Source
-    sources = vars_.get("source")
-    if sources:
+    # Source — plain, then each arch variant.
+    for source_key in ("source", "source_x86_64", "source_aarch64"):
+        sources = vars_.get(source_key)
+        if not sources:
+            continue
         items = []
         for s in sources:
             filename = s.get("filename", "")
@@ -481,18 +586,22 @@ def _render_pkgbuild(vars_: dict, funcs: dict) -> str:
                 items.append(f'"{filename}::{url}"')
             else:
                 items.append(f'"{url}"')
-        lines.append(f"source=({' '.join(items)})")
+        lines.append(f"{source_key}=({' '.join(items)})")
 
-    # Checksums — use first available
-    checksum_key = None
-    for key in _CHECKSUM_KEYS:
-        if key in vars_:
-            checksum_key = key
-            break
-    if checksum_key and vars_.get(checksum_key):
-        items = []
-        for c in vars_[checksum_key]:
-            items.append(f"'{c}'")
+    # Checksums — every array the package declares, not just the first.
+    for checksum_key in (
+        "sha256sums",
+        "sha512sums",
+        "sha224sums",
+        "sha384sums",
+        "b2sums",
+        "sha512sums_x86_64",
+        "sha512sums_aarch64",
+    ):
+        values = vars_.get(checksum_key)
+        if not values:
+            continue
+        items = [f"'{c}'" for c in values]
         lines.append(f"{checksum_key}=({' '.join(items)})")
 
     # validpgpkeys, noextract
@@ -626,6 +735,12 @@ def main() -> None:
             vars_, funcs, ok = _merge_with_identity(vars_, funcs, pkg_dir)
             if not ok:
                 sys.exit(1)
+
+            # Rename colliding source entries on the MERGED PKGBUILD. The
+            # merge keeps our source= lines, so rewriting PKGBUILD.new before
+            # it would be discarded and each arch would then be hashed from
+            # whichever file remained on disk.
+            _disambiguate_source_names(pkg_dir)
 
             _apply_prereview_marker(vars_, build_changed, new_ver)
             upstream_changed = True
