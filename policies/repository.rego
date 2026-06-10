@@ -575,8 +575,63 @@ deny_vcs_without_skip contains msg if {
 }
 
 # ─────────────────────────────────────────────────────────────────────
+# Rule 15: deny_no_version_constraints (ERROR)
+# Version operators (>=, <=, >, <, =) in depends/makedepends/checkdepends
+# are non-functional — pacman does not enforce version ranges.
+# ─────────────────────────────────────────────────────────────────────
+deny_no_version_constraints contains msg if {
+	pkg := input.packages[_]
+	not has_exception(pkg, "no_version_constraints")
+	dep_lists := [
+		{"name": "depends", "entries": object.get(pkg, "depends", [])},
+		{"name": "makedepends", "entries": object.get(pkg, "makedepends", [])},
+		{"name": "checkdepends", "entries": object.get(pkg, "checkdepends", [])},
+	]
+	dep := dep_lists[i].entries[j]
+	regex.match(`[<>]=`, dep)
+	msg := sprintf(
+		"%s: %s entry '%s' contains version operator — pacman does not enforce version ranges (no_version_constraints rule)",
+		[pkg.pkgname, dep_lists[i].name, dep],
+	)
+}
+
+deny_no_version_constraints contains msg if {
+	pkg := input.packages[_]
+	not has_exception(pkg, "no_version_constraints")
+	dep_lists := [
+		{"name": "depends", "entries": object.get(pkg, "depends", [])},
+		{"name": "makedepends", "entries": object.get(pkg, "makedepends", [])},
+		{"name": "checkdepends", "entries": object.get(pkg, "checkdepends", [])},
+	]
+	dep := dep_lists[i].entries[j]
+	regex.match(`\b=\d`, dep)
+	msg := sprintf(
+		"%s: %s entry '%s' contains version constraint — pacman does not enforce version ranges (no_version_constraints rule)",
+		[pkg.pkgname, dep_lists[i].name, dep],
+	)
+}
+
+# ─────────────────────────────────────────────────────────────────────
+# Rule 16: warn_prefer_strong_hash (WARN)
+# md5sums without sha256sums, sha512sums, or b2sums is cryptographically
+# weak — SHA-256 or stronger is preferred per Arch Wiki guidelines.
+# ─────────────────────────────────────────────────────────────────────
+warn_prefer_strong_hash contains msg if {
+	pkg := input.packages[_]
+	not has_exception(pkg, "prefer_strong_hash")
+	count(pkg.md5sums) > 0
+	not has_field(pkg, "sha256sums")
+	not has_field(pkg, "sha512sums")
+	not has_field(pkg, "b2sums")
+	msg := sprintf(
+		"%s: md5sums used but no sha256/sha512/b2sums present — prefer stronger hash (prefer_strong_hash rule)",
+		[pkg.pkgname],
+	)
+}
+
+# ─────────────────────────────────────────────────────────────────────
 # Legacy exception rule — inert. Policy exceptions are now wired
-# through input.exceptions (merged by validate-pkgbuilds-pkl.sh)
+# through input.exceptions (merged by validate-pkgbuilds-pkl.py)
 # and checked via has_exception() in each rule above.
 # Retained for tool compatibility only.
 # ─────────────────────────────────────────────────────────────────────

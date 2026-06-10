@@ -150,14 +150,14 @@ Outstanding architectural and documentation items requiring completion.
       `git commit`/`git push` — no PR is created. Requires static binary
       downloads in the archlinux builder container. (Due: 4-part plan)
 
-- [ ] **OPA/Rego Policy — `no_version_constraints` (ERROR)**: Add a Rego rule to
+- [x] **OPA/Rego Policy — `no_version_constraints` (ERROR)**: Add a Rego rule to
       deny version operators (`>=`, `<=`, `>`, `<`, `=`) embedded in `depends`,
       `makedepends`, and `checkdepends` strings. Pacman does not enforce version
       ranges — they are non-functional noise. Example violation:
       `depends=('glibc>=2.35')`. Pkl pipeline preserves literal dep strings,
       making this a straightforward `re_match` check.
 
-- [ ] **OPA/Rego Policy — `prefer_strong_hash` (WARN)**: Add a Rego rule to warn
+- [x] **OPA/Rego Policy — `prefer_strong_hash` (WARN)**: Add a Rego rule to warn
       when `md5sums` is populated but `sha256sums`, `sha512sums`, or `b2sums`
       are not. `md5` is cryptographically broken per Arch Wiki guidelines; the
       standard is at least SHA-256. Example violation: `md5sums=('f0d26bc...')`
