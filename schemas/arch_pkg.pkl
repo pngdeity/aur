@@ -9,37 +9,63 @@
 /// References:
 ///   - PKGBUILD(5):       https://man.archlinux.org/man/PKGBUILD.5
 ///   - Pkl Language Ref:  https://pkl-lang.org/main/current/language-reference/index.html
-
 module schemas.arch_pkg
 
-import "licenses.spdx.pkl" as spdx
 import "custom_types.pkl" as ct
+import "licenses.spdx.pkl" as spdx
 
 // ── Type Aliases ──
 
 /// Known architecture values (PKGBUILD(5) §7.7)
-typealias KnownArchitecture = "x86_64"|"i686"|"aarch64"|"armv7h"|"arm"|"any"
+typealias KnownArchitecture = "x86_64" | "i686" | "aarch64" | "armv7h" | "arm" | "any"
 
 /// License identifier. Either "custom" (optionally with ":" qualifier), "LicenseRef-*" (SPDX custom), or an SPDX identifier.
-typealias LicenseId = "custom"|String(matches(Regex(#"^custom:[A-Za-z0-9.+_-]+$"#)))|String(matches(Regex(#"^LicenseRef-[A-Za-z0-9.-]+$"#)))|spdx.SpdxId
+typealias LicenseId =
+  "custom"
+    | String(matches(Regex(#"^custom:[A-Za-z0-9.+_-]+$"#)))
+    | String(matches(Regex(#"^LicenseRef-[A-Za-z0-9.-]+$"#)))
+    | spdx.SpdxId
 
 /// Dependency entry: package name with optional single version constraint (>=, <=, =, >, <) and optional epoch.
 /// Multiple constraints require separate array entries (PKGBUILD(5) convention).
-typealias DependsEntry = String(matches(Regex(#"^[a-z0-9@._+][a-z0-9@._+-]*(?:(?:[<>]=|[<>=])(?:\d+:)?[a-zA-Z0-9._]+)?$"#)))
+typealias DependsEntry =
+  String(
+    matches(Regex(#"^[a-z0-9@._+][a-z0-9@._+-]*(?:(?:[<>]=|[<>=])(?:\d+:)?[a-zA-Z0-9._]+)?$"#)),
+  )
 
 /// Provision entry: package name with optional =version (no comparison operators per PKGBUILD(5)).
-typealias ProvidesEntry = String(matches(Regex(#"^[a-z0-9@._+][a-z0-9@._+-]*(?:=(?:\d+:)?[a-zA-Z0-9._]+)?$"#)))
+typealias ProvidesEntry =
+  String(matches(Regex(#"^[a-z0-9@._+][a-z0-9@._+-]*(?:=(?:\d+:)?[a-zA-Z0-9._]+)?$"#)))
 
 /// Checksum entry: hex digest or "SKIP" (VCS sources).
-typealias ChecksumEntry = "SKIP"|String(matches(Regex(#"^[A-Fa-f0-9]+$"#)))
+typealias ChecksumEntry = "SKIP" | String(matches(Regex(#"^[A-Fa-f0-9]+$"#)))
 
 /// Known makepkg option flags (PKGBUILD(5) §7.19)
-typealias KnownOption = "!strip"|"!debug"|"!lto"|"!staticlibs"|"!emptydirs"
-                       |"!zipman"|"!docs"|"!libtool"|"!ccache"|"!distcc"
-                       |"!buildflags"|"!makeflags"
-                       |"strip"|"debug"|"lto"|"staticlibs"|"emptydirs"
-                       |"zipman"|"docs"|"libtool"|"ccache"|"distcc"
-                       |"buildflags"|"makeflags"
+typealias KnownOption =
+  "!strip"
+    | "!debug"
+    | "!lto"
+    | "!staticlibs"
+    | "!emptydirs"
+    | "!zipman"
+    | "!docs"
+    | "!libtool"
+    | "!ccache"
+    | "!distcc"
+    | "!buildflags"
+    | "!makeflags"
+    | "strip"
+    | "debug"
+    | "lto"
+    | "staticlibs"
+    | "emptydirs"
+    | "zipman"
+    | "docs"
+    | "libtool"
+    | "ccache"
+    | "distcc"
+    | "buildflags"
+    | "makeflags"
 
 // ── Sub-Classes ──
 
@@ -70,8 +96,8 @@ class Package {
   // Identity (PKGBUILD(5) convention: # Maintainer:/# Contributor: comments)
 
   /// Primary maintainer. Must match "Name <email>" format (PKGBUILD(5) convention).
-  maintainer: String(matches(Regex(#"^[^<>]+ <[^<>]+@[^<>]+>$"#)))
-    = "pngdeity <pngdeity@tutanota.com>"
+  maintainer: String(matches(Regex(#"^[^<>]+ <[^<>]+@[^<>]+>$"#))) =
+    "pngdeity <pngdeity@tutanota.com>"
 
   /// Past contributors. Free-form — may be bare name, "Name <email>", or "Name <url>" (PKGBUILD(5) convention, loosely enforced).
   contributor: Listing<String(this.length > 0)>?
@@ -149,7 +175,7 @@ class Package {
   sha512sums: Listing<ChecksumEntry>?
   sha224sums: Listing<ChecksumEntry>?
   sha384sums: Listing<ChecksumEntry>?
-  b2sums:     Listing<ChecksumEntry>?
+  b2sums: Listing<ChecksumEntry>?
 
   /// Architecture-specific checksums (PKGBUILD(5) sha512sums_<arch>)
   sha512sums_x86_64: Listing<ChecksumEntry>?
@@ -241,11 +267,16 @@ class Package {
   /// Local helper variable (convenience alias, e.g. _name=$pkgname)
   hidden _name: String?
 
+  /// Package-local convenience variable (e.g. _projectname, _sourcedirectory)
+  hidden _projectname: String?
+
+  /// Package-local convenience variable (e.g. _sourcedirectory)
+  hidden _sourcedirectory: String?
+
   // ── Cross-Field Constraints ──
 
   /// _deploy_aur and _repo_subarch are mutually exclusive (AGENTS.md §AUR Deployment Gate).
-  local deploy_aur_subarch_mutex: Boolean =
-    !(_deploy_aur && _repo_subarch != null)
+  local deploy_aur_subarch_mutex: Boolean = !(_deploy_aur && _repo_subarch != null)
 
   // ── Renderer Methods ──
 
@@ -253,19 +284,26 @@ class Package {
   /// Simple values (alphanumeric, ., _, +, -, @) are output unquoted.
   /// Values with spaces, special chars, or empty strings are single-quoted.
   function _quoteString(s: String): String =
-    if (s.isEmpty) "''"
-    else if (s.matches(Regex(#"^[a-zA-Z0-9@._+-]+$"#))) s
-    else "'\(s.replaceAll(Regex(#"'"#), "'\\''"))'"
+    if (s.isEmpty)
+      "''"
+    else if (s.matches(Regex(#"^[a-zA-Z0-9@._+-]+$"#)))
+      s
+    else
+      "'\(s.replaceAll(Regex(#"'"#), "'\\''"))'"
 
   /// Render a SourceEntry for PKGBUILD source array.
   function _renderSource(e: SourceEntry): String =
-    if (e.url == e.filename) _quoteString(e.filename)
-    else "'\(e.filename.replaceAll(Regex(#"'"#), "'\\''"))::\(e.url.replaceAll(Regex(#"'"#), "'\\''"))'"
+    if (e.url == e.filename)
+      _quoteString(e.filename)
+    else
+      "'\(e.filename.replaceAll(Regex(#"'"#), "'\\''"))::\(e.url.replaceAll(Regex(#"'"#), "'\\''"))'"
 
   /// Render an OptDependsEntry for PKGBUILD optdepends array.
   function _renderOptDepends(e: OptDependsEntry): String =
-    if (e.desc == "") _quoteString(e.name)
-    else "'\(e.name.replaceAll(Regex(#"'"#), "'\\''")): \(e.desc.replaceAll(Regex(#"'"#), "'\\''"))'"
+    if (e.desc == "")
+      _quoteString(e.name)
+    else
+      "'\(e.name.replaceAll(Regex(#"'"#), "'\\''")): \(e.desc.replaceAll(Regex(#"'"#), "'\\''"))'"
 
   /// Indent function body text by 4 spaces.
   function _indentBody(body: String): String =
@@ -283,11 +321,11 @@ class Package {
       "# Maintainer: \(maintainer)"
       when (contributor != null && !contributor.isEmpty) {
         let (cl = contributor!!)
-        new Listing {
-          for (c in cl) {
-            "# Contributor: \(c)"
-          }
-        }.join("\n")
+          new Listing {
+            for (c in cl) {
+              "# Contributor: \(c)"
+            }
+          }.join("\n")
       }
       ""
 
@@ -325,7 +363,8 @@ class Package {
         let (c = checkdepends!!) "checkdepends=('\(c.join("' '"))')"
       }
       when (optdepends != null && !optdepends.isEmpty) {
-        let (o = optdepends!!) "optdepends=(\(o.toList().map((e) -> _renderOptDepends(e)).join(" ")))"
+        let (o = optdepends!!)
+          "optdepends=(\(o.toList().map((e) -> _renderOptDepends(e)).join(" ")))"
       }
       when (provides != null && !provides.isEmpty) {
         let (p = provides!!) "provides=('\(p.join("' '"))')"
@@ -357,10 +396,12 @@ class Package {
         let (s = source!!) "source=(\(s.toList().map((e) -> _renderSource(e)).join(" ")))"
       }
       when (source_x86_64 != null && !source_x86_64.isEmpty) {
-        let (s = source_x86_64!!) "source_x86_64=(\(s.toList().map((e) -> _renderSource(e)).join(" ")))"
+        let (s = source_x86_64!!)
+          "source_x86_64=(\(s.toList().map((e) -> _renderSource(e)).join(" ")))"
       }
       when (source_aarch64 != null && !source_aarch64.isEmpty) {
-        let (s = source_aarch64!!) "source_aarch64=(\(s.toList().map((e) -> _renderSource(e)).join(" ")))"
+        let (s = source_aarch64!!)
+          "source_aarch64=(\(s.toList().map((e) -> _renderSource(e)).join(" ")))"
       }
       when (noextract != null && !noextract.isEmpty) {
         let (n = noextract!!) "noextract=('\(n.join("' '"))')"
@@ -411,7 +452,6 @@ class Package {
         _renderFunc("package", packageFunc)
       }
     }.join("\n")
-
 }
 
 // ── Default Package (for schema validation) ──
