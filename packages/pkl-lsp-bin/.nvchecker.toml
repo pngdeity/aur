@@ -1,6 +1,6 @@
 [pkl-lsp-bin]
 source = "github"
-github = "colelawrence/pkl-lsp"
+github = "apple/pkl-lsp"
 use_latest_tag = true
 # Tags look like 0.6.0-native.20260518.5, but pkgver may not contain a
 # hyphen. Report only the leading numeric part and keep the rest in the
