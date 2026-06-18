@@ -124,7 +124,7 @@ Test framework: Pkl's built-in test functions. Run with `pkl test schemas/merge.
 
 ## Chunk 3: Extract `_json_to_vars_funcs()` Helper
 
-Refactor `_load_pkl()` in `sync-package.py` — extract the JSON→tuple conversion so the merge bridge can reuse it:
+Refactor `_load_pkl()` in `scripts/sync-package.py` (current definition at lines 92–128). Extract the JSON→tuple conversion from the function body so the merge bridge can reuse it:
 
 ```python
 def _json_to_vars_funcs(data: dict) -> tuple[dict, dict]:
@@ -175,13 +175,14 @@ No behavioral change — existing `_load_pkl()` callers are unaffected.
 
 ### 4a. Replace the merge path in `main()`
 
-Replace lines ~487–510 in `sync-package.py` (the classify → fetch assets → merge_with_identity → prereview marker block) with:
+Replace lines 490–510 of `scripts/sync-package.py` (the `if fetched and changed and cache.exists():` block — classify, fetch assets, merge_with_identity, prereview marker) with:
 
 ```python
 if fetched and changed and cache.exists():
     _log("  -> Upstream PKGBUILD changed, classifying and merging via Pkl...")
 
     # Parse upstream PKGBUILDs (unavoidable bash — raw text from internet)
+    from pkgbuild_loader import load_pkgbuild  # inline — only for raw upstream text
     old_vars, old_funcs = load_pkgbuild(str(pkg_dir / ".PKGBUILD.upstream"))
     new_vars, new_funcs = load_pkgbuild(str(pkg_dir / "PKGBUILD.new"))
 
@@ -189,6 +190,7 @@ if fetched and changed and cache.exists():
     _fetch_assets((pkg_dir / "PKGBUILD.new").read_text(), base_url, pkg_dir)
 
     # Write upstream dicts as temporary .pkl files
+    # `write_pkl_module` is already imported at sync-package.py line 28
     (pkg_dir / ".upstream.base.pkl").write_text(
         write_pkl_module(old_vars, old_funcs)
     )
