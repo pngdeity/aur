@@ -1,0 +1,140 @@
+amends "pkl:test"
+
+import "merge.pkl" as merge
+import "test-fixtures/pkg-base.pkl" as baseMod
+import "test-fixtures/pkg-build-diff.pkl" as buildDiffMod
+import "test-fixtures/pkg-bump.pkl" as bumpMod
+import "test-fixtures/pkg-desc-conflict.pkl" as descConflictMod
+import "test-fixtures/pkg-name-diff.pkl" as nameDiffMod
+import "test-fixtures/pkg-new-depends.pkl" as newDependsMod
+import "test-fixtures/pkg-new-maintainer.pkl" as newMaintainerMod
+
+local base = baseMod.output.value
+
+examples {
+  // ── no-change ─────────────────────────────────────────────────────
+  ["no-change"] {
+    let (merged = merge.merge(base, base, base))
+      new {
+        pkgname = merged.pkgname
+        pkgver = merged.pkgver
+        pkgdesc = merged.pkgdesc
+        _prereview = merged._prereview
+      }
+  }
+
+  // ── pkgver bump ───────────────────────────────────────────────────
+  ["pkgver-bump"] {
+    let (theirs = bumpMod.output.value)
+    let (merged = merge.merge(base, base, theirs))
+      new {
+        pkgver = merged.pkgver
+        pkgrel = merged.pkgrel
+      }
+  }
+
+  // ── new depends ───────────────────────────────────────────────────
+  ["new-depends"] {
+    let (theirs = newDependsMod.output.value)
+    let (merged = merge.merge(base, base, theirs))
+      if (merged.depends != null && !merged.depends!!.isEmpty)
+        merged.depends!!.length
+      else
+        0
+  }
+
+  // ── build changed (ours unchanged, theirs differs) ────────────────
+  ["build-changed"] {
+    let (theirs = buildDiffMod.output.value)
+    let (ours = (base) { pkgdesc = "our description"; _auto_merge_build = false })
+    let (merged = merge.merge(ours, base, theirs))
+      new {
+        build = merged.build
+        _prereview = merged._prereview
+      }
+  }
+
+  // ── build auto-merge ──────────────────────────────────────────────
+  ["build-changed-auto-merge"] {
+    let (theirs = buildDiffMod.output.value)
+    let (
+      ours = (base) {
+        build = "echo our_build"
+        _auto_merge_build = true
+      }
+    )
+    let (merged = merge.merge(ours, base, theirs))
+      new {
+        build = merged.build
+        _prereview = merged._prereview
+      }
+  }
+
+  // ── pkgdesc conflict (both changed, differ) ──────────────────────
+  ["desc-conflict"] {
+    let (theirs = descConflictMod.output.value)
+    let (
+      ours = (base) {
+        pkgdesc = "our description"
+        _auto_merge_build = false
+      }
+    )
+    let (merged = merge.merge(ours, base, theirs))
+      new {
+        pkgdesc = merged.pkgdesc
+        _prereview = merged._prereview
+      }
+  }
+
+  // ── our change preserved (we changed, upstream didn't) ───────────
+  ["our-change-preserved"] {
+    let (ours = (base) { pkgdesc = "our description" })
+    let (merged = merge.merge(ours, base, base))
+      new {
+        pkgdesc = merged.pkgdesc
+        _prereview = merged._prereview
+      }
+  }
+
+  // ── identity protection ───────────────────────────────────────────
+  ["identity-protection"] {
+    let (theirs = nameDiffMod.output.value)
+    let (merged = merge.merge(base, base, theirs))
+      merged.pkgname
+  }
+
+  // ── maintainer demotion ───────────────────────────────────────────
+  ["maintainer-demotion"] {
+    let (theirs = newMaintainerMod.output.value)
+    let (ours = (base) { _demote_upstream_maintainer = true })
+    let (merged = merge.merge(ours, base, theirs))
+      new {
+        maintainer = merged.maintainer
+        contributor = merged.contributor
+      }
+  }
+
+  // ── no demotion (flag false) ─────────────────────────────────────
+  ["no-demotion"] {
+    let (theirs = newMaintainerMod.output.value)
+    let (ours = (base) { _demote_upstream_maintainer = false })
+    let (merged = merge.merge(ours, base, theirs))
+      new {
+        maintainer = merged.maintainer
+        contributor = merged.contributor
+      }
+  }
+
+  // ── classifyChanges ───────────────────────────────────────────────
+  ["classify-pkgver-bump"] {
+    merge.classifyChanges(base, bumpMod.output.value).events.contains("VERSION")
+  }
+
+  ["classify-build-changed"] {
+    merge.classifyChanges(base, buildDiffMod.output.value).buildChanged
+  }
+
+  ["classify-build-event"] {
+    merge.classifyChanges(base, buildDiffMod.output.value).events.contains("BUILD")
+  }
+}

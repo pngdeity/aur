@@ -1,0 +1,5 @@
+import "pkg-base.pkl" as baseMod
+
+output {
+  value = (baseMod.output.value) { pkgdesc = "theirs description" }
+}
