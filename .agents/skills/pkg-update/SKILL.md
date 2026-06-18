@@ -1,6 +1,6 @@
 ---
 name: pkg-update
-description: Update an Arch Linux package to a new upstream version. Use when a package version has changed, nvchecker reports a delta, oldver.json is stale, the user asks to update/sync/upgrade a package, or a version bump is needed — even if the user doesn't explicitly mention "PKGBUILD" or "sync-package.sh."
+description: Update an Arch Linux package to a new upstream version. Use when a package version has changed, nvchecker reports a delta, oldver.json is stale, the user asks to update/sync/upgrade a package, or a version bump is needed — even if the user doesn't explicitly mention "PKGBUILD" or "sync-package.py."
 allowed-tools: bash
 compatibility: Requires bash, namcap, makepkg, pkgctl, and nvtake. Designed for the pngdeity aur repository.
 ---
@@ -61,6 +61,6 @@ When updating a package to a new upstream version:
   `mkarchroot`.
 - If `updpkgsums` fails due to a re-rolled upstream tarball, verify the file
   content before accepting new hashes.
-- If the `sync-package.sh` merge produces conflicts, manual intervention is
+- If the `sync-package.py` merge produces conflicts, manual intervention is
   required. Hybrid merge conflict recovery is not yet automated (see
   `docs/TODO.md`).

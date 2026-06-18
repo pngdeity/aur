@@ -1,6 +1,6 @@
 ---
 name: pkg-patch-recovery
-description: Recover from patch failures when an upstream Arch Linux package source changes. Use when .rej files appear, a patch fails to apply during sync-package.sh, updpkgsums reports checksum mismatches, or a build fails with patch-related errors — even if the user doesn't explicitly mention "patch" or ".rej."
+description: Recover from patch failures when an upstream Arch Linux package source changes. Use when .rej files appear, a patch fails to apply during sync-package.py, updpkgsums reports checksum mismatches, or a build fails with patch-related errors — even if the user doesn't explicitly mention "patch" or ".rej."
 allowed-tools: bash
 compatibility: Requires bash, git, patch, and updpkgsums. Designed for the pngdeity aur repository.
 ---

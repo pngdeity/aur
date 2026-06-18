@@ -59,7 +59,7 @@ examples, not an exhaustive list:
     alerted during version bumps.
 
     If the upstream PKGBUILD already exists on the AUR or Arch GitLab,
-    this check is handled automatically by `sync-package.sh` in the
+    this check is handled automatically by `sync-package.py` in the
     next step — skip to step 2.
 
 2. For mirrored packages, run the bootstrap script. Look up the upstream version
@@ -98,7 +98,7 @@ examples, not an exhaustive list:
 
 ## Gotchas
 
-- The `sync-package.sh` script expects the upstream source variable to be set
+- The `sync-package.py` script expects the upstream source variable to be set
   correctly. If the upstream package uses a non-standard name, verify the
   variable before bootstrapping.
 - `pkgctl version setup` must be run inside the package directory. The
