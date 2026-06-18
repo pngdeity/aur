@@ -250,14 +250,15 @@ The migration follows the FCIS pattern:
 
 The functional core is built and proven first (Phase 1). Then the shell is
 rewired to call it (Phase 3). Then the core is incrementally improved while
-the shell keeps the pipeline green (Phases 2, 4, 5). The shell shrinks as
+the shell keeps the pipeline green (Phases 4, 5, 6). The shell shrinks as
 core capabilities grow — this is why the net reduction is ~1,300 lines.
 
-Phase 2 (hand-authoring) and Phase 3 (shell rewiring) are sequenced in
-**reverse of naive order**: rewire the shell to read importer-generated
-`.pkl` files first, then hand-author incrementally. This gives a working
-end-to-end pipeline as early as possible — the shell becomes the test
-harness for every core improvement.
+Phase 2 (hand-authored `.pkl`) was originally sequenced to run after Phase 3
+shell rewiring, but was **skipped**: `sync-package.py` regenerates `.pkl` from
+flat dicts on every sync, vaporizing any hand-authored Pkl constructs. Phase
+6.0 (merge rearchitecture) achieves the same goal — it generates `.pkl` from
+typed `Package` objects with full structural fidelity, equivalent to
+hand-authoring.
 
 ### Phase 1: Verify the Pkl Renderer Produces Identical Output (Functional Core Gate)
 
@@ -282,19 +283,22 @@ Gate: prove `renderPKGBUILD()` in `schemas/arch_pkg.pkl` can replace
 **Exit gate**: `python3 scripts/compare-renderers.py` produces zero unexpected
 diffs across all 24 packages. Gate passed 2026-06-18 — 24/24 OK, 0 diffs.
 
-### Phase 2: Migrate PKGBUILDs to Hand-Authored `.pkl` Files (Incremental, After Phase 3)
+### Phase 2: Migrate PKGBUILDs to Hand-Authored `.pkl` Files — SKIPPED
 
 **FCIS role**: Functional core improvement. Each hand-authored `package.pkl`
-replaces an importer-generated one. Pure data transformation — no shell changes.
+would replace an importer-generated one. Pure data transformation — no shell changes.
 
-**Sequencing**: Executes **after** Phase 3 (shell rewired). The shell is already
-reading importer-generated `.pkl` files, so each hand-authored conversion is a
-small, testable step. Convert one package → `pkl eval` passes → the shell
-produces identical output → commit. Repeat 25 times. The shell is the test
-harness.
+**Skipped 2026-06-18.** Rationale: `sync-package.py` calls `_validate()` →
+`write_pkl_module()` on every sync, which regenerates `.pkl` from flat dicts.
+Any hand-authored Pkl constructs (string interpolation, omitted defaults,
+typed `new { ... }` literals) are vaporized by the next version bump. Phase
+6.0 (merge rearchitecture) achieves the same goal — it generates `.pkl` from
+typed `Package` objects with full structural fidelity, equivalent to
+hand-authoring. Each task below is reabsorbed into Phase 6.0 or left as a
+cosmetic artifact of the generated format.
 
-`packages/<name>/package.pkl` becomes the canonical format. `PKGBUILD` becomes
-generated output.
+~~`packages/<name>/package.pkl` becomes the canonical format. `PKGBUILD` becomes
+generated output.~~
 
 - [ ] 2.1 Hand-author a `package.pkl` for each of the 24 packages. Bash lifecycle
       functions (`prepare()`, `build()`, `check()`, `package()`) remain as raw
@@ -314,7 +318,7 @@ generated output.
 - [ ] 2.8 Update `.pre-commit-config.yaml` hook: validate `.pkl` files directly
       — no import step needed.
 
-### Phase 3: Rewire `sync-package.py` for Pkl-Native Operation (Imperative Shell, Before Phase 2)
+### Phase 3: Rewire `sync-package.py` for Pkl-Native Operation (Imperative Shell)
 
 **FCIS role**: Imperative shell rewiring. Replaces two Python modules
 (`pkgbuild_loader`, `pkgbuild_renderer`) with subprocess calls into the proven
@@ -322,11 +326,10 @@ Pkl core (`pkl eval --format json` for reading, `pkl eval -x renderPKGBUILD()`
 for writing). The shell contains no validation or rendering logic — it delegates
 entirely to the core.
 
-**Sequencing**: Executes **before** Phase 2. Uses importer-generated `package.pkl`
+Executes after Phase 1. Uses importer-generated `package.pkl`
 files (already produced by `pkgbuild_to_pkl.py` and validated by Phase 1) to get
-the pipeline running end-to-end. Phase 2 then swaps these generated files for
-hand-authored ones — one package at a time — with a working shell to catch
-regressions.
+the pipeline running end-to-end. Typed Pkl-native `.pkl` files are generated
+by Phase 6.0's merge function.
 
 The sync engine reads from `.pkl` (via `pkl eval --format json`) instead of
 bash-sourced PKGBUILDs.
@@ -353,7 +356,7 @@ bash-sourced PKGBUILDs.
       fixed (was no-op rename-to-self; now correctly updates cache after merge).
       Gate passed 2026-06-18: 24/24 _load_pkl() == load_pkgbuild() dict shape.
 
-### Phase 4: Amends for Variant Packages (After Phase 2)
+### Phase 4: Amends for Variant Packages (After Phase 3)
 
 **FCIS role**: Functional core improvement. Pkl's `amends` inheritance
 replaces field duplication between variant packages. Pure data modeling —
@@ -501,7 +504,6 @@ Net reduction: ~1,300 lines deleted/removed, ~180 lines added (merge.pkl).
 | `makepkg` rejects Pkl-rendered PKGBUILD (quoting) | ~~Phase 1.4 gate: `makepkg --printsrcinfo` on every rendered output~~ Verified 2026-06-18: 22/24 pass (2 pre-existing changelog failures, not renderer-related) |
 | CI `pkl eval` cold-start latency | Pkl native binary (~200ms); already called in current pipeline |
 | `sync-package.py` merge logic assumes bash-sourced dicts, breaks on Pkl-sourced | Both produce same dict structure (proven by Phase 3 rewiring with importer-generated `.pkl`) |
-| Shell breaks during Phase 2 incremental conversion of a single package | Phase 3 gate: shell already exercises all 24 packages via importer-generated `.pkl`. Each Phase 2 conversion is a one-package diff from a known-working state |
 | FCIS boundary leaks — validation logic creeps into shell | Phase 3 explicitly removes validation from shell (`load_pkgbuild` + `render_pkgbuild` replaced by `pkl eval` subprocess). Any new validation belongs in Pkl schema or Rego policy |
 | Merge rearchitecture produces wrong merged Package | Phase 6.0.2: Pkl unit tests with fixture packages covering all merge scenarios before replacing live merge path |
 | Upstream PKGBUILDs have fields not in our schema | Merge function handles missing fields gracefully (treat absent as null, skip comparison). Schema evolves to accommodate upstream drift |
@@ -511,17 +513,15 @@ Net reduction: ~1,300 lines deleted/removed, ~180 lines added (merge.pkl).
 ### Execution Order
 
 ```
-Phase 1 ──► Phase 3 ──► Phase 2 ──► Phase 4
-(CORE)      (SHELL)     (CORE+)     (CORE++)
-                                      │
-                                      ▼
-                                   Phase 5 ──► Phase 6 ──► Phase 7
-                                   (CORE++)    (SHRINK)     (DOCS)
+Phase 1 ──► Phase 3 ──► Phase 4 ──► Phase 5
+(CORE)      (SHELL)     (CORE++)    (CORE++)
+               │                       │
+               ▼                       ▼
+          Phase 6 (SHRINK) ───► Phase 7 (DOCS)
 ```
 
 Phase 1 is the hard gate — if `renderPKGBUILD()` can't produce identical output,
 the rest is blocked. Phase 3 wires the shell to the proven core and uses
-importer-generated `.pkl` files to get the pipeline green early. Phase 2
-converts one package at a time with a working shell as the test harness.
+importer-generated `.pkl` files to get the pipeline green early.
 Phases 4 and 5 improve the core further. Phase 6 deletes each script as its
 replacement is verified. Phase 7 updates documentation.
