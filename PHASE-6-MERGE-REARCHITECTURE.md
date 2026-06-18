@@ -22,9 +22,39 @@ Chunk 6 (retire dead scripts)
 
 ---
 
+---
+
+## Design Decisions (Resolved — Confirm Before Implementing Chunk 1)
+
+**D1: `_auto_merge_build` gate** — **CONFIRMED: gated.**  
+Build-function diffs only set `_prereview` when `ours._auto_merge_build == false`.  
+If `_auto_merge_build` is true, build changes merge silently (no PREREVIEW marker).  
+Matches current `_apply_prereview_marker` behavior (`sync-package.py:275-285`).  
+Rationale: packages with `_auto_merge_build=true` (e.g., `go-regal-bin`) trust upstream
+build logic; spurious markers would break their CI/CD automation.
+
+**D2: `_demote_upstream_maintainer`** — **CONFIRMED: gated.**  
+Upstream maintainer appended to `contributor` only when `ours._demote_upstream_maintainer == true`.  
+Otherwise upstream maintainer is dropped (schema's `maintainer` is a single `String` —  
+cannot hold two maintainers; ours always wins).  
+Matches current `_merge_with_identity` behavior (`sync-package.py:248`).  
+Rationale: the flag's purpose is to opt in to upstream-author credit preservation.
+
+**D3: Identity-field semantics change** — **CONFIRMED: accept the change.**  
+`pkgver`, `pkgrel`, `source`, `pkgverFunc` move from always-ours (via current  
+`_IDENTITY_FIELDS`) to 3-way pick in the new merge.  
+`_bump_version` overwrites `pkgver` afterward anyway, so upstream version flows are  
+harmless. `source` URL changes from upstream now flow through (improvement — current  
+code blocks them). `pkgverFunc` changes affect `-git` packages (`amass-git`,  
+`apm-go-git`, `opencode-git`).  
+Rationale: the new design is more correct — upstream changes to these fields should  
+be visible for downstream processing, not silently discarded.
+
+---
+
 ## Chunk 1: `schemas/merge.pkl` — The Typed Merge Core
 
-New file. Approximately 150 lines of Pkl.
+New file. Approximately 400 lines of Pkl (grew beyond initial 150-line estimate due to module-level helper functions `_dataConflicts`/`_buildConflict`/`_prereviewText`, per-function `when` generators for all build functions, and detailed documentation).
 
 ### Data Types
 
@@ -61,9 +91,9 @@ SOURCES:     base.source != theirs.source OR base.sha256sums != theirs.sha256sum
              base.source_aarch64 != theirs.source_aarch64 OR
              base.sha512sums_x86_64 != theirs.sha512sums_x86_64 OR
              base.sha512sums_aarch64 != theirs.sha512sums_aarch64
-BUILD:       base.prepare != theirs.prepare OR base.build != theirs.build OR
-             base.check != theirs.check OR base.package != theirs.package OR
-             base.pkgver != theirs.pkgver OR base.verify != theirs.verify
+BUILD:       base.verify != theirs.verify OR base.pkgverFunc != theirs.pkgverFunc OR
+             base.prepare != theirs.prepare OR base.build != theirs.build OR
+             base.check != theirs.check OR base.packageFunc != theirs.packageFunc
 AUTHORSHIP:  base.maintainer != theirs.maintainer OR
              base.contributor != theirs.contributor
 ```
@@ -72,39 +102,111 @@ Returns `ChangeSet { events = ["VERSION", "METADATA"]; buildChanged = false }` f
 
 ### `merge(ours: Package, base: Package, theirs: Package) -> Package`
 
-Constructs a new `Package` object field by field. Three resolution rules cover every field:
+Returns `(ours) { ... }` — the idiomatic Pkl "copy with overrides" pattern. Starts from
+`ours` (so all "always ours" identity fields are correct by construction — zero
+assignments) and uses `when` clauses to override only the fields where `theirs`
+wins a 3-way comparison. The `Package` class has no `fixed` data properties, so
+all fields are overridable. Three resolution rules:
 
 | Rule | Applies to | Logic |
 |---|---|---|
-| **Always ours** | `pkgname`, `provides`, `conflicts`, `replaces`, `_deploy_aur`, `_repo_subarch`, `_upstream_aur_pkg`, `_upstream_arch_repo`, `_githubname`, `_tag`, `_*scope`, `_npmname`, `_npmver`, `_name`, `_projectname`, `_sourcedirectory`, `_github_api_version`, `_auto_merge_build`, `_demote_upstream_maintainer`, `_use_common_gemini_settings` | `ours.field` |
-| **3-way pick** | `pkgver`, `pkgrel`, `epoch`, `pkgdesc`, `url`, `license`, `arch`, `depends`, `makedepends`, `checkdepends`, `optdepends`, `source`, `source_x86_64`, `source_aarch64`, `sha256sums`, `sha512sums`, `sha224sums`, `sha384sums`, `b2sums`, `sha512sums_x86_64`, `sha512sums_aarch64`, `validpgpkeys`, `noextract`, `install`, `backup`, `options`, `groups`, `changelog`, `pkgbase` | `ours == base AND theirs != base` → theirs; `ours != base AND theirs == base` → ours; both changed → ours + set `_prereview` |
-| **Authorship** | `maintainer`, `contributor` | `ours.maintainer`; upstream maintainer(s) appended to contributor list |
+| **Always ours** | `pkgname`, `provides`, `conflicts`, `replaces`, `maintainer`, and all `_`-prefixed control vars (`_deploy_aur`, `_repo_subarch`, `_upstream_*`, `_githubname`, `_tag`, `_npm*`, `_name`, `_projectname`, `_sourcedirectory`, `_github_api_version`, `_auto_merge_build`, `_demote_upstream_maintainer`, `_use_common_gemini_settings`, `_pkgname`) | Already correct in `ours` — no override needed |
+| **3-way pick** | `pkgver`, `pkgrel`, `epoch`, `pkgdesc`, `url`, `license`, `arch`, `depends`, `makedepends`, `checkdepends`, `optdepends`, `source`, `source_x86_64`, `source_aarch64`, all `*sums*`, `validpgpkeys`, `noextract`, `install`, `backup`, `options`, `groups`, `changelog`, `pkgbase` | `when (ours.f == base.f && theirs.f != base.f) { f = theirs.f }` — only emit an override where theirs wins. No override when we changed it (ours != base) — our change is preserved |
+| **Authorship** | `contributor` | `when (ours._demote_upstream_maintainer)` → append upstream maintainer to `contributor`; otherwise upstream maintainer is dropped (schema's `maintainer` is single-string, ours always wins) |
 
-Build functions (`prepare`, `build`, `check`, `pkgverFunc`, `packageFunc`, `verify`) use rule 2 but additionally set `_prereview` when the function body differs between ours and theirs.
+Build functions (`prepare`, `build`, `check`, `pkgverFunc`, `packageFunc`, `verify`):
+use rule 2 (3-way pick) but additionally set `_prereview` when the function body
+differs between ours and theirs — **gated on `!_auto_merge_build`**. If
+`_auto_merge_build` is true, build-function changes merge silently without a
+PREREVIEW marker, matching the current `_apply_prereview_marker` behavior
+(`sync-package.py:275-285`).
 
-The output is a `new Package { ... }` object literal with approximately 50 field lines. Verbose but straightforward — each field is a conditional expression or direct assignment. No loops, no reflection, no runtime indirection.
+Conflict detection (both ours and theirs changed from base, for any 3-way-pick
+field) also sets `_prereview = "upstream conflicts: <field names>"`. The data-field
+and build-function `_prereview` strings are distinct for legibility.
+
+The body is ~30 `when` blocks — one per 3-way-pick field + 5 build-function
+blocks + conflict-detection logic. No `new Package` reconstruction, no risk of
+omitting a required field, and idiomatic Pkl (amends is the canonical "copy with
+overrides" pattern per the Pkl language reference §Amending Objects).
+
+### Verified Against Pkl 0.31.1 Language Reference
+
+External documentation research confirms:
+
+- **Module-level functions** are supported (LR §Methods): *"Pkl methods can be defined on classes and modules using the `function` keyword."* Modules are regular objects; importing a module exposes its members. `merge.merge(...)` resolves correctly.
+- **`==`/`!=` structural equality** works as assumed (LR §Properties): `"Objects that differ only in hidden property values are considered equal."` `arch_pkg.pkl` has no hidden data fields, so all fields participate. `Listing` equality is order-sensitive.
+- **No built-in 3-way merge/diff**: Only `+` on `Map` (right-biased) and `amends` (2-way prototypical inheritance). `merge.pkl` is novel, not reinventing.
+- **`pkl:test` is snapshot-based**, not assertion-based (CLI docs). See Chunk 2 redesign note.
 
 ### Edge Cases
 
 - **Missing fields**: if a field exists in `base` but not `theirs` (or vice versa), treat the absent value as equal to the present one — the `!=` comparison catches the difference.
 - **Null vs empty Listing**: `null != new {}`. The `!=` operator on Pkl objects handles structural equality correctly.
-- **`_prereview` format**: set to `"upstream build functions changed (see diff)"` for build-function conflicts; set to `"upstream conflicts: <field names>"` for data-field conflicts. The shell no longer needs `_apply_prereview_marker()`.
+- **`_prereview` format**: `"upstream build functions changed (see diff)"` for build-function conflicts (gated on `!_auto_merge_build`); `"upstream conflicts: <field names>"` for data-field conflicts. The shell no longer needs `_apply_prereview_marker()`.
+- **`_auto_merge_build` gate** (D1): build-function diffs only set `_prereview` when `ours._auto_merge_build == false`. Matches current `sync-package.py:275-285` behavior.
+- **`_demote_upstream_maintainer` gate** (D2): upstream maintainer demoted to contributor only when `ours._demote_upstream_maintainer == true`. Otherwise dropped (schema's `maintainer` is single-string). Matches current behavior (`sync-package.py:248`).
+- **Identity semantics change** (D3): `pkgver`, `pkgrel`, `source`, `pkgverFunc` move from always-ours (current `_IDENTITY_FIELDS`) to 3-way pick. Upstream source/version changes now flow through; `_bump_version` overwrites `pkgver` afterward. Affects `-git` packages (`amass-git`, `apm-go-git`, `opencode-git`) which carry `pkgverFunc`.
+
+### Chunk 1 Verification (pkl eval -x)
+
+1. `pkl eval schemas/merge.pkl` — parses and type-checks (no `output` block needed).
+2. Smoke script in `/tmp/opencode/smoke.pkl`: imports `merge.pkl` + three hand-built
+   `pkg.Package` literals (base/theirs/ours). Then verify via `pkl eval -x`:
+   - `merge.merge(ours, base, theirs).pkgver` → theirs.pkgver (bump case)
+   - `merge.merge(ours, base, theirs).pkgname` → ours.pkgname (identity protection)
+   - `merge.merge(ours, base, theirs)._prereview` → null (no conflicts) / set (conflict)
+   - `classifyChanges(base, theirs).buildChanged` → expected boolean
+3. Confirm JSON output passes through `_json_to_vars_funcs()` shape (Chunk 3/4 compat).
+4. Full fixture suite is Chunk 2 (out of scope).
 
 ---
 
-## Chunk 2: Pkl Unit Tests for merge.pkl
+## Chunk 2: Pkl Unit Tests for merge.pkl — REDESIGN REQUIRED
+
+**Prefatory note**: External documentation research confirms `pkl:test` is an
+**example/snapshot** framework, not assertion-based. CLI docs: *"The module must
+extend `pkl:test`"* and uses `examples { ["name"] { expr } }` blocks whose rendered
+output is compared against committed `pkl-expected.pcf` files. "Tests that result
+in writing `pkl-expected.pcf` files are considered failing tests."
+
+The original design below (assertion-based, running `pkl test` directly on
+`merge.pkl`) is incorrect on two counts: (1) `merge.pkl` is a library module, not
+a test module — `pkl test` requires `extends "pkl:test"`; (2) `pkl:test` has no
+`assertEqual` or similar assertion API — it snapshots rendered output.
+
+**Revised approach for Chunk 2** (to be finalized during implementation):
+
+Create `schemas/merge_test.pkl` that `amends "pkl:test"`, imports `merge.pkl`,
+and defines `examples { ... }` blocks that call `merge()` / `classifyChanges()`
+and expose the relevant property values. Example:
+
+```pkl
+amends "pkl:test"
+import "merge.pkl" as merge
+import "test-fixtures/pkg-base.pkl"
+
+examples {
+  ["pkgver bump"] { merge.merge(ours, base, theirs).pkgver }
+  ["identity protection"] { merge.merge(ours, base, theirs).pkgname }
+}
+```
+
+Run with `pkl test schemas/merge_test.pkl`. First run generates
+`pkl-expected.pcf` files; subsequent runs compare against them. Committed
+`.pcf` files make regressions visible in code review.
 
 Fixture packages in `schemas/test-fixtures/` — minimal `.pkl` files importing `arch_pkg.pkl`:
 
 ```
 schemas/test-fixtures/
-  pkg-base.pkl         # Package with pkgname="test", pkgver="1.0", pkgrel=1
-  pkg-bump.pkl         # Same but pkgver="1.1"
-  pkg-build-diff.pkl   # Same but build function body differs
+  pkg-base.pkl          # Package with pkgname="test", pkgver="1.0", pkgrel=1
+  pkg-bump.pkl          # Same but pkgver="1.1"
+  pkg-build-diff.pkl    # Same but build function body differs
   pkg-desc-conflict.pkl # pkgdesc="C" (conflicting change)
-  pkg-name-diff.pkl    # pkgname="other" (identity field — must be ignored)
-  pkg-new-maintainer.pkl # Different maintainer (must be demoted)
-  pkg-new-depends.pkl  # Adds depends=["foo"]
+  pkg-name-diff.pkl     # pkgname="other" (identity field — must be ignored)
+  pkg-new-maintainer.pkl # Different maintainer + _demote_upstream_maintainer=true
+  pkg-new-depends.pkl   # Adds depends=["foo"]
 ```
 
 | Test | Scenario | Expected merge result |
@@ -112,13 +214,16 @@ schemas/test-fixtures/
 | `no-change` | base == theirs | ours unchanged |
 | `pkgver-bump` | base.pkgver="1.0", theirs.pkgver="1.1" | merged.pkgver="1.1" |
 | `build-changed` | base.build != theirs.build | merged has `_prereview` set; ours.build kept |
+| `build-changed-auto-merge` | base.build != theirs.build, _auto_merge_build=true | merged.build = theirs.build; `_prereview` null |
 | `desc-conflict` | base.pkgdesc="A", ours.pkgdesc="B", theirs.pkgdesc="C" | ours.pkgdesc="B"; `_prereview` set |
 | `identity-protection` | theirs.pkgname="different" | merged.pkgname = ours.pkgname (unchanged) |
-| `maintainer-demotion` | theirs has new maintainer | new maintainer appended to contributor; ours.maintainer kept |
+| `maintainer-demotion` | theirs has new maintainer, _demote_upstream_maintainer=true | new maintainer appended to contributor; ours.maintainer kept |
+| `no-demotion` | theirs has new maintainer, _demote_upstream_maintainer=false | upstream maintainer dropped; ours.maintainer kept |
 | `new-depends` | base.depends=[], theirs.depends=["foo"] | merged.depends=["foo"] (taken from theirs) |
 | `our-change-preserved` | ours.pkgdesc="ours-only", base.pkgdesc="base", theirs.pkgdesc="base" | merged.pkgdesc="ours-only" (our change, upstream didn't touch) |
-
-Test framework: Pkl's built-in test functions. Run with `pkl test schemas/merge.pkl`. Each test creates 3 `Package` objects from the fixtures, calls `merge()`, and asserts specific field values.
+| `classify-pkgver-bump` | base vs bump fixture | `events.contains("VERSION") == true` |
+| `classify-build-changed` | base vs build-diff fixture | `buildChanged == true` |
+| `classify-build-event` | base vs build-diff fixture | `events.contains("BUILD") == true` |
 
 ---
 
@@ -257,13 +362,14 @@ Two `load_pkgbuild()` calls remain — one for the cached upstream, one for the 
 
 1. **Baseline sync** — run on a package with `_upstream_aur_pkg` that has no upstream changes:
    ```
-   python scripts/sync-package.py bifrost 1.0.0
+   python scripts/sync-package.py amass-bin 0.0.0
    ```
    Expected: "Upstream PKGBUILD unchanged." — merge path not triggered.
+   (Use an impossible version `0.0.0` so `_bump_version` doesn't change pkgver.)
 
 2. **Simulated upstream change** — manually edit `.PKGBUILD.upstream` to change `pkgdesc`, then run sync again:
    ```
-   python scripts/sync-package.py bifrost 1.0.0
+   python scripts/sync-package.py amass-bin 0.0.0
    ```
    Expected: Pkl merge picks up the change, merged `pkgdesc` reflects upstream value, no conflict markers, no crash.
 

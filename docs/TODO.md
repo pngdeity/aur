@@ -126,7 +126,7 @@ Outstanding architectural and documentation items requiring completion.
 
 - [x] **Port `sync-package.sh` → `sync-package.py`**: Replaced the last remaining
       Bash script (317 lines) with a structured-data Python implementation
-      (669 lines, `scripts/sync-package.py`). Uses `load_pkgbuild()` for variable
+      (669 lines → 561 lines, `scripts/sync-package.py`). Uses `load_pkgbuild()` for variable
       resolution, `hashlib`+`urllib` for checksums, `pkl eval` for schema
       validation, and Python PKGBUILD renderer for final output.
       - ~~Update `discovery.yml:41` caller: `python3 scripts/sync-package.py`.~~ Done.
@@ -430,7 +430,7 @@ cannot consume them for merging.
   - `ours != base AND theirs == base` → keep ours (our change, upstream didn't touch)
   - `ours != base AND theirs != base` → conflict → keep ours, set `_prereview`
   - Maintainer authorship → ours stays; upstream maintainer demoted to contributor
-  - Build functions differ → set `_merge_prereview` (replaces imperative `_apply_prereview_marker`)
+  - Build functions differ → set `_prereview` (replaces imperative `_apply_prereview_marker`)
 
 **Bridge**: Python writes upstream dicts as temporary `.pkl` files
 (`.upstream.base.pkl`, `.upstream.new.pkl`) via `write_pkl_module()`, generates
@@ -440,13 +440,27 @@ as the merged `vars_`/`funcs`.
 
 **Migration steps**:
 
-- [ ] 6.0.1 Write `schemas/merge.pkl` — `classifyChanges()` and `merge()`
+- [x] 6.0.1 Write `schemas/merge.pkl` — `classifyChanges()` and `merge()`
         functions with concern group definitions and typed field comparison.
-- [ ] 6.0.2 Write Pkl unit tests for merge.pkl — fixture packages covering:
+        **Done 2026-06-18.** Uses idiomatic `(ours) { …when-blocks… }` amends
+        pattern (Pkl LR §Amending Objects) instead of `new Package { … }` field-by-field
+        reconstruction. D1/D2/D3 design decisions confirmed and implemented.
+        Module-level helper functions (`_dataConflicts`, `_buildConflict`,
+        `_prereviewText`) compute the prereview marker. Verified with `pkl eval -x`
+        smoke script (9/9 assertions pass) and bridge-simulation JSON output.\
+        Pkl `let` expressions (0.31.1) confirmed working.
+- [x] 6.0.2 Write Pkl unit tests for merge.pkl — fixture packages covering:
         no-change, pkgver-bump-only, build-function-changed, conflict-both-changed,
         maintainer-demotion, identity-field-protection.
-- [ ] 6.0.3 Add `write_pkl_module()` support for writing to an arbitrary output
-        path (currently hardcoded to `package.pkl` in the package directory).
+        **Done 2026-06-18.** 7 fixture packages in `schemas/test-fixtures/`;
+        `schemas/merge_test.pkl` amends `pkl:test` with 13 snapshot examples
+        (10 merge scenarios + 3 classifyChanges). 100% pass rate. Generated
+        `pkl-expected.pcf` is committed and serves as the regression gate.
+- [x] 6.0.3 Add `write_pkl_module()` support for writing to an arbitrary output
+        path. ~~(currently hardcoded to `package.pkl` in the package directory).~~
+        **Resolved**: `write_pkl_module()` returns a string — it never writes to disk
+        (`scripts/pkl_writer.py:166`). Callers write the output wherever needed.
+        No change required. PHASE-6 Chunk 4a correctly uses the return value.
 - [ ] 6.0.4 In `sync-package.py` `main()`: replace the merge path (current
         lines ~487–510: classify, fetch assets, merge_with_identity, prereview
         marker) with the bridge — write temp `.pkl` files, generate merge script,
