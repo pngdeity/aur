@@ -1,7 +1,7 @@
 name: Discovery
 on:
   schedule:
-    - cron: '0 */12 * * *'
+    - cron: '0 6 * * 1'
   workflow_dispatch:
 concurrency: discovery-${{ github.ref }}
 jobs:
@@ -13,6 +13,7 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
+      packages: read
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
@@ -35,9 +36,7 @@ jobs:
 
           nvchecker -c master.toml --logger json > results.json
 
-          jq -c 'select(.event == "updated")' results.json | while read -r row; do
-            name=$(echo "$row" | jq -r .name)
-            ver=$(echo "$row" | jq -r .version)
+          jq -r 'select(.event == "updated") | "\(.name)\t\(.version)"' results.json | while IFS=$'\t' read -r name ver; do
             bash scripts/sync-package.sh "$name" "$ver"
             echo "true" > /tmp/has_changes
           done
@@ -63,7 +62,7 @@ jobs:
             exit 0
           fi
 
-          git config user.email "action@github.com"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git config user.name "GitHub Action"
           git checkout -b "$BRANCH"
           git add oldver.json packages/

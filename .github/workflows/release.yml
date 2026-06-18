@@ -17,7 +17,7 @@ jobs:
       SOURCE_DATE_EPOCH: '1693526400'
     steps:
       - name: Install devtools and git
-        run: pacman -Syu --noconfirm devtools git
+        run: pacman -Syu --noconfirm devtools git # Mutates pinned container; digest provides baseline, not immutability
       - uses: actions/checkout@v6
       - name: Build packages
         run: |
@@ -26,11 +26,11 @@ jobs:
           for PKG_DIR in $PKGS; do
             echo "==> Building $PKG_DIR"
             pushd "$PKG_DIR" > /dev/null
-            makepkg --syncdeps --noconfirm --noprogressbar --clean
+            makepkg --syncdeps --noconfirm --noprogressbar --needed --clean
             mkdir -p "$GITHUB_WORKSPACE/dist"
-            cp ./*.pkg.tar.zst "$GITHUB_WORKSPACE/dist/" 2>/dev/null || true
+            cp ./*.pkg.tar.zst "$GITHUB_WORKSPACE/dist/" 2>/dev/null
+            MAKEDEPS=$(makepkg --printsrcinfo 2>/dev/null | grep -oP '^\s*makedepends = \K.*' | tr '\n' ' ' || true)
             popd > /dev/null
-            MAKEDEPS=$(makepkg --printsrcinfo "$PKG_DIR/PKGBUILD" 2>/dev/null | grep -oP '^\s*makedepends = \K.*' | tr '\n' ' ' || true)
             [ -n "$MAKEDEPS" ] && pacman -Rsn --noconfirm $MAKEDEPS 2>/dev/null || true
           done
       - name: Upload artifacts
@@ -47,6 +47,7 @@ jobs:
     permissions:
       contents: read
       id-token: write
+      packages: read
     env:
       GPG_KEY: ${{ secrets.REPO_GPG_KEY }}
       HOST: ${{ secrets.REPO_HOST }}
@@ -80,7 +81,9 @@ jobs:
             printf '%s' "$GPG_KEY" | gpg --batch --import --no-tty 2>/dev/null
           fi
 
-          rsync -avz -e "ssh" "$USER@$HOST:/var/www/html/repo/nightly/" repo-root/ || echo "First run — no remote repo."
+          if ! rsync -avz -e "ssh" "$USER@$HOST:/var/www/html/repo/nightly/" repo-root/; then
+            echo "::warning::Pull from remote repo failed (expected on first run)."
+          fi
 
           find repo-root/x86_64/ -name "*.pkg.tar.zst" -type f -mtime +7 -delete
           cp dist/*.pkg.tar.zst repo-root/x86_64/
@@ -92,12 +95,18 @@ jobs:
             exit 1
           fi
 
-          rm -f nightly.db.tar.gz nightly.db nightly.files.tar.gz nightly.files
+          TMPDB=$(mktemp -d)
+          cp ./*.pkg.tar.zst "$TMPDB/"
+          pushd "$TMPDB" > /dev/null
           if [ -n "$GPG_KEY" ]; then
             repo-add --sign nightly.db.tar.gz ./*.pkg.tar.zst
           else
             repo-add nightly.db.tar.gz ./*.pkg.tar.zst
           fi
+          popd > /dev/null
+          rm -f nightly.db.tar.gz nightly.db nightly.files.tar.gz nightly.files
+          mv "$TMPDB"/nightly.db.tar.gz "$TMPDB"/nightly.files "$TMPDB"/nightly.db "$TMPDB"/nightly.files.tar.gz ./ 2>/dev/null || true
+          rm -rf "$TMPDB"
 
           cd "$OLDPWD"
           rsync -avz --delete -e "ssh" repo-root/ "$USER@$HOST:/var/www/html/repo/nightly/"
@@ -113,6 +122,7 @@ jobs:
     timeout-minutes: 30
     permissions:
       contents: read
+      packages: read
     steps:
       - name: Checkout
         uses: actions/checkout@v6
