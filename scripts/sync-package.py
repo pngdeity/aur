@@ -16,6 +16,7 @@ Exit codes:
 from __future__ import annotations
 
 import hashlib
+import json
 import os
 import shutil
 import subprocess
@@ -88,6 +89,45 @@ def _log(msg: str) -> None:
     print(msg, file=sys.stderr)
 
 
+def _load_pkl(pkg_dir: Path) -> tuple[dict, dict]:
+    """Load a package's package.pkl via pkl eval --format json.
+
+    Returns (vars_, funcs) — matching load_pkgbuild()'s contract.
+    Splits function bodies into a separate funcs dict and renames
+    pkgverFunc→pkgver, packageFunc→package.
+    """
+    result = subprocess.run(
+        ["pkl", "eval", str(pkg_dir / "package.pkl"), "--format", "json"],
+        capture_output=True,
+        text=True,
+    )
+    data = json.loads(result.stdout)
+
+    funcs: dict = {}
+    for pkl_key, bash_key in [
+        ("verify", "verify"),
+        ("pkgverFunc", "pkgver"),
+        ("prepare", "prepare"),
+        ("build", "build"),
+        ("check", "check"),
+        ("packageFunc", "package"),
+    ]:
+        if pkl_key in data:
+            funcs[bash_key] = data.pop(pkl_key)
+
+    # Strip schema-default booleans that the loader would only capture when true.
+    # _deploy_aur is NOT stripped — it may be explicitly set to false in PKGBUILDs.
+    for key in (
+        "_auto_merge_build",
+        "_demote_upstream_maintainer",
+        "_use_common_gemini_settings",
+    ):
+        if data.get(key) is False:
+            del data[key]
+
+    return data, funcs
+
+
 # ── concern classification ───────────────────────────────────────────────
 
 
@@ -151,9 +191,7 @@ def _fetch_upstream(url: str, base_url: str, pkg_dir: Path) -> tuple[bool, bool]
             return True, False
         return True, True
     else:
-        _log("  -> Initial upstream tracking setup.")
         _fetch_assets(content, base_url, pkg_dir)
-        tmp.rename(cache)
         return True, True
 
 
@@ -227,24 +265,11 @@ def _merge_with_identity(
     if pkgver_func_body:
         merged_funcs["pkgver"] = pkgver_func_body
 
-    # Clean up temp
-    new.unlink(missing_ok=True)
-    old.rename(pkg_dir / ".PKGBUILD.upstream")
+    # Clean up: update cache with new upstream content
+    old.unlink(missing_ok=True)
+    new.rename(pkg_dir / ".PKGBUILD.upstream")
 
     return merged_vars, merged_funcs, True
-
-
-# ── declarative rules ─────────────────────────────────────────────────────
-
-
-def _apply_declarative_rules(vars_: dict) -> None:
-    """Maintainer demotion if _demote_upstream_maintainer is true."""
-    if vars_.get("_demote_upstream_maintainer"):
-        _log("  -> Applying maintainer demotion")
-        contrib = vars_.get("contributor", [])
-        if contrib:
-            # Current maintainer stays; contributors are from demoted upstream
-            pass
 
 
 def _apply_prereview_marker(vars_: dict, build_changed: bool, new_ver: str) -> None:
@@ -322,6 +347,15 @@ def _generate_changelog(
         vars_["changelog"] = changelog_file.name
 
 
+_HASH_ALGO_MAP = {
+    "sha256sums": "sha256",
+    "sha512sums": "sha512",
+    "sha224sums": "sha224",
+    "sha384sums": "sha384",
+    "b2sums": "blake2b",
+}
+
+
 def _compute_checksums(vars_: dict, pkg_dir: Path) -> None:
     _log("  -> Computing checksums")
     sources = vars_.get("source", [])
@@ -337,6 +371,8 @@ def _compute_checksums(vars_: dict, pkg_dir: Path) -> None:
     if checksum_key is None:
         checksum_key = "sha256sums"
 
+    hasher = getattr(hashlib, _HASH_ALGO_MAP[checksum_key])
+
     hashes = []
     for src in sources:
         filename = src.get("filename", "")
@@ -351,7 +387,7 @@ def _compute_checksums(vars_: dict, pkg_dir: Path) -> None:
         ):
             filepath = pkg_dir / filename
             if filepath.is_file():
-                h = hashlib.sha256(filepath.read_bytes()).hexdigest()
+                h = hasher(filepath.read_bytes()).hexdigest()
                 hashes.append(h)
                 continue
 
@@ -361,7 +397,7 @@ def _compute_checksums(vars_: dict, pkg_dir: Path) -> None:
                 url, headers={"User-Agent": "sync-package/1.0"}
             )
             with urllib.request.urlopen(req, timeout=60) as resp:
-                h = hashlib.sha256(resp.read()).hexdigest()
+                h = hasher(resp.read()).hexdigest()
                 hashes.append(h)
         except Exception as e:
             _log(f"    -> WARN: cannot fetch {url}: {e}")
@@ -371,163 +407,6 @@ def _compute_checksums(vars_: dict, pkg_dir: Path) -> None:
 
 
 # ── validation & render ───────────────────────────────────────────────────
-
-
-def _render_pkgbuild(vars_: dict, funcs: dict) -> str:
-    """Render structured vars_ and funcs to standard PKGBUILD(5) text."""
-    lines: list[str] = []
-
-    # Maintainer / Contributors
-    maint = vars_.get("maintainer", "")
-    if maint:
-        lines.append(f"# Maintainer: {maint}")
-    for c in vars_.get("contributor", []) or []:
-        lines.append(f"# Contributor: {c}")
-    if lines:
-        lines.append("")
-
-    # Custom variables
-    for key in (
-        "_deploy_aur",
-        "_pkgname",
-        "_githubname",
-        "_upstream_aur_pkg",
-        "_upstream_arch_repo",
-        "_demote_upstream_maintainer",
-        "_auto_merge_build",
-        "_use_common_gemini_settings",
-        "_repo_subarch",
-        "_tag",
-        "_npmscope",
-        "_npmname",
-        "_npmver",
-    ):
-        val = vars_.get(key)
-        if val is None or val is False or val == "":
-            continue
-        if isinstance(val, bool):
-            lines.append(f"{key}=true")
-        else:
-            lines.append(f'{key}="{val}"')
-
-    # PREREVIEW marker
-    prereview = vars_.get("_prereview")
-    if prereview:
-        lines.append(f"# PREREVIEW: {prereview}")
-        lines.append(
-            "# Review the diff, verify build, then remove this marker to unblock release."
-        )
-
-    # Identity & versioning
-    for key in ("pkgname", "pkgver"):
-        if vars_.get(key):
-            lines.append(f"{key}={vars_[key]}")
-    lines.append(f"pkgrel={vars_.get('pkgrel', 1)}")
-    if vars_.get("epoch") is not None:
-        lines.append(f"epoch={vars_['epoch']}")
-    if vars_.get("pkgdesc"):
-        lines.append(f"pkgdesc={_q(vars_['pkgdesc'])}")
-
-    # Metadata
-    if vars_.get("arch"):
-        lines.append(f"arch=({' '.join(_q(a) for a in vars_['arch'])})")
-    if vars_.get("url"):
-        lines.append(f"url='{vars_['url']}'")
-    if vars_.get("license"):
-        lines.append(f"license=({' '.join(_q(l) for l in vars_['license'])})")
-    if vars_.get("groups"):
-        lines.append(f"groups=({' '.join(_q(g) for g in vars_['groups'])})")
-
-    # Dependencies
-    for key in ("depends", "makedepends", "checkdepends"):
-        val = vars_.get(key)
-        if val:
-            lines.append(f"{key}=({' '.join(_q(d) for d in val)})")
-
-    # Optdepends
-    opt = vars_.get("optdepends")
-    if opt:
-        items = []
-        for o in opt:
-            name = o.get("name", "")
-            desc = o.get("desc", "")
-            items.append(_q(f"{name}: {desc}" if desc else name))
-        lines.append(f"optdepends=({' '.join(items)})")
-
-    # Provides/Conflicts/Replaces
-    for key in ("provides", "conflicts", "replaces"):
-        val = vars_.get(key)
-        if val:
-            lines.append(f"{key}=({' '.join(_q(v) for v in val)})")
-
-    # Config
-    if vars_.get("backup"):
-        lines.append(f"backup=({' '.join(_q(b) for b in vars_['backup'])})")
-    if vars_.get("install"):
-        lines.append(f"install={vars_['install']}")
-    if vars_.get("options"):
-        lines.append(f"options=({' '.join(_q(o) for o in vars_['options'])})")
-    if vars_.get("changelog"):
-        lines.append(f"changelog={vars_['changelog']}")
-
-    # Source
-    sources = vars_.get("source")
-    if sources:
-        items = []
-        for s in sources:
-            filename = s.get("filename", "")
-            url = s.get("url", "")
-            if filename and filename != url:
-                items.append(f'"{filename}::{url}"')
-            else:
-                items.append(f'"{url}"')
-        lines.append(f"source=({' '.join(items)})")
-
-    # Checksums — use first available
-    checksum_key = None
-    for key in _CHECKSUM_KEYS:
-        if key in vars_:
-            checksum_key = key
-            break
-    if checksum_key and vars_.get(checksum_key):
-        items = []
-        for c in vars_[checksum_key]:
-            items.append(f"'{c}'")
-        lines.append(f"{checksum_key}=({' '.join(items)})")
-
-    # validpgpkeys, noextract
-    for key in ("validpgpkeys", "noextract"):
-        val = vars_.get(key)
-        if val:
-            lines.append(f"{key}=({' '.join(_q(v) for v in val)})")
-
-    # Lifecycle functions
-    func_order = [
-        ("pkgver", "pkgver"),
-        ("prepare", "prepare"),
-        ("build", "build"),
-        ("check", "check"),
-        ("package", "package"),
-    ]
-    for func_key, func_name in func_order:
-        body = funcs.get(func_key)
-        if body:
-            lines.append("")
-            lines.append(f"{func_name}() {{")
-            for bline in body.strip().split("\n"):
-                lines.append(f"    {bline}")
-            lines.append("}")
-
-    return "\n".join(lines) + "\n"
-
-
-def _q(s: str) -> str:
-    """Quote a value for PKGBUILD output. Single-quotes if needed."""
-    if not s:
-        return "''"
-    if " " not in s and "'" not in s and '"' not in s:
-        return s
-    return f"'{s}'"
 
 
 def _validate(vars_: dict, funcs: dict, pkg_dir: Path) -> bool:
@@ -557,12 +436,12 @@ def _check_variant_consistency(vars_: dict, pkg_name: str) -> None:
     current_desc = vars_.get("pkgdesc", "")
 
     packages_dir = REPO_ROOT / "packages"
-    for sibling_pkgbuild in sorted(packages_dir.glob("*/PKGBUILD")):
-        sibling_name = sibling_pkgbuild.parent.name
+    for sibling_pkl in sorted(packages_dir.glob("*/package.pkl")):
+        sibling_name = sibling_pkl.parent.name
         if sibling_name == pkg_name:
             continue
         try:
-            sib_vars, _ = load_pkgbuild(str(sibling_pkgbuild))
+            sib_vars, _ = _load_pkl(sibling_pkl.parent)
         except Exception:
             continue
         if sib_vars.get("_pkgname") != pkgname_val:
@@ -598,8 +477,8 @@ def main() -> None:
         _log(f"::error::Package directory {pkg_dir} not found!")
         sys.exit(1)
 
-    # Load current PKGBUILD
-    vars_, funcs = load_pkgbuild(str(pkg_dir / "PKGBUILD"))
+    # Load current package from package.pkl
+    vars_, funcs = _load_pkl(pkg_dir)
 
     # 0. Upstream merge logic
     upstream_changed = False
@@ -657,7 +536,20 @@ def main() -> None:
     if not _validate(vars_, funcs, pkg_dir):
         sys.exit(1)
 
-    (pkg_dir / "PKGBUILD").write_text(_render_pkgbuild(vars_, funcs))
+    (pkg_dir / "PKGBUILD").write_text(
+        subprocess.run(
+            [
+                "pkl",
+                "eval",
+                "-x",
+                "output.value.renderPKGBUILD()",
+                str(pkg_dir / "package.pkl"),
+            ],
+            capture_output=True,
+            text=True,
+            check=True,
+        ).stdout
+    )
 
     # 5. Variant consistency
     _check_variant_consistency(vars_, pkg_name)

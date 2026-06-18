@@ -15,6 +15,7 @@ Exit codes:
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import re
 import sys
@@ -34,8 +35,6 @@ def fetch_release_body(repo: str, tag: str, api_version: str, token: str | None)
     req = urllib.request.Request(url, headers=headers)
     try:
         with urllib.request.urlopen(req, timeout=30) as resp:
-            import json
-
             data = json.loads(resp.read().decode())
             return data.get("body", "No release notes available.")
     except urllib.error.HTTPError as e:
@@ -75,7 +74,7 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    token = os.environ.get("GITHUB_TOKEN", "")
+    token = os.environ.get("GITHUB_TOKEN")
     print(f"  -> Generating changelog for {args.tag}...")
     body = fetch_release_body(args.repo, args.tag, args.api_version, token)
     formatted = format_body(body)
