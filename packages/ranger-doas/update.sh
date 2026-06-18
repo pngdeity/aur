@@ -1,33 +1,82 @@
-#!/bin/bash
-set -e
+#!/usr/bin/env python3
+"""Regenerate doas-substitution.patch from upstream ranger source.
 
-# This script is called by the master CI when a new version is detected.
-# The current directory will be packages/ranger-doas/
-UPSTREAM_URL="https://github.com/ranger/ranger.git"
-LATEST_VER=$1 # nvchecker will pass the new version as the first argument
+Called by sync-package.py after upstream merge. Clones the ranger repo
+at the new version tag, applies sudo→doas substitutions to source files,
+and generates a fresh patch. Idempotent — re-running produces the same patch.
 
-echo "Updating ranger-doas to version $LATEST_VER..."
+Usage:
+    python update.sh <new_version>
 
-# 1. Clone fresh upstream and apply transformations
-git clone --depth 1 --branch "v$LATEST_VER" "$UPSTREAM_URL" ranger-update
-cd ranger-update
+Exit codes:
+    0 — patch regenerated successfully
+    1 — git clone or diff failure
+"""
+from __future__ import annotations
 
-# Replicate the transformations
-sed -i 's/sudo/doas/g' ranger/core/runner.py
-sed -i "s/\['sudo', '-E', 'su', 'root', '-mc'\]/\['doas', '\/bin\/sh', '-c'\]/g" ranger/ext/rifle.py
-find . -type f \( -name "README.md" -o -name "*.pod" -o -name "*.conf" -o -name "CHANGELOG.md" -o -name "*.svg" \) \
-    -exec sed -i 's/sudo/doas/g' {} +
+import shutil
+import subprocess
+import sys
+import tempfile
+from pathlib import Path
 
-# 2. Generate the new patch
-git diff > "../doas-substitution.patch"
-cd ..
+UPSTREAM_URL = "https://github.com/ranger/ranger.git"
+PATCH_FILE = "doas-substitution.patch"
 
-# 3. Update PKGBUILD
-sed -i "s/^pkgver=.*/pkgver=$LATEST_VER/" PKGBUILD
-sed -i "s/^pkgrel=.*/pkgrel=1/" PKGBUILD
+# Files to blanket-replace sudo→doas (documentation, configs)
+_GLOB_FILES = ("README.md", "*.pod", "*.conf", "CHANGELOG.md", "*.svg")
 
-# 4. Update Checksums (requires devtools)
-updpkgsums
 
-# Cleanup
-rm -rf ranger-update
+def _replace_in_file(path: Path, old: bytes, new: bytes) -> None:
+    data = path.read_bytes()
+    if old in data:
+        path.write_bytes(data.replace(old, new))
+
+
+def main() -> None:
+    if len(sys.argv) != 2:
+        print(f"Usage: {sys.argv[0]} <new_version>", file=sys.stderr)
+        sys.exit(1)
+
+    version = sys.argv[1]
+    pkg_dir = Path.cwd()
+    patch_path = pkg_dir / PATCH_FILE
+    print(f"  -> Regenerating {PATCH_FILE} for ranger v{version}")
+
+    tmp = Path(tempfile.mkdtemp(prefix="ranger-update-"))
+    try:
+        subprocess.run(
+            ["git", "clone", "--depth", "1", "--branch", f"v{version}", UPSTREAM_URL, str(tmp)],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+
+        # Apply sudo→doas substitutions
+        _replace_in_file(tmp / "ranger/core/runner.py", b"sudo", b"doas")
+        _replace_in_file(
+            tmp / "ranger/ext/rifle.py",
+            b"['sudo', '-E', 'su', 'root', '-mc']",
+            b"['doas', '/bin/sh', '-c']",
+        )
+
+        for pattern in _GLOB_FILES:
+            for f in tmp.rglob(pattern):
+                _replace_in_file(f, b"sudo", b"doas")
+
+        # Generate patch
+        diff = subprocess.run(
+            ["git", "-C", str(tmp), "diff"],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        patch_path.write_text(diff.stdout)
+        print(f"  -> Wrote {patch_path} ({len(diff.stdout)} bytes)")
+
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
+if __name__ == "__main__":
+    main()
