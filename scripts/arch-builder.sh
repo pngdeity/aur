@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # scripts/arch-builder.sh
 # Standardized Arch Linux package builder for monorepos.
-# Usage: ./arch-builder.sh <package_dir> <version>
+# Usage: ./arch-builder.sh <package_dir>
 #
 # Build isolation: uses makepkg --clean --syncdeps inside a Docker container
 # (fresh container per job in CI). For strict clean-chroot verification,
@@ -10,10 +10,9 @@
 set -e
 
 PKG_DIR="$1"
-NEW_VER="$2"
 
-if [[ -z "$PKG_DIR" || -z "$NEW_VER" ]]; then
-	echo "Usage: $0 <package_dir> <version>"
+if [[ -z "$PKG_DIR" ]]; then
+	echo "Usage: $0 <package_dir>"
 	exit 1
 fi
 
@@ -37,7 +36,7 @@ cd "$PKG_DIR"
 # 1. PGP Key Management
 # Automatically import keys defined in the PKGBUILD
 # This remains in the builder as keys are environment-specific (keyring)
-KEYS=$(makepkg --printsrcinfo | grep -oP '^\s*validpgpkeys = \K.*' || true)
+KEYS=$(makepkg --printsrcinfo 2>/dev/null | sed -n 's/^\s*validpgpkeys = //p' || true)
 for KEY in $KEYS; do
 	echo "  -> Importing PGP Key: $KEY"
 	gpg --recv-keys "$KEY" || echo "    ! Warning: Failed to fetch PGP key $KEY"

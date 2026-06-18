@@ -50,14 +50,14 @@ for pkgbuild in "${pkgbuilds[@]}"; do
 	PACKAGE_COUNT=$((PACKAGE_COUNT + 1))
 
 	# Step a: Import PKGBUILD → Pkl
-	if ! python3 scripts/pkgbuild_to_pkl.py "$pkgbuild" >"$pkl_file" 2>/dev/null; then
+	if ! python3 scripts/pkgbuild_to_pkl.py "$pkgbuild" >"$pkl_file"; then
 		echo "FAIL: $pkg_name — import failed"
 		FAILED=1
 		continue
 	fi
 
 	# Step b: Validate with pkl eval → JSON
-	if ! pkl eval "$pkl_file" --format json >"$json_file" 2>/dev/null; then
+	if ! pkl eval "$pkl_file" --format json >"$json_file"; then
 		echo "FAIL: $pkg_name — Pkl validation error"
 		FAILED=1
 		continue
@@ -129,7 +129,7 @@ CONFTEST_TMP="$(mktemp)"
 trap 'rm -f "$CONFTEST_TMP"' EXIT
 
 set +e
-conftest test "$MANIFEST_FILE" --policy policies/ --output json >"$CONFTEST_TMP" 2>/dev/null
+conftest test "$MANIFEST_FILE" --policy policies/ --output json >"$CONFTEST_TMP"
 CONFTEST_EXIT=$?
 set -e
 
