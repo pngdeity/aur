@@ -11,7 +11,7 @@ When updating a package to a new upstream version:
 
 1. Run the sync script:
    ```bash
-   bash scripts/sync-package.sh <pkgname> <version>
+   python scripts/sync-package.py <pkgname> <version>
    ```
    This performs the hybrid merge with upstream, applies `update.sh`, and
    updates hashes.

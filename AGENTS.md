@@ -379,6 +379,14 @@ distinct target and responsibility boundary:
   (which runs conftest Rule 7 — `deny_pkgdesc_consistency` in
   `policies/repository.rego`).
 
+> **Note — Script Language Migration**: All automation scripts in `scripts/` are
+> now Python (`.py`). Bash wrappers (`sync-package.sh`, `aur-deploy.sh`,
+> `arch-builder.sh`, etc.) have been retired. Design documents under `docs/` may
+> still reference `.sh` suffixes from the original Bash implementation — the
+> logic and function names are unchanged; only the runtime has moved to Python.
+> Package-local `update.sh` hooks (if present) are executed by `sync-package.py`
+> regardless of their internal language.
+
 ### Semantic Commit Standards
 
 - **Format**: All commit messages MUST follow the
@@ -436,7 +444,7 @@ Source-code `.patch` files applied during `prepare()` belong in the `source[]`
 array — they are standard Arch practice and are preserved across merges by
 identity protection, not by `update.sh`.
 
-3. **Automated Execution**: The `scripts/sync-package.sh` tool runs `update.sh`
+3. **Automated Execution**: The `scripts/sync-package.py` tool runs `update.sh`
    (if executable) after the upstream merge and declarative rules but before
    hash generation.
 4. **Verification**: After a transformation, run `namcap PKGBUILD` to verify
@@ -475,7 +483,7 @@ identity protection, not by `update.sh`.
 
 Before proposing or pushing a change to any package, an agent MUST perform:
 
-1. **Sync**: Run `bash scripts/sync-package.sh <pkgname> <version>` to update
+1. **Sync**: Run `python scripts/sync-package.py <pkgname> <version>` to update
    hashes and changelogs.
 2. **Lint**: Run `namcap PKGBUILD`.
 3. **Metadata**: Run `makepkg --printsrcinfo > /dev/null` to validate metadata
