@@ -66,7 +66,7 @@ examples, not an exhaustive list:
    from the source repository (AUR web interface, Arch GitLab tags, or release
    page) before running:
    ```bash
-   bash scripts/sync-package.sh <pkgname> <version>
+   python scripts/sync-package.py <pkgname> <version>
    ```
    This fetches the upstream PKGBUILD, initializes tracking state, applies
    declarative identity rules (demotion, asset sync), and updates hashes. Only

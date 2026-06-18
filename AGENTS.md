@@ -391,6 +391,14 @@ distinct target and responsibility boundary:
   emits a `::warning::` naming the mismatch, so a run can finish with
   inconsistent variants and no commit blocked.
 
+> **Note — Script Language Migration**: All automation scripts in `scripts/` are
+> now Python (`.py`). Bash wrappers (`sync-package.sh`, `aur-deploy.sh`,
+> `arch-builder.sh`, etc.) have been retired. Design documents under `docs/` may
+> still reference `.sh` suffixes from the original Bash implementation — the
+> logic and function names are unchanged; only the runtime has moved to Python.
+> Package-local `update.sh` hooks (if present) are executed by `sync-package.py`
+> regardless of their internal language.
+
 ### Semantic Commit Standards
 
 - **Format**: All commit messages MUST follow the
