@@ -220,8 +220,9 @@ class Package {
   packageFunc: String(!this.isEmpty)?
 
   // Custom Variables (Repository-Specific)
-  // Declared as "hidden" — accessible within the class, omitted from JSON output.
-  // These drive build system behavior but are not part of the rendered PKGBUILD.
+  // Accessible within the class. Some are un-hidden for the sync shell to read
+  // via `pkl eval --format json`. They drive build system behavior and are
+  // emitted in rendered PKGBUILD output but stripped by aur-deploy.py.
 
   /// AUR deployment gate. Mutually exclusive with _repo_subarch.
   _deploy_aur: Boolean = false
@@ -230,48 +231,54 @@ class Package {
   _pkgname: String?
 
   /// GitHub owner/repo for changelog generation
-  hidden _githubname: ct.GitHubName?
+  _githubname: ct.GitHubName?
 
   /// AUR package name for upstream merge
-  hidden _upstream_aur_pkg: String?
+  _upstream_aur_pkg: String?
 
   /// Arch GitLab repo path for upstream merge
-  hidden _upstream_arch_repo: String?
+  _upstream_arch_repo: String?
 
   /// Convert upstream maintainer to contributor
-  hidden _demote_upstream_maintainer: Boolean = false
+  _demote_upstream_maintainer: Boolean = false
 
   /// Auto-adopt upstream build logic changes
-  hidden _auto_merge_build: Boolean = false
+  _auto_merge_build: Boolean = false
 
   /// Synchronize shared gemini settings asset
-  hidden _use_common_gemini_settings: Boolean = false
+  _use_common_gemini_settings: Boolean = false
 
   /// Sub-architecture target (variant builds only)
-  hidden _repo_subarch: ct.SubArch?
+  _repo_subarch: ct.SubArch?
 
   /// Custom tag pattern for changelog generation
-  hidden _tag: String?
+  _tag: String?
 
   // Package-Local Conventions
 
-  /// npm package scope (e.g., "@google")
-  hidden _npmscope: String?
+  /// npm package scope (e.g., \"@google\")
+  _npmscope: String?
 
   /// npm package name
-  hidden _npmname: String?
+  _npmname: String?
 
   /// npm pinned version
-  hidden _npmver: String?
+  _npmver: String?
 
   /// Local helper variable (convenience alias, e.g. _name=$pkgname)
-  hidden _name: String?
+  _name: String?
 
   /// Package-local convenience variable (e.g. _projectname, _sourcedirectory)
-  hidden _projectname: String?
+  _projectname: String?
 
   /// Package-local convenience variable (e.g. _sourcedirectory)
-  hidden _sourcedirectory: String?
+  _sourcedirectory: String?
+
+  /// PREREVIEW marker text (injected by sync-package.py during upstream merge)
+  _prereview: String?
+
+  /// GitHub API version for changelog generation
+  _github_api_version: String?
 
   // ── Cross-Field Constraints ──
 
@@ -281,41 +288,57 @@ class Package {
   // ── Renderer Methods ──
 
   /// Quote a string for PKGBUILD output.
-  /// Simple values (alphanumeric, ., _, +, -, @) are output unquoted.
-  /// Values with spaces, special chars, or empty strings are single-quoted.
+  /// Matches Py renderer's _q(): quote only if string contains space, ', or ".
   function _quoteString(s: String): String =
     if (s.isEmpty)
       "''"
-    else if (s.matches(Regex(#"^[a-zA-Z0-9@._+-]+$"#)))
+    else if (!s.contains(" ") && !s.contains("'") && !s.contains("\""))
       s
     else
       "'\(s.replaceAll(Regex(#"'"#), "'\\''"))'"
 
   /// Render a SourceEntry for PKGBUILD source array.
+  /// Matches Py renderer: always double-quoted.
   function _renderSource(e: SourceEntry): String =
     if (e.url == e.filename)
-      _quoteString(e.filename)
+      "\"\(e.url)\""
     else
-      "'\(e.filename.replaceAll(Regex(#"'"#), "'\\''"))::\(e.url.replaceAll(Regex(#"'"#), "'\\''"))'"
+      "\"\(e.filename)::\(e.url)\""
 
   /// Render an OptDependsEntry for PKGBUILD optdepends array.
+  /// Matches Py renderer: _q() on combined "name: desc" string.
   function _renderOptDepends(e: OptDependsEntry): String =
     if (e.desc == "")
       _quoteString(e.name)
     else
-      "'\(e.name.replaceAll(Regex(#"'"#), "'\\''")): \(e.desc.replaceAll(Regex(#"'"#), "'\\''"))'"
+      _quoteString("\(e.name): \(e.desc)")
 
   /// Indent function body text by 4 spaces.
+  /// Matches Py renderer: strip leading/trailing whitespace first.
   function _indentBody(body: String): String =
-    body.split("\n").toList().map((line) -> "    \(line)").join("\n")
+    body.trim().split("\n").toList().map((line) -> "    \(line)").join("\n")
 
   /// Render a lifecycle function block.
   function _renderFunc(name: String, body: String?): String? =
-    if (body == null) null else "\(name)() {\n\(_indentBody(body))\n}"
+    if (body == null) null else "\n\(name)() {\n\(_indentBody(body))\n}"
+
+  /// Render the first available checksum line only (matching Py renderer).
+  function _renderChecksums(): String? =
+    if (sha256sums != null && !sha256sums.isEmpty)
+      "sha256sums=('\(sha256sums!!.join("' '"))')"
+    else if (sha512sums != null && !sha512sums.isEmpty)
+      "sha512sums=('\(sha512sums!!.join("' '"))')"
+    else if (sha224sums != null && !sha224sums.isEmpty)
+      "sha224sums=('\(sha224sums!!.join("' '"))')"
+    else if (sha384sums != null && !sha384sums.isEmpty)
+      "sha384sums=('\(sha384sums!!.join("' '"))')"
+    else if (b2sums != null && !b2sums.isEmpty)
+      "b2sums=('\(b2sums!!.join("' '"))')"
+    else
+      null
 
   /// Render this package as a valid PKGBUILD string.
-  /// Maps: packageFunc → package() in output (Pkl keyword transformation).
-  /// Follows PKGBUILD(5) canonical field ordering.
+  /// Matches Python renderer field ordering and quoting exactly.
   function renderPKGBUILD(): String =
     new Listing {
       "# Maintainer: \(maintainer)"
@@ -328,7 +351,56 @@ class Package {
           }.join("\n")
       }
       ""
-
+      // Custom Variables — sorted alphabetically
+      // Booleans: only emitted when true (matching Py renderer behavior)
+      when (_auto_merge_build) { "_auto_merge_build=true" }
+      when (_demote_upstream_maintainer) { "_demote_upstream_maintainer=true" }
+      when (_deploy_aur) { "_deploy_aur=true" }
+      when (_githubname != null && !_githubname!!.isEmpty) {
+        let (v = _githubname!!) "_githubname=\"\(v)\""
+      }
+      when (_name != null && !_name!!.isEmpty) {
+        let (v = _name!!) "_name=\"\(v)\""
+      }
+      when (_npmname != null && !_npmname!!.isEmpty) {
+        let (v = _npmname!!) "_npmname=\"\(v)\""
+      }
+      when (_npmscope != null && !_npmscope!!.isEmpty) {
+        let (v = _npmscope!!) "_npmscope=\"\(v)\""
+      }
+      when (_npmver != null && !_npmver!!.isEmpty) {
+        let (v = _npmver!!) "_npmver=\"\(v)\""
+      }
+      when (_pkgname != null && !_pkgname!!.isEmpty) {
+        let (v = _pkgname!!) "_pkgname=\"\(v)\""
+      }
+      when (_projectname != null && !_projectname!!.isEmpty) {
+        let (v = _projectname!!) "_projectname=\"\(v)\""
+      }
+      when (_repo_subarch != null) {
+        let (v = _repo_subarch!!) "_repo_subarch=\"\(v)\""
+      }
+      when (_sourcedirectory != null && !_sourcedirectory!!.isEmpty) {
+        let (v = _sourcedirectory!!) "_sourcedirectory=\"\(v)\""
+      }
+      when (_tag != null && !_tag!!.isEmpty) {
+        let (v = _tag!!) "_tag=\"\(v)\""
+      }
+      when (_upstream_arch_repo != null && !_upstream_arch_repo!!.isEmpty) {
+        let (v = _upstream_arch_repo!!) "_upstream_arch_repo=\"\(v)\""
+      }
+      when (_upstream_aur_pkg != null && !_upstream_aur_pkg!!.isEmpty) {
+        let (v = _upstream_aur_pkg!!) "_upstream_aur_pkg=\"\(v)\""
+      }
+      when (_use_common_gemini_settings) { "_use_common_gemini_settings=true" }
+      // PREREVIEW marker
+      when (_prereview != null && !_prereview!!.isEmpty) {
+        let (p = _prereview!!)
+          new Listing {
+            "# PREREVIEW: \(p)"
+            "# Review the diff, verify build, then remove this marker to unblock release."
+          }.join("\n")
+      }
       // Identity & Versioning
       "pkgname=\(pkgname)"
       when (pkgbase != null) {
@@ -336,61 +408,54 @@ class Package {
       }
       "pkgver=\(pkgver)"
       "pkgrel=\(pkgrel)"
-
       when (epoch != null) {
         let (e = epoch!!) "epoch=\(e)"
       }
-
       "pkgdesc=\(_quoteString(pkgdesc))"
-
       // Architecture & Metadata
-      "arch=('\(arch.join("' '"))')"
+      "arch=(\(arch.toList().map((e) -> _quoteString(e)).join(" ")))"
       "url='\(url.replaceAll(Regex(#"'"#), "'\\''"))'"
-      "license=('\(license.join("' '"))')"
-
+      "license=(\(license.toList().map((e) -> _quoteString(e)).join(" ")))"
       when (groups != null && !groups.isEmpty) {
-        let (g = groups!!) "groups=('\(g.join("' '"))')"
+        let (g = groups!!) "groups=(\(g.toList().map((e) -> _quoteString(e)).join(" ")))"
       }
-
       // Package Relationships
       when (depends != null && !depends.isEmpty) {
-        let (d = depends!!) "depends=('\(d.join("' '"))')"
+        let (d = depends!!) "depends=(\(d.toList().map((e) -> _quoteString(e)).join(" ")))"
       }
       when (makedepends != null && !makedepends.isEmpty) {
-        let (m = makedepends!!) "makedepends=('\(m.join("' '"))')"
+        let (m = makedepends!!) "makedepends=(\(m.toList().map((e) -> _quoteString(e)).join(" ")))"
       }
       when (checkdepends != null && !checkdepends.isEmpty) {
-        let (c = checkdepends!!) "checkdepends=('\(c.join("' '"))')"
+        let (c = checkdepends!!)
+          "checkdepends=(\(c.toList().map((e) -> _quoteString(e)).join(" ")))"
       }
       when (optdepends != null && !optdepends.isEmpty) {
         let (o = optdepends!!)
           "optdepends=(\(o.toList().map((e) -> _renderOptDepends(e)).join(" ")))"
       }
       when (provides != null && !provides.isEmpty) {
-        let (p = provides!!) "provides=('\(p.join("' '"))')"
+        let (p = provides!!) "provides=(\(p.toList().map((e) -> _quoteString(e)).join(" ")))"
       }
       when (conflicts != null && !conflicts.isEmpty) {
-        let (c = conflicts!!) "conflicts=('\(c.join("' '"))')"
+        let (c = conflicts!!) "conflicts=(\(c.toList().map((e) -> _quoteString(e)).join(" ")))"
       }
       when (replaces != null && !replaces.isEmpty) {
-        let (r = replaces!!) "replaces=('\(r.join("' '"))')"
+        let (r = replaces!!) "replaces=(\(r.toList().map((e) -> _quoteString(e)).join(" ")))"
       }
-
       // Install & Config
       when (backup != null && !backup.isEmpty) {
-        let (b = backup!!) "backup=('\(b.join("' '"))')"
-      }
-      when (options != null && !options.isEmpty) {
-        let (o = options!!) "options=('\(o.join("' '"))')"
+        let (b = backup!!) "backup=(\(b.toList().map((e) -> _quoteString(e)).join(" ")))"
       }
       when (install != null) {
-        let (ins = install!!) "install=\(_quoteString(ins))"
+        let (ins = install!!) "install=\(ins)"
       }
-
+      when (options != null && !options.isEmpty) {
+        let (o = options!!) "options=(\(o.toList().map((e) -> _quoteString(e)).join(" ")))"
+      }
       when (changelog != null) {
-        let (cl = changelog!!) "changelog=\(_quoteString(cl))"
+        let (cl = changelog!!) "changelog=\(cl)"
       }
-
       // Source & Integrity
       when (source != null && !source.isEmpty) {
         let (s = source!!) "source=(\(s.toList().map((e) -> _renderSource(e)).join(" ")))"
@@ -403,17 +468,8 @@ class Package {
         let (s = source_aarch64!!)
           "source_aarch64=(\(s.toList().map((e) -> _renderSource(e)).join(" ")))"
       }
-      when (noextract != null && !noextract.isEmpty) {
-        let (n = noextract!!) "noextract=('\(n.join("' '"))')"
-      }
-      when (validpgpkeys != null && !validpgpkeys.isEmpty) {
-        let (v = validpgpkeys!!) "validpgpkeys=('\(v.join("' '"))')"
-      }
-      when (sha256sums != null && !sha256sums.isEmpty) {
-        let (s = sha256sums!!) "sha256sums=('\(s.join("' '"))')"
-      }
-      when (sha512sums != null && !sha512sums.isEmpty) {
-        let (s = sha512sums!!) "sha512sums=('\(s.join("' '"))')"
+      when (_renderChecksums() != null) {
+        _renderChecksums()!!
       }
       when (sha512sums_x86_64 != null && !sha512sums_x86_64.isEmpty) {
         let (s = sha512sums_x86_64!!) "sha512sums_x86_64=('\(s.join("' '"))')"
@@ -421,18 +477,14 @@ class Package {
       when (sha512sums_aarch64 != null && !sha512sums_aarch64.isEmpty) {
         let (s = sha512sums_aarch64!!) "sha512sums_aarch64=('\(s.join("' '"))')"
       }
-      when (sha224sums != null && !sha224sums.isEmpty) {
-        let (s = sha224sums!!) "sha224sums=('\(s.join("' '"))')"
+      when (validpgpkeys != null && !validpgpkeys.isEmpty) {
+        let (v = validpgpkeys!!)
+          "validpgpkeys=(\(v.toList().map((e) -> _quoteString(e)).join(" ")))"
       }
-      when (sha384sums != null && !sha384sums.isEmpty) {
-        let (s = sha384sums!!) "sha384sums=('\(s.join("' '"))')"
+      when (noextract != null && !noextract.isEmpty) {
+        let (n = noextract!!) "noextract=(\(n.toList().map((e) -> _quoteString(e)).join(" ")))"
       }
-      when (b2sums != null && !b2sums.isEmpty) {
-        let (s = b2sums!!) "b2sums=('\(s.join("' '"))')"
-      }
-
       // Lifecycle Functions
-      // Note: packageFunc is rendered as "package()" — the Pkl keyword transformation.
       when (verify != null) {
         _renderFunc("verify", verify)
       }
@@ -451,7 +503,7 @@ class Package {
       when (packageFunc != null) {
         _renderFunc("package", packageFunc)
       }
-    }.join("\n")
+    }.join("\n") + "\n"
 }
 
 // ── Default Package (for schema validation) ──
