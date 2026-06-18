@@ -396,7 +396,7 @@ distinct target and responsibility boundary:
   package updates).
 - **Scope**: The scope MUST be the package name (e.g., `opendoas`) or the
   functional area (e.g., `scripts`).
-- **Package Updates**: Updates triggered by `sync-package.sh` MUST use the
+- **Package Updates**: Updates triggered by `sync-package.py` MUST use the
   format: `<pkgname>: update to <version>`.
 - **Imperative Mood**: Use the imperative mood in the description (e.g., "add
   Rowhammer patch" instead of "added Rowhammer patch").
@@ -413,7 +413,7 @@ distinct target and responsibility boundary:
 
 To add a new package, activate the `pkg-bootstrap` skill. It handles skeleton
 creation, upstream dependency verification (for non-mirrored packages),
-`sync-package.sh` bootstrapping, `pkgctl version setup`, conditional local
+`sync-package.py` bootstrapping, `pkgctl version setup`, conditional local
 `AGENTS.md` creation, and `.nvchecker.toml` registration.
 
 **Critical**: For packages that do not mirror an existing Arch/AUR PKGBUILD (no
