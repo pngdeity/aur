@@ -1,0 +1,392 @@
+/// Typed 3-way merge for PKGBUILD packages.
+///
+/// Two functions:
+///   classifyChanges(base, theirs) -> ChangeSet  — classify upstream drift by concern
+///   merge(ours, base, theirs)       -> Package    — produce merged package
+///
+/// merge() uses Pkl's idiomatic amends pattern: starts from ours, overrides only
+/// fields where theirs wins a 3-way comparison. No field-by-field reconstruction.
+///
+/// Design decisions (confirmed 2026-06-18):
+///   D1: _auto_merge_build gate — build-function diffs only set _prereview when false
+///   D2: _demote_upstream_maintainer gate — demotion only when flag is true
+///   D3: pkgver/pkgrel/source/pkgverFunc move from always-ours to 3-way pick
+module schemas.merge
+
+import "arch_pkg.pkl" as pkg
+
+// ── Data Types ────────────────────────────────────────────────────────────
+
+class ChangeSet {
+  /// Concern groups that differ between base and theirs
+  events: Listing<String>
+
+  /// Whether any build function (verify/pkgverFunc/prepare/build/check/packageFunc) changed
+  buildChanged: Boolean
+}
+
+// ── Concern Classification ────────────────────────────────────────────────
+
+/// Compare two upstream snapshots (base = cached, theirs = newly fetched) and
+/// classify which concern groups have changed. Used by the sync shell for
+/// diagnostic logging.
+function classifyChanges(base: pkg.Package, theirs: pkg.Package): ChangeSet = new ChangeSet {
+  buildChanged =
+    base.verify != theirs.verify
+      || base.pkgverFunc != theirs.pkgverFunc
+      || base.prepare != theirs.prepare
+      || base.build != theirs.build
+      || base.check != theirs.check
+      || base.packageFunc != theirs.packageFunc
+
+  events {
+    when (buildChanged) { "BUILD" }
+    when (
+      base.pkgname != theirs.pkgname
+        || base.provides != theirs.provides
+        || base.conflicts != theirs.conflicts
+        || base.replaces != theirs.replaces
+    ) {
+      "IDENTITY"
+    }
+    when (
+      base.pkgver != theirs.pkgver
+        || base.pkgrel != theirs.pkgrel
+        || base.epoch != theirs.epoch
+    ) {
+      "VERSION"
+    }
+    when (
+      base.pkgdesc != theirs.pkgdesc
+        || base.url != theirs.url
+        || base.license != theirs.license
+        || base.arch != theirs.arch
+        || base.backup != theirs.backup
+        || base.install != theirs.install
+        || base.options != theirs.options
+    ) {
+      "METADATA"
+    }
+    when (base.depends != theirs.depends) { "DEPENDS" }
+    when (base.makedepends != theirs.makedepends) { "MAKEDEPENDS" }
+    when (base.checkdepends != theirs.checkdepends) { "CHECKDEPENDS" }
+    when (base.optdepends != theirs.optdepends) { "OPTDEPENDS" }
+    when (
+      base.source != theirs.source
+        || base.source_x86_64 != theirs.source_x86_64
+        || base.source_aarch64 != theirs.source_aarch64
+        || base.sha256sums != theirs.sha256sums
+        || base.sha512sums != theirs.sha512sums
+        || base.sha224sums != theirs.sha224sums
+        || base.sha384sums != theirs.sha384sums
+        || base.b2sums != theirs.b2sums
+        || base.sha512sums_x86_64 != theirs.sha512sums_x86_64
+        || base.sha512sums_aarch64 != theirs.sha512sums_aarch64
+    ) {
+      "SOURCES"
+    }
+    when (
+      base.maintainer != theirs.maintainer
+        || base.contributor != theirs.contributor
+    ) {
+      "AUTHORSHIP"
+    }
+  }
+}
+
+// ── Prereview Helpers (called from merge() when‑generators) ─────────────
+
+/// Data fields where ours and theirs both changed from base and differ.
+/// Returns a Listing of conflicted field names.
+local const function _dataConflicts(
+  ours: pkg.Package,
+  base: pkg.Package,
+  theirs: pkg.Package,
+): Listing<String> = new {
+  when (ours.pkgver != base.pkgver && theirs.pkgver != base.pkgver && ours.pkgver != theirs.pkgver) {
+    "pkgver"
+  }
+  when (ours.pkgrel != base.pkgrel && theirs.pkgrel != base.pkgrel && ours.pkgrel != theirs.pkgrel) {
+    "pkgrel"
+  }
+  when (ours.epoch != base.epoch && theirs.epoch != base.epoch && ours.epoch != theirs.epoch) {
+    "epoch"
+  }
+  when (
+    ours.pkgdesc != base.pkgdesc && theirs.pkgdesc != base.pkgdesc && ours.pkgdesc != theirs.pkgdesc
+  ) { "pkgdesc" }
+  when (ours.url != base.url && theirs.url != base.url && ours.url != theirs.url) { "url" }
+  when (
+    ours.license != base.license && theirs.license != base.license && ours.license != theirs.license
+  ) { "license" }
+  when (ours.arch != base.arch && theirs.arch != base.arch && ours.arch != theirs.arch) { "arch" }
+  when (
+    ours.depends != base.depends && theirs.depends != base.depends && ours.depends != theirs.depends
+  ) { "depends" }
+  when (
+    ours.makedepends != base.makedepends
+      && theirs.makedepends != base.makedepends
+      && ours.makedepends != theirs.makedepends
+  ) { "makedepends" }
+  when (
+    ours.checkdepends != base.checkdepends
+      && theirs.checkdepends != base.checkdepends
+      && ours.checkdepends != theirs.checkdepends
+  ) { "checkdepends" }
+  when (
+    ours.optdepends != base.optdepends
+      && theirs.optdepends != base.optdepends
+      && ours.optdepends != theirs.optdepends
+  ) { "optdepends" }
+  when (ours.source != base.source && theirs.source != base.source && ours.source != theirs.source) {
+    "source"
+  }
+  when (ours.groups != base.groups && theirs.groups != base.groups && ours.groups != theirs.groups) {
+    "groups"
+  }
+  when (ours.backup != base.backup && theirs.backup != base.backup && ours.backup != theirs.backup) {
+    "backup"
+  }
+  when (
+    ours.install != base.install && theirs.install != base.install && ours.install != theirs.install
+  ) { "install" }
+  when (
+    ours.options != base.options && theirs.options != base.options && ours.options != theirs.options
+  ) { "options" }
+  when (
+    ours.validpgpkeys != base.validpgpkeys
+      && theirs.validpgpkeys != base.validpgpkeys
+      && ours.validpgpkeys != theirs.validpgpkeys
+  ) { "validpgpkeys" }
+  when (
+    ours.noextract != base.noextract
+      && theirs.noextract != base.noextract
+      && ours.noextract != theirs.noextract
+  ) { "noextract" }
+  when (
+    ours.changelog != base.changelog
+      && theirs.changelog != base.changelog
+      && ours.changelog != theirs.changelog
+  ) { "changelog" }
+  when (
+    ours.pkgbase != base.pkgbase && theirs.pkgbase != base.pkgbase && ours.pkgbase != theirs.pkgbase
+  ) { "pkgbase" }
+  when (
+    ours.source_x86_64 != base.source_x86_64
+      && theirs.source_x86_64 != base.source_x86_64
+      && ours.source_x86_64 != theirs.source_x86_64
+  ) { "source_x86_64" }
+  when (
+    ours.source_aarch64 != base.source_aarch64
+      && theirs.source_aarch64 != base.source_aarch64
+      && ours.source_aarch64 != theirs.source_aarch64
+  ) { "source_aarch64" }
+  when (
+    ours.sha256sums != base.sha256sums
+      && theirs.sha256sums != base.sha256sums
+      && ours.sha256sums != theirs.sha256sums
+  ) { "sha256sums" }
+  when (
+    ours.sha512sums != base.sha512sums
+      && theirs.sha512sums != base.sha512sums
+      && ours.sha512sums != theirs.sha512sums
+  ) { "sha512sums" }
+  when (
+    ours.sha224sums != base.sha224sums
+      && theirs.sha224sums != base.sha224sums
+      && ours.sha224sums != theirs.sha224sums
+  ) { "sha224sums" }
+  when (
+    ours.sha384sums != base.sha384sums
+      && theirs.sha384sums != base.sha384sums
+      && ours.sha384sums != theirs.sha384sums
+  ) { "sha384sums" }
+  when (ours.b2sums != base.b2sums && theirs.b2sums != base.b2sums && ours.b2sums != theirs.b2sums) {
+    "b2sums"
+  }
+  when (
+    ours.sha512sums_x86_64 != base.sha512sums_x86_64
+      && theirs.sha512sums_x86_64 != base.sha512sums_x86_64
+      && ours.sha512sums_x86_64 != theirs.sha512sums_x86_64
+  ) { "sha512sums_x86_64" }
+  when (
+    ours.sha512sums_aarch64 != base.sha512sums_aarch64
+      && theirs.sha512sums_aarch64 != base.sha512sums_aarch64
+      && ours.sha512sums_aarch64 != theirs.sha512sums_aarch64
+  ) { "sha512sums_aarch64" }
+}
+
+/// True when a build function differs between ours and theirs and
+/// _auto_merge_build is not set.  (D1 gate.)
+local const function _buildConflict(ours: pkg.Package, theirs: pkg.Package): Boolean =
+  !ours._auto_merge_build
+    && (
+      (ours.verify != theirs.verify)
+        || (ours.pkgverFunc != theirs.pkgverFunc)
+        || (ours.prepare != theirs.prepare)
+        || (ours.build != theirs.build)
+        || (ours.check != theirs.check)
+        || (ours.packageFunc != theirs.packageFunc)
+    )
+
+/// Human-readable prereview marker text, or null when nothing to flag.
+local const function _prereviewText(
+  ours: pkg.Package,
+  base: pkg.Package,
+  theirs: pkg.Package,
+): String? =
+  let (dataConflicts = _dataConflicts(ours, base, theirs))
+  let (buildConflict = _buildConflict(ours, theirs))
+    if (!dataConflicts.isEmpty && buildConflict)
+      "upstream conflicts: \(dataConflicts.join(", ")); upstream build functions changed"
+    else if (!dataConflicts.isEmpty)
+      "upstream conflicts: \(dataConflicts.join(", "))"
+    else if (buildConflict)
+      "upstream build functions changed (see diff)"
+    else
+      null
+
+// ── Typed 3-Way Merge ─────────────────────────────────────────────────────
+
+/// Merge three Package snapshots into one.
+///
+/// Returns ``(ours) { …when-blocks… }`` — starts from ours so all identity and
+/// custom control fields are correct by construction.  Uses ``when`` generators
+/// to override only fields where theirs wins a 3-way comparison.
+///
+/// Resolution rules:
+///   - Always ours (identity, custom vars) — never overridden
+///   - 3-way pick (data fields)          — override only when ours==base && theirs!=base
+///   - Build functions                   — 3-way pick, and auto-adopt upstream
+///                                          even in conflicts when _auto_merge_build
+///   - Authorship                        — maintainer always ours;
+///                                          upstream maintainer → contributor
+///                                          only when _demote_upstream_maintainer
+function merge(ours: pkg.Package, base: pkg.Package, theirs: pkg.Package): pkg.Package = (ours) {
+  // ── 3-way pick: data fields ──
+
+  // Version
+  when (ours.pkgver == base.pkgver && theirs.pkgver != base.pkgver) { pkgver = theirs.pkgver }
+  when (ours.pkgrel == base.pkgrel && theirs.pkgrel != base.pkgrel) { pkgrel = theirs.pkgrel }
+  when (ours.epoch == base.epoch && theirs.epoch != base.epoch) { epoch = theirs.epoch }
+
+  // Metadata
+  when (ours.pkgdesc == base.pkgdesc && theirs.pkgdesc != base.pkgdesc) { pkgdesc = theirs.pkgdesc }
+  when (ours.url == base.url && theirs.url != base.url) { url = theirs.url }
+  when (ours.license == base.license && theirs.license != base.license) { license = theirs.license }
+  when (ours.arch == base.arch && theirs.arch != base.arch) { arch = theirs.arch }
+  when (ours.groups == base.groups && theirs.groups != base.groups) { groups = theirs.groups }
+
+  // Package relationships
+  when (ours.depends == base.depends && theirs.depends != base.depends) { depends = theirs.depends }
+  when (ours.makedepends == base.makedepends && theirs.makedepends != base.makedepends) {
+    makedepends = theirs.makedepends
+  }
+  when (ours.checkdepends == base.checkdepends && theirs.checkdepends != base.checkdepends) {
+    checkdepends = theirs.checkdepends
+  }
+  when (ours.optdepends == base.optdepends && theirs.optdepends != base.optdepends) {
+    optdepends = theirs.optdepends
+  }
+
+  // Source & integrity
+  when (ours.source == base.source && theirs.source != base.source) { source = theirs.source }
+  when (ours.source_x86_64 == base.source_x86_64 && theirs.source_x86_64 != base.source_x86_64) {
+    source_x86_64 = theirs.source_x86_64
+  }
+  when (ours.source_aarch64 == base.source_aarch64 && theirs.source_aarch64 != base.source_aarch64) {
+    source_aarch64 = theirs.source_aarch64
+  }
+  when (ours.sha256sums == base.sha256sums && theirs.sha256sums != base.sha256sums) {
+    sha256sums = theirs.sha256sums
+  }
+  when (ours.sha512sums == base.sha512sums && theirs.sha512sums != base.sha512sums) {
+    sha512sums = theirs.sha512sums
+  }
+  when (ours.sha224sums == base.sha224sums && theirs.sha224sums != base.sha224sums) {
+    sha224sums = theirs.sha224sums
+  }
+  when (ours.sha384sums == base.sha384sums && theirs.sha384sums != base.sha384sums) {
+    sha384sums = theirs.sha384sums
+  }
+  when (ours.b2sums == base.b2sums && theirs.b2sums != base.b2sums) { b2sums = theirs.b2sums }
+  when (
+    ours.sha512sums_x86_64 == base.sha512sums_x86_64
+      && theirs.sha512sums_x86_64 != base.sha512sums_x86_64
+  ) { sha512sums_x86_64 = theirs.sha512sums_x86_64 }
+  when (
+    ours.sha512sums_aarch64 == base.sha512sums_aarch64
+      && theirs.sha512sums_aarch64 != base.sha512sums_aarch64
+  ) { sha512sums_aarch64 = theirs.sha512sums_aarch64 }
+
+  // Install & config
+  when (ours.backup == base.backup && theirs.backup != base.backup) { backup = theirs.backup }
+  when (ours.install == base.install && theirs.install != base.install) { install = theirs.install }
+  when (ours.options == base.options && theirs.options != base.options) { options = theirs.options }
+
+  // Other
+  when (ours.validpgpkeys == base.validpgpkeys && theirs.validpgpkeys != base.validpgpkeys) {
+    validpgpkeys = theirs.validpgpkeys
+  }
+  when (ours.noextract == base.noextract && theirs.noextract != base.noextract) {
+    noextract = theirs.noextract
+  }
+  when (ours.changelog == base.changelog && theirs.changelog != base.changelog) {
+    changelog = theirs.changelog
+  }
+  when (ours.pkgbase == base.pkgbase && theirs.pkgbase != base.pkgbase) { pkgbase = theirs.pkgbase }
+
+  // ── 3-way pick: build functions ──
+
+  // Normal 3-way: upstream changed, we didn't → take theirs
+  when (ours.verify == base.verify && theirs.verify != base.verify) { verify = theirs.verify }
+  when (ours.pkgverFunc == base.pkgverFunc && theirs.pkgverFunc != base.pkgverFunc) {
+    pkgverFunc = theirs.pkgverFunc
+  }
+  when (ours.prepare == base.prepare && theirs.prepare != base.prepare) { prepare = theirs.prepare }
+  when (ours.build == base.build && theirs.build != base.build) { build = theirs.build }
+  when (ours.check == base.check && theirs.check != base.check) { check = theirs.check }
+  when (ours.packageFunc == base.packageFunc && theirs.packageFunc != base.packageFunc) {
+    packageFunc = theirs.packageFunc
+  }
+
+  // Auto-merge: both changed + _auto_merge_build → take theirs (upstream wins)
+  when (ours._auto_merge_build && ours.verify != base.verify && theirs.verify != base.verify) {
+    verify = theirs.verify
+  }
+  when (
+    ours._auto_merge_build
+      && ours.pkgverFunc != base.pkgverFunc
+      && theirs.pkgverFunc != base.pkgverFunc
+  ) { pkgverFunc = theirs.pkgverFunc }
+  when (ours._auto_merge_build && ours.prepare != base.prepare && theirs.prepare != base.prepare) {
+    prepare = theirs.prepare
+  }
+  when (ours._auto_merge_build && ours.build != base.build && theirs.build != base.build) {
+    build = theirs.build
+  }
+  when (ours._auto_merge_build && ours.check != base.check && theirs.check != base.check) {
+    check = theirs.check
+  }
+  when (
+    ours._auto_merge_build
+      && ours.packageFunc != base.packageFunc
+      && theirs.packageFunc != base.packageFunc
+  ) { packageFunc = theirs.packageFunc }
+
+  // ── prereview marker ──
+
+  when (_prereviewText(ours, base, theirs) != null) {
+    _prereview = _prereviewText(ours, base, theirs)!!
+  }
+
+  // ── authorship (D2: gated on _demote_upstream_maintainer) ──
+
+  when (ours._demote_upstream_maintainer && theirs.maintainer != ours.maintainer) {
+    contributor =
+      if (ours.contributor != null && !ours.contributor!!.isEmpty)
+        (ours.contributor!!) { theirs.maintainer }
+      else
+        new { theirs.maintainer }
+  }
+}

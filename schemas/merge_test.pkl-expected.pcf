@@ -1,0 +1,69 @@
+examples {
+  ["no-change"] {
+    new {
+      pkgname = "testpkg"
+      pkgver = "1.0"
+      pkgdesc = "base description"
+      _prereview = null
+    }
+  }
+  ["pkgver-bump"] {
+    new {
+      pkgver = "1.1"
+      pkgrel = 1
+    }
+  }
+  ["new-depends"] {
+    2
+  }
+  ["build-changed"] {
+    new {
+      build = "echo theirs_build"
+      _prereview = "upstream build functions changed (see diff)"
+    }
+  }
+  ["build-changed-auto-merge"] {
+    new {
+      build = "echo theirs_build"
+      _prereview = null
+    }
+  }
+  ["desc-conflict"] {
+    new {
+      pkgdesc = "our description"
+      _prereview = "upstream conflicts: pkgdesc"
+    }
+  }
+  ["our-change-preserved"] {
+    new {
+      pkgdesc = "our description"
+      _prereview = null
+    }
+  }
+  ["identity-protection"] {
+    "testpkg"
+  }
+  ["maintainer-demotion"] {
+    new {
+      maintainer = "pngdeity <pngdeity@tutanota.com>"
+      contributor {
+        "upstream <upstream@example.com>"
+      }
+    }
+  }
+  ["no-demotion"] {
+    new {
+      maintainer = "pngdeity <pngdeity@tutanota.com>"
+      contributor = null
+    }
+  }
+  ["classify-pkgver-bump"] {
+    true
+  }
+  ["classify-build-changed"] {
+    true
+  }
+  ["classify-build-event"] {
+    true
+  }
+}
