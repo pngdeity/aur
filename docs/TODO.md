@@ -230,13 +230,14 @@ provisioning, and CI verification.
 - [x] **build.yml workflow_dispatch trigger**: Completed — `workflow_dispatch`
       added to `build.yml` (commit `28b5e16`).
 
-## Pkl Canonical Migration (Phase 4)
+## Pkl Canonical Migration (Phases 1–7)
 
 Pkl becomes the canonical source of truth for package definitions. PKGBUILD
-becomes generated output. Retires `pkgbuild_loader.py` (492 lines),
+becomes generated output. Shrinks `pkgbuild_loader.py` (492→350 lines), retires
 `pkgbuild_renderer.py` (149 lines), `pkgbuild_to_pkl.py` (49 lines),
 `pkgvar` (104 lines bash), `sync-package.sh` (317 lines bash), and
-`merge_policy_exceptions.py` (56 lines). Net deletion: ~1,100 lines.
+`merge_policy_exceptions.py` (56 lines). Net reduction: ~1,300 lines deleted,
+~180 lines added (merge.pkl).
 
 ### Architecture: Functional Core, Imperative Shell
 
@@ -250,7 +251,7 @@ The migration follows the FCIS pattern:
 The functional core is built and proven first (Phase 1). Then the shell is
 rewired to call it (Phase 3). Then the core is incrementally improved while
 the shell keeps the pipeline green (Phases 2, 4, 5). The shell shrinks as
-core capabilities grow — this is why the net deletion is ~1,100 lines.
+core capabilities grow — this is why the net reduction is ~1,300 lines.
 
 Phase 2 (hand-authoring) and Phase 3 (shell rewiring) are sequenced in
 **reverse of naive order**: rewire the shell to read importer-generated
@@ -295,7 +296,7 @@ harness.
 `packages/<name>/package.pkl` becomes the canonical format. `PKGBUILD` becomes
 generated output.
 
-- [ ] 2.1 Hand-author a `package.pkl` for each of the 25 packages. Bash lifecycle
+- [ ] 2.1 Hand-author a `package.pkl` for each of the 24 packages. Bash lifecycle
       functions (`prepare()`, `build()`, `check()`, `package()`) remain as raw
       Pkl strings — no structural change from current generated `.pkl` files.
 - [ ] 2.2 `${pkgname}`, `${pkgver}` references in `source[]` URLs become Pkl
@@ -304,9 +305,9 @@ generated output.
       `Listing<DependsEntry>` — already typed by the schema.
 - [ ] 2.4 `# Maintainer:` / `# Contributor:` comments become `maintainer` /
       `contributor` fields.
-- [ ] 2.5 Validate all 25 packages: `pkl eval packages/*/package.pkl --format json`
+- [ ] 2.5 Validate all 24 packages: `pkl eval packages/*/package.pkl --format json`
       must pass with zero errors.
-- [ ] 2.6 Render all 25 packages: `pkl eval -x 'output.value.renderPKGBUILD()'`
+- [ ] 2.6 Render all 24 packages: `pkl eval -x 'output.value.renderPKGBUILD()'`
       must produce valid PKGBUILD text.
 - [ ] 2.7 Create a `just` recipe to regenerate PKGBUILDs from `.pkl` files:
       `pkl eval packages/*/package.pkl -x 'output.value.renderPKGBUILD()' -o '%{moduleDir}/PKGBUILD'`
@@ -500,7 +501,7 @@ Net reduction: ~1,300 lines deleted/removed, ~180 lines added (merge.pkl).
 | `makepkg` rejects Pkl-rendered PKGBUILD (quoting) | ~~Phase 1.4 gate: `makepkg --printsrcinfo` on every rendered output~~ Verified 2026-06-18: 22/24 pass (2 pre-existing changelog failures, not renderer-related) |
 | CI `pkl eval` cold-start latency | Pkl native binary (~200ms); already called in current pipeline |
 | `sync-package.py` merge logic assumes bash-sourced dicts, breaks on Pkl-sourced | Both produce same dict structure (proven by Phase 3 rewiring with importer-generated `.pkl`) |
-| Shell breaks during Phase 2 incremental conversion of a single package | Phase 3 gate: shell already exercises all 25 packages via importer-generated `.pkl`. Each Phase 2 conversion is a one-package diff from a known-working state |
+| Shell breaks during Phase 2 incremental conversion of a single package | Phase 3 gate: shell already exercises all 24 packages via importer-generated `.pkl`. Each Phase 2 conversion is a one-package diff from a known-working state |
 | FCIS boundary leaks — validation logic creeps into shell | Phase 3 explicitly removes validation from shell (`load_pkgbuild` + `render_pkgbuild` replaced by `pkl eval` subprocess). Any new validation belongs in Pkl schema or Rego policy |
 | Merge rearchitecture produces wrong merged Package | Phase 6.0.2: Pkl unit tests with fixture packages covering all merge scenarios before replacing live merge path |
 | Upstream PKGBUILDs have fields not in our schema | Merge function handles missing fields gracefully (treat absent as null, skip comparison). Schema evolves to accommodate upstream drift |
