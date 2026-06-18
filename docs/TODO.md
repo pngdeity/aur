@@ -476,7 +476,7 @@ Validate each deletion by confirming the pipeline still passes end-to-end.
 | `compare-renderers.py` | 86 | Delete — depends on `pkgbuild_renderer.py`; `makepkg --printsrcinfo` supersedes post-Phase 6 |
 | `pkgbuild_renderer.py` | 149 | Delete — replaced by `renderPKGBUILD()` in schema; already unused by sync-package.py since Phase 3 |
 | `pkgbuild_to_pkl.py` | 49 | Retain as one-time migration tool; remove from CI |
-| `pkgvar` (bash) | 104 | Delete — Pkl JSON provides all resolved values |
+| `pkgvar` (bash) | 104 | Delete — after `aur-deploy.py` refactored to use `pkl eval --format json` for pkgver/pkgrel resolution; currently invoked at lines 187–188 |
 | `sync-package.sh` (bash) | 317 | Delete — `sync-package.py` is the single engine |
 | `merge_policy_exceptions.py` | 56 | Delete — `manifest.pkl` handles this natively |
 | `validate-pkgbuilds-pkl.py` | ~100 remaining | Shrink — `build_manifest()` removed; becomes thin CLI wrapper |
