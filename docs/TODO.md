@@ -240,3 +240,8 @@ provisioning, and CI verification.
       (dispatched 2026-05-15). Verify the new validation gate passes.
 - [x] **build.yml workflow_dispatch trigger**: Completed — `workflow_dispatch`
       added to `build.yml` (commit `28b5e16`).
+- [ ] **CI/CD maintenance burden reduction**: 12 items identified in the
+      2026-06-18 CI/CD maintenance audit. Tasks are documented in
+      [`TASKS.md`](../TASKS.md) at the repository root. Priorities: extract
+      duplicated configuration (#1), centralize version pins (#2), add
+      unknown-change guard to concern classifier (#3).
