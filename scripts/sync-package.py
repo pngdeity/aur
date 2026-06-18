@@ -16,6 +16,7 @@ Exit codes:
 from __future__ import annotations
 
 import hashlib
+import json
 import os
 import re
 import shutil
@@ -111,6 +112,45 @@ def _log(msg: str) -> None:
     print(msg, file=sys.stderr)
 
 
+def _load_pkl(pkg_dir: Path) -> tuple[dict, dict]:
+    """Load a package's package.pkl via pkl eval --format json.
+
+    Returns (vars_, funcs) — matching load_pkgbuild()'s contract.
+    Splits function bodies into a separate funcs dict and renames
+    pkgverFunc→pkgver, packageFunc→package.
+    """
+    result = subprocess.run(
+        ["pkl", "eval", str(pkg_dir / "package.pkl"), "--format", "json"],
+        capture_output=True,
+        text=True,
+    )
+    data = json.loads(result.stdout)
+
+    funcs: dict = {}
+    for pkl_key, bash_key in [
+        ("verify", "verify"),
+        ("pkgverFunc", "pkgver"),
+        ("prepare", "prepare"),
+        ("build", "build"),
+        ("check", "check"),
+        ("packageFunc", "package"),
+    ]:
+        if pkl_key in data:
+            funcs[bash_key] = data.pop(pkl_key)
+
+    # Strip schema-default booleans that the loader would only capture when true.
+    # _deploy_aur is NOT stripped — it may be explicitly set to false in PKGBUILDs.
+    for key in (
+        "_auto_merge_build",
+        "_demote_upstream_maintainer",
+        "_use_common_gemini_settings",
+    ):
+        if data.get(key) is False:
+            del data[key]
+
+    return data, funcs
+
+
 # ── concern classification ───────────────────────────────────────────────
 
 
@@ -174,9 +214,7 @@ def _fetch_upstream(url: str, base_url: str, pkg_dir: Path) -> tuple[bool, bool]
             return True, False
         return True, True
     else:
-        _log("  -> Initial upstream tracking setup.")
         _fetch_assets(content, base_url, pkg_dir)
-        tmp.rename(cache)
         return True, True
 
 
@@ -250,24 +288,11 @@ def _merge_with_identity(
     if pkgver_func_body:
         merged_funcs["pkgver"] = pkgver_func_body
 
-    # Clean up temp
-    new.unlink(missing_ok=True)
-    old.rename(pkg_dir / ".PKGBUILD.upstream")
+    # Clean up: update cache with new upstream content
+    old.unlink(missing_ok=True)
+    new.rename(pkg_dir / ".PKGBUILD.upstream")
 
     return merged_vars, merged_funcs, True
-
-
-# ── declarative rules ─────────────────────────────────────────────────────
-
-
-def _apply_declarative_rules(vars_: dict) -> None:
-    """Maintainer demotion if _demote_upstream_maintainer is true."""
-    if vars_.get("_demote_upstream_maintainer"):
-        _log("  -> Applying maintainer demotion")
-        contrib = vars_.get("contributor", [])
-        if contrib:
-            # Current maintainer stays; contributors are from demoted upstream
-            pass
 
 
 def _apply_prereview_marker(vars_: dict, build_changed: bool, new_ver: str) -> None:
@@ -666,12 +691,12 @@ def _check_variant_consistency(vars_: dict, pkg_name: str) -> None:
     current_desc = vars_.get("pkgdesc", "")
 
     packages_dir = REPO_ROOT / "packages"
-    for sibling_pkgbuild in sorted(packages_dir.glob("*/PKGBUILD")):
-        sibling_name = sibling_pkgbuild.parent.name
+    for sibling_pkl in sorted(packages_dir.glob("*/package.pkl")):
+        sibling_name = sibling_pkl.parent.name
         if sibling_name == pkg_name:
             continue
         try:
-            sib_vars, _ = load_pkgbuild(str(sibling_pkgbuild))
+            sib_vars, _ = _load_pkl(sibling_pkl.parent)
         except Exception:
             continue
         if sib_vars.get("_pkgname") != pkgname_val:
@@ -707,8 +732,8 @@ def main() -> None:
         _log(f"::error::Package directory {pkg_dir} not found!")
         sys.exit(1)
 
-    # Load current PKGBUILD
-    vars_, funcs = load_pkgbuild(str(pkg_dir / "PKGBUILD"))
+    # Load current package from package.pkl
+    vars_, funcs = _load_pkl(pkg_dir)
 
     # 0. Upstream merge logic
     upstream_changed = False
@@ -772,7 +797,20 @@ def main() -> None:
     if not _validate(vars_, funcs, pkg_dir):
         sys.exit(1)
 
-    (pkg_dir / "PKGBUILD").write_text(_render_pkgbuild(vars_, funcs))
+    (pkg_dir / "PKGBUILD").write_text(
+        subprocess.run(
+            [
+                "pkl",
+                "eval",
+                "-x",
+                "output.value.renderPKGBUILD()",
+                str(pkg_dir / "package.pkl"),
+            ],
+            capture_output=True,
+            text=True,
+            check=True,
+        ).stdout
+    )
 
     # 5. Variant consistency
     _check_variant_consistency(vars_, pkg_name)
