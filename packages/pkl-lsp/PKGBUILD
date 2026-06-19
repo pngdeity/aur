@@ -96,6 +96,7 @@ build() {
     --initialize-at-build-time= \
     -H:+ReportExceptionStackTraces \
     -H:+StripDebugInfo \
+    -R:MaxHeapSize=1g \
     --enable-sbom=false \
     -jar "${JAR}" \
     -o "${pkgname}"
