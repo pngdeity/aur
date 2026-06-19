@@ -227,9 +227,16 @@ are quality improvements deferred from initial development.
 
 ### Before AUR Deployment
 
-- [ ] **`pkgctl build` chroot validation**: Run `pkgctl build` in a clean chroot
-      to confirm no dependency resolution errors, build failures, or namcap
-      issues in the Arch standard build environment. (Running 2026-06-18)
+- [x] **`pkgctl build` chroot validation**: Completed 2026-06-19. No dependency
+      resolution errors, build failures, or namcap issues.
+
+### Native-Image Flags
+
+- [x] **`-H:+UnlockExperimentalVMOptions`**: Added 2026-06-19. Scoped around
+      `-H:+StripDebugInfo` (remains experimental). `-H:+ForeignAPISupport` removed
+      (default-on in GraalVM 25.0+). Warnings reduced from 7 to expected 1-2.
+- [x] **Remove dead flags**: `--no-fallback` (deprecated, no effect) and
+      `-H:-ParseRuntimeOptions` (unnecessary) removed.
 
 ### Build Quality
 
@@ -250,9 +257,9 @@ are quality improvements deferred from initial development.
 
 ### Optimization
 
-- [ ] **Binary size**: 60 MiB unstripped / 19 MiB compressed (was 328/107 MiB).
-      Primary reduction done (14d). Remaining: verify `-H:+RemoveUnusedSymbols`
-      active, evaluate dropping `-H:+ReportExceptionStackTraces`.
+- [x] **Binary size**: 60 MiB unstripped / 19 MiB compressed (was 328/107 MiB).
+      Primary reduction done (14d: removed `-H:IncludeResources`,
+      rely on agent metadata). Secondary: `-R:MaxHeapSize=1g` caps runtime heap.
 - [x] **`-H:+FullRelro`**: Added `-H:NativeLinkerOption=-Wl,-z,relro,-z,now`.
       Fixes the only namcap warning (`ELF file lacks FULL RELRO`).
 

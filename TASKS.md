@@ -206,15 +206,12 @@ flags. If ineffective, accept as cosmetic.
 
 **Files:** `PKGBUILD`.
 
-### 14b. `-H:+FullRelro`
+### 14b. `-H:+FullRelro` ✅
 
-**Problem:** Only namcap warning on the built package: `ELF file lacks FULL RELRO`
-(line 334).
+**Done:** Added `-H:NativeLinkerOption=-Wl,-z,relro,-z,now` (2026-06-19). `-H:+FullRelro`
+doesn't exist in GraalVM 25; the correct approach is passing linker flags. namcap clean.
 
-**Proposed fix:** Add `-H:+FullRelro` to `native-image` invocation (~line 95).
-Rebuild, verify namcap clean.
-
-**Files:** `PKGBUILD`.
+**Files:** `PKGBUILD` (line 99).
 
 ### 14c. Reflection surface verification
 
@@ -229,26 +226,27 @@ completion → hover → diagnostic). Diff trace metadata against agent-generate
 
 **Files:** `run-lsp-agent.py` (if gaps), `PKGBUILD` (temporary flag).
 
-### 14d. Tighten `-H:IncludeResources`
+### 14d. Tighten `-H:IncludeResources` ✅
 
-**Problem:** `'.*'` embeds everything in the JAR → 328 MiB binary, 262 MiB is
-`byte[] for embedded resources` (line 231). Also causes 2-minute resource
-scanning phase (line 207).
-
-**Proposed fix:** Enumerate non-class resources in shadow JAR. Replace `'.*'`
-with `META-INF/native-image/.*`, `META-INF/services/.*`, and `.pkl` stdlib
-globs. Rebuild, verify LSP functional, compare binary size.
+**Done:** Removed `-H:IncludeResources='.*'` entirely (2026-06-19). The
+agent-generated `reachability-metadata.json` auto-detected by native-image
+contains exactly 84 resources (Pkl stdlib, ServiceLoader SPI, tree-sitter
+natives, Kotlin builtins, JDK resources). Binary: 328 MiB → 60 MiB (–82%),
+compressed: 107 MiB → 19 MiB (–82%). Build time: 5m 36s → 2m 56s (–47%).
+Verified via `-H:+GenerateEmbeddedResourcesFile` diagnostic — no class files
+or Gradle artifacts embedded.
 
 **Files:** `PKGBUILD`.
 
-### 14e. Binary size optimization
+### 14e. Binary size optimization (partial)
 
-**Problem:** 328 MiB unstripped / 106.8 MiB compressed.
+**Done:** Primary reduction via 14d (82% drop). Added `-R:MaxHeapSize=1g` to
+cap generated image runtime heap. G1GC for builder JVM (`-J-XX:+UseG1GC`)
+attempted but conflicts with native-image's internal GC configuration.
 
-**Proposed fix:** Primary lever is 14d. Secondary: verify
-`-H:+RemoveUnusedSymbols` active, evaluate dropping
-`-H:+ReportExceptionStackTraces` (debug info tradeoff). Profile with `--verbose`
-if further reduction needed.
+**Remaining:** Verify `-H:+RemoveUnusedSymbols` active (likely default in
+GraalVM 25). Evaluate dropping `-H:+ReportExceptionStackTraces` (debug info
+tradeoff).
 
 **Files:** `PKGBUILD`.
 
@@ -307,17 +305,17 @@ warnings; tracked, no action until GraalVM enforces `-H:+UnlockExperimentalVMOpt
 
 **Files:** `package.json`, `package.pkl`.
 
-### 14k. Native-image deprecation warnings
+### 14k. Native-image deprecation warnings ✅
 
-**Problem:** 7 warnings at `pkgctl-build-output.txt` lines 177-185. Three
-experimental options (`IncludeResources`, `ForeignAPISupport`, `StripDebugInfo`)
-will need `-H:+UnlockExperimentalVMOptions` in future GraalVM. Two deprecated
-options (`--no-fallback`, `FallbackThreshold`) have no effect and can be removed
-now.
+**Done:** Removed `-H:+ForeignAPISupport` (default-on in GraalVM 25.0+, causes
+warning when passed explicitly). Removed `--no-fallback` (deprecated, no effect).
+Removed `-H:-ParseRuntimeOptions` (unnecessary). Added `-H:+UnlockExperimentalVMOptions`
+/ `-H:-UnlockExperimentalVMOptions` scope around `-H:+StripDebugInfo` (remains
+experimental). Warnings: 7 → expected 1-2. Committed as `d60f980`, deployed as
+pkgrel 3.
 
-**Proposed fix:** Remove `--no-fallback` from `native-image` invocation. Add
-`-H:+UnlockExperimentalVMOptions` when GraalVM enforces it. Remove
-`FallbackThreshold` if present (check: it's a warning from `--no-fallback` alias).
+**Remaining:** Triage `-H:+ReportExceptionStackTraces` — may also require
+unlocking. Consider adding to the existing unlock scope if needed.
 
 **Files:** `PKGBUILD`.
 
