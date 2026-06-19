@@ -253,8 +253,8 @@ are quality improvements deferred from initial development.
 - [ ] **Binary size**: 60 MiB unstripped / 19 MiB compressed (was 328/107 MiB).
       Primary reduction done (14d). Remaining: verify `-H:+RemoveUnusedSymbols`
       active, evaluate dropping `-H:+ReportExceptionStackTraces`.
-- [ ] **`-H:+FullRelro`**: Trivial addition — fixes the only namcap warning
-      (`ELF file lacks FULL RELRO, check LDFLAGS`).
+- [x] **`-H:+FullRelro`**: Added `-H:NativeLinkerOption=-Wl,-z,relro,-z,now`.
+      Fixes the only namcap warning (`ELF file lacks FULL RELRO`).
 
 ### Completeness
 
