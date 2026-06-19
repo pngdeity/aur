@@ -5,7 +5,7 @@ _deploy_aur=true
 
 pkgname=$_pkgname
 pkgver=0.7.1
-pkgrel=1
+pkgrel=2
 pkgdesc="Language Server Protocol implementation for Pkl"
 arch=('x86_64' 'aarch64')
 url="https://github.com/apple/pkl-lsp"
