@@ -179,7 +179,147 @@ repo-root/x86_64/`, and `cd "$BUILD_DIR"` to return.
 
 ## 13. Determine utility of github.com/apple/pkl-pantry
 
-**Problem:** Don't reinvent the wheel. FILL OUT THIS SECTION. DO NOT DELETE.
+**Problem:** Pkl is used for package schema validation and policy check pipelines, but other configuration surfaces like GitHub Actions workflows and `.nvchecker.toml` are written in raw YAML and TOML, leading to duplicated version pins and configuration drift. We need to evaluate whether the `apple/pkl-pantry` package registry can help us centralize and type-validate these configurations without reinventing the wheel.
+
+**Proposed fix:** Integrate and leverage specific packages from `package://pkg.pkl-lang.org/pkl-pantry/`:
+1. **`com.github.actions` (High Utility):** Allows defining our four GitHub Actions workflows (`build.yml`, `release.yml`, `discovery.yml`, `builder-image.yml`) in Pkl. This allows centralizing all version pins, directories, and shared steps in a single Pkl config, then compiling them to YAML. This directly resolves **Item #1** (duplicated package discovery commands) and **Item #2** (centralizing version pins) in a typesafe manner.
+2. **`pkl.toml` (Moderate Utility):** Can generate `.nvchecker.toml` dynamically from our package registry declarations if we decide to generate nvchecker targets programmatically rather than managing them manually.
+3. **Arch Linux Schemas (None):** The pantry has no native support for Arch Linux or pacman configuration formats; we must continue maintaining our custom `schemas/arch_pkg.pkl`.
+
+**Files:** `.github/workflows/`, `.nvchecker.toml`.
+
+---
+
+## 14. `pkl-lsp` Package Deferred Improvements
+
+All items refer to `packages/pkl-lsp/` — builds a GraalVM native image of
+`apple/pkl-lsp` v0.7.1. Package is live on the AUR. Chroot build validated.
+
+### 14a. `$srcdir` leak in binary
+
+**Problem:** `namcap` warns `/usr/bin/pkl-lsp` contains a reference to `$srcdir`
+(`pkgctl-build-output.txt` line 268). GraalVM embeds classpath/source paths in
+stack traces. Cosmetic but violates Arch packaging hygiene.
+
+**Proposed fix:** Test `-H:-PathInStackTrace` and `-H:+RemoveSaturatedTypeFlows`
+flags. If ineffective, accept as cosmetic.
+
+**Files:** `PKGBUILD`.
+
+### 14b. `-H:+FullRelro`
+
+**Problem:** Only namcap warning on the built package: `ELF file lacks FULL RELRO`
+(line 334).
+
+**Proposed fix:** Add `-H:+FullRelro` to `native-image` invocation (~line 95).
+Rebuild, verify namcap clean.
+
+**Files:** `PKGBUILD`.
+
+### 14c. Reflection surface verification
+
+**Problem:** `run-lsp-agent.py` was written for `colelawrence/pkl-lsp`. Five
+reflection surfaces (kotlin-reflect, Gson, lsp4j Proxy, jtreesitter FFM,
+ServiceLoader SPI) must be verified against `apple/pkl-lsp` v0.7.1 classes.
+
+**Proposed fix:** Run a full LSP session trace (initialize → didOpen →
+completion → hover → diagnostic). Diff trace metadata against agent-generated
+`META-INF/native-image/*.json`. Update agent if gaps found. Then run
+`--exact-reachability-metadata` as one-off validation.
+
+**Files:** `run-lsp-agent.py` (if gaps), `PKGBUILD` (temporary flag).
+
+### 14d. Tighten `-H:IncludeResources`
+
+**Problem:** `'.*'` embeds everything in the JAR → 328 MiB binary, 262 MiB is
+`byte[] for embedded resources` (line 231). Also causes 2-minute resource
+scanning phase (line 207).
+
+**Proposed fix:** Enumerate non-class resources in shadow JAR. Replace `'.*'`
+with `META-INF/native-image/.*`, `META-INF/services/.*`, and `.pkl` stdlib
+globs. Rebuild, verify LSP functional, compare binary size.
+
+**Files:** `PKGBUILD`.
+
+### 14e. Binary size optimization
+
+**Problem:** 328 MiB unstripped / 106.8 MiB compressed.
+
+**Proposed fix:** Primary lever is 14d. Secondary: verify
+`-H:+RemoveUnusedSymbols` active, evaluate dropping
+`-H:+ReportExceptionStackTraces` (debug info tradeoff). Profile with `--verbose`
+if further reduction needed.
+
+**Files:** `PKGBUILD`.
+
+### 14f. Check function
+
+**Problem:** No `check()` in PKGBUILD. Upstream has `./gradlew test`.
+
+**Proposed fix:** Add smoke test (`pkl-lsp --version`). Upgrade to full Gradle
+test suite if tests are fast and meaningful.
+
+**Files:** `PKGBUILD`.
+
+### 14g. aarch64 build validation
+
+**Problem:** `sha512sums_aarch64` present and GraalVM aarch64 tarball in source
+array, but build only tested on x86_64. Requires aarch64 hardware.
+
+**Proposed fix:** `makepkg` on ARM host, verify LSP initialize response.
+
+**Files:** None (build logic is arch-agnostic).
+
+### 14h. GraalVM stable migration
+
+**Problem:** Current `_graalvm_ver=25.1.3-dev-20260619_0111` references a dev
+build because GraalVM CE 25.0.2 has a `linkToNative` bug. Dev build URL is
+ephemeral.
+
+**Proposed fix:** When GraalVM CE 25.1.x stable ships (~June 25 2026): bump
+`_graalvm_ver`, update `source_x86_64`/`source_aarch64` URL patterns (stable
+releases use `graalvm/graalvm-ce-builds` with different path conventions), run
+`updpkgsums`, rebuild, push AUR update.
+
+**Files:** `PKGBUILD` (lines 16, 22-27, 31-32).
+
+### 14i. `pkl-lsp-bin` rewrite (blocked)
+
+**Blocked:** Apple does not currently publish native binaries for `pkl-lsp`
+(tracking [issue #60](https://github.com/apple/pkl-lsp/issues/60)). Plan assumes
+they will follow `apple/pkl` convention: bare binaries
+(`pkl-lsp-linux-{amd64,aarch64}`), no tarball, tag without `v` prefix.
+
+**Proposed fix:** When native binaries appear: rewrite `packages/pkl-lsp-bin/`
+with `_pkgname=pkl-lsp`, `provides/conflicts`, `options=('!strip')`,
+`_deploy_aur=true`. Bootstrap, chroot validate, register, deploy.
+
+**Files:** `packages/pkl-lsp-bin/PKGBUILD`, `.nvchecker.toml`.
+
+### 14j. Metadata regeneration
+
+**Problem:** `package.json` and `package.pkl` stale after `makedepends` changed
+from `('python')` to `('git' 'python')`. Also the build warnings in
+`pkgctl-build-output.txt` §0.2 need triage (7 native-image deprecation
+warnings; tracked, no action until GraalVM enforces `-H:+UnlockExperimentalVMOptions`).
+
+**Proposed fix:** Regenerate both metadata files. Document deprecation timeline.
+
+**Files:** `package.json`, `package.pkl`.
+
+### 14k. Native-image deprecation warnings
+
+**Problem:** 7 warnings at `pkgctl-build-output.txt` lines 177-185. Three
+experimental options (`IncludeResources`, `ForeignAPISupport`, `StripDebugInfo`)
+will need `-H:+UnlockExperimentalVMOptions` in future GraalVM. Two deprecated
+options (`--no-fallback`, `FallbackThreshold`) have no effect and can be removed
+now.
+
+**Proposed fix:** Remove `--no-fallback` from `native-image` invocation. Add
+`-H:+UnlockExperimentalVMOptions` when GraalVM enforces it. Remove
+`FallbackThreshold` if present (check: it's a warning from `--no-fallback` alias).
+
+**Files:** `PKGBUILD`.
 
 ---
 
