@@ -233,9 +233,10 @@ are quality improvements deferred from initial development.
 
 ### Build Quality
 
-- [ ] **Tighten `-H:IncludeResources`**: Replace `'.*'` with specific resource
-      patterns (`META-INF/`, classpath resources). Reduces binary size and
-      prevents embedding unwanted files.
+- [x] **Tighten `-H:IncludeResources`**: Removed `'.*'`; rely on agent-generated
+      `reachability-metadata.json` resources section (84 resources, 10 MiB).
+      Binary: 328 MiB → 60 MiB (–82%), compressed: 107 MiB → 19 MiB (–82%).
+      Build time: 5m 36s → 2m 56s (–47%).
 - [ ] **Verify `run-lsp-agent.py` reflection surfaces**: Confirm all 5 reflection
       surfaces (kotlin-reflect, Gson, lsp4j Proxy, jtreesitter FFM, ServiceLoader
       SPI) are exercised against `apple/pkl-lsp` v0.7.1 classes, not the
@@ -249,17 +250,24 @@ are quality improvements deferred from initial development.
 
 ### Optimization
 
-- [ ] **Binary size**: 328 MiB unstripped / 106.8 MiB compressed. Investigate:
-      WP-SCCP (enabled by default in GraalVM 25, but may need explicit flags),
-      `-H:+RemoveUnusedSymbols`, tighter `IncludeResources` patterns (above).
+- [ ] **Binary size**: 60 MiB unstripped / 19 MiB compressed (was 328/107 MiB).
+      Primary reduction done (14d). Remaining: verify `-H:+RemoveUnusedSymbols`
+      active, evaluate dropping `-H:+ReportExceptionStackTraces`.
 - [ ] **`-H:+FullRelro`**: Trivial addition — fixes the only namcap warning
       (`ELF file lacks FULL RELRO, check LDFLAGS`).
 
 ### Completeness
 
-- [ ] **`check()` function**: Upstream has Gradle-based tests (`./gradlew test`).
-      Add `check()` to the PKGBUILD if tests are meaningful and don't add
-      excessive build time.
+- [ ] **`check()` function**: Upstream tests are JUnit 5 (Jupiter) with two custom
+      test engines — `ParserSnippetTestEngine` and `DiagnosticsSnippetTestEngine` —
+      that parse `.pkl` snippet files with embedded assertions from `src/test/files/`.
+      Dependencies: `assertj` 3.27.7, `junit-jupiter` 6.1.0, plus a native
+      Pkl CLI binary (`pklCli`, ~95 MB) downloaded as a test dependency and passed
+      via `-DpklExecutable=`. Tests also require `--enable-native-access=ALL-UNNAMED`.
+      **Not suitable for `check()`** — requires network access for the Pkl CLI
+      download and pulls heavy `checkdepends`. **Recommendation**: smoke test only
+      (`pkl-lsp --version` or LSP initialize JSON-RPC). Full Gradle test suite
+      deferred to CI or manual verification.
 - [ ] **Update `package.json` / `package.pkl`**: Auto-generated metadata is stale
       after `makedepends` changed from `('python')` to `('git' 'python')`.
 

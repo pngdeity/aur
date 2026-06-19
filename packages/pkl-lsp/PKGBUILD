@@ -89,14 +89,11 @@ build() {
 
   native-image \
     -J--enable-native-access=ALL-UNNAMED \
-    --no-fallback \
     -march=compatibility \
-    -H:IncludeResources='.*' \
     --enable-url-protocols=https,http \
     --enable-native-access=ALL-UNNAMED \
     -H:+ForeignAPISupport \
     --initialize-at-build-time= \
-    -H:-ParseRuntimeOptions \
     -H:+ReportExceptionStackTraces \
     -H:+StripDebugInfo \
     --enable-sbom=false \
