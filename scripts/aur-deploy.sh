@@ -42,6 +42,12 @@ rm -rf "$AUR_DIR"
 mkdir -p "$AUR_DIR"
 cp PKGBUILD "$AUR_DIR/PKGBUILD"
 
+# Copy changelog file if referenced in PKGBUILD (makepkg --printsrcinfo needs it)
+CHANGELOG_FILE=$("$SCRIPT_DIR/pkgvar" "$AUR_DIR/PKGBUILD" changelog 2>/dev/null || true)
+if [[ -n "$CHANGELOG_FILE" && -f "$CHANGELOG_FILE" ]]; then
+	cp "$CHANGELOG_FILE" "$AUR_DIR/$CHANGELOG_FILE"
+fi
+
 # 1. Inline source directives (recursively resolve relative paths starting with ../)
 echo "  -> Resolving source directives"
 while grep -q '^source "\.\./' "$AUR_DIR/PKGBUILD"; do
@@ -119,9 +125,16 @@ fi
 # Copy processed files into clone
 cp "$AUR_DIR/PKGBUILD" "$AUR_DIR/.SRCINFO" "$AUR_CLONE/"
 
+# Copy changelog if present (referenced by PKGBUILD changelog=)
+CHANGELOG_FILE=$("$SCRIPT_DIR/pkgvar" "$AUR_DIR/PKGBUILD" changelog 2>/dev/null || true)
+if [[ -n "$CHANGELOG_FILE" && -f "$AUR_DIR/$CHANGELOG_FILE" ]]; then
+	cp "$AUR_DIR/$CHANGELOG_FILE" "$AUR_CLONE/"
+fi
+
 # Diff processed output against current AUR state
 cd "$AUR_CLONE"
 git add PKGBUILD .SRCINFO
+[[ -f "$CHANGELOG_FILE" ]] && git add "$CHANGELOG_FILE"
 if git diff --cached --quiet; then
 	echo "  -> AUR repository already up to date (content identical)."
 	exit 0
