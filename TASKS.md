@@ -177,6 +177,12 @@ repo-root/x86_64/`, and `cd "$BUILD_DIR"` to return.
 
 ---
 
+## 13. Determine utility of github.com/apple/pkl-pantry
+
+**Problem:** Don't reinvent the wheel. FILL OUT THIS SECTION. DO NOT DELETE.
+
+---
+
 ## References
 
 - Initial audit: `docs/TODO.md` § CI/CD Compliance (this file)
