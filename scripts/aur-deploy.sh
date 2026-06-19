@@ -107,11 +107,12 @@ echo "  -> SSH connection verified."
 AUR_CLONE="/tmp/aur-deploy/${PKG_NAME}-remote"
 rm -rf "$AUR_CLONE"
 
-if git clone "$AUR_REMOTE" "$AUR_CLONE" 2>/dev/null; then
+# AUR requires master branch; respect that regardless of local init.defaultBranch
+if git -c init.defaultBranch=master clone "$AUR_REMOTE" "$AUR_CLONE" 2>/dev/null; then
 	echo "  -> Cloned existing AUR repository for ${PKG_NAME}"
 else
 	echo "::error::AUR repository for ${PKG_NAME} does not exist."
-	echo "::error::You must register the pkgbase '${PKG_NAME}' on https://aur.archlinux.org/ first."
+	echo "::error::Register it first: git -c init.defaultBranch=master clone ${AUR_REMOTE}"
 	exit 1
 fi
 

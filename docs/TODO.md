@@ -219,6 +219,79 @@ Outstanding architectural and documentation items requiring completion.
       support via `declare -p`, with single/multi-element examples and JSON mode
       output.
 
+## `pkl-lsp` Package (2026-06-18)
+
+All items below refer to `packages/pkl-lsp/` (build-from-source via GraalVM
+native-image from `apple/pkl-lsp` source). The package builds and works; these
+are quality improvements deferred from initial development.
+
+### Before AUR Deployment
+
+- [ ] **`pkgctl build` chroot validation**: Run `pkgctl build` in a clean chroot
+      to confirm no dependency resolution errors, build failures, or namcap
+      issues in the Arch standard build environment. (Running 2026-06-18)
+
+### Build Quality
+
+- [ ] **Tighten `-H:IncludeResources`**: Replace `'.*'` with specific resource
+      patterns (`META-INF/`, classpath resources). Reduces binary size and
+      prevents embedding unwanted files.
+- [ ] **Verify `run-lsp-agent.py` reflection surfaces**: Confirm all 5 reflection
+      surfaces (kotlin-reflect, Gson, lsp4j Proxy, jtreesitter FFM, ServiceLoader
+      SPI) are exercised against `apple/pkl-lsp` v0.7.1 classes, not the
+      `colelawrence/pkl-lsp` fork for which the agent was originally written.
+- [ ] **`--exact-reachability-metadata` verification**: Run as one-off validation
+      to detect missing reflection, JNI, or resource registrations in the
+      agent-generated metadata.
+- [ ] **Test aarch64 build**: `sha512sums_aarch64` generated and GraalVM aarch64
+      tarball exists in source array, but the build has only been tested on
+      x86_64.
+
+### Optimization
+
+- [ ] **Binary size**: 328 MiB unstripped / 106.8 MiB compressed. Investigate:
+      WP-SCCP (enabled by default in GraalVM 25, but may need explicit flags),
+      `-H:+RemoveUnusedSymbols`, tighter `IncludeResources` patterns (above).
+- [ ] **`-H:+FullRelro`**: Trivial addition — fixes the only namcap warning
+      (`ELF file lacks FULL RELRO, check LDFLAGS`).
+
+### Completeness
+
+- [ ] **`check()` function**: Upstream has Gradle-based tests (`./gradlew test`).
+      Add `check()` to the PKGBUILD if tests are meaningful and don't add
+      excessive build time.
+- [ ] **Update `package.json` / `package.pkl`**: Auto-generated metadata is stale
+      after `makedepends` changed from `('python')` to `('git' 'python')`.
+
+### GraalVM Migration
+
+- [ ] **Switch to stable GraalVM**: Current `_graalvm_ver=25.1.3-dev-20260619_0111`
+      references a dev build (from `graalvm/graalvm-ce-dev-builds`) because
+      GraalVM CE 25.0.2 has a `linkToNative` bug in `PolymorphicSignatureWrapperMethod`
+      that crashes native-image compilation for any application using jtreesitter
+      FFM downcalls. The fix exists in the 25.1.x branch. When a stable 25.1.x
+      release ships (~June 25 2026 per release calendar):
+  1. Update `_graalvm_ver` to the stable version tag.
+  2. Update `source_x86_64` and `source_aarch64` URL patterns (stable releases
+     use `graalvm/graalvm-ce-builds` with different filename conventions).
+  3. Run `updpkgsums` to regenerate checksums.
+  4. Rebuild and validate.
+
+## `pkl-lsp-bin` Package
+
+The `packages/pkl-lsp-bin/` package is deferred. It currently points at a
+single native binary release from the `colelawrence/pkl-lsp` fork at version
+`0.6.0-native.20260518.5` and needs a full rewrite:
+
+- [ ] **Rebase to `apple/pkl-lsp`**: Switch from `colelawrence/pkl-lsp` fork to
+      official `apple/pkl-lsp` releases. Determine if Apple publishes native
+      binaries, or if this package should download pre-built native images from
+      the `pkl-lsp` package's build output.
+- [ ] **Update maintainer format**: Fix `# Maintainer:` line to match repo
+      standard (`pngdeity <pngdeity@tutanota.com>`).
+- [ ] **Add `_pkgname` variable**: Per repo variant conventions.
+- [ ] **Fix `license=`**: Verify license matches upstream (Apache-2.0).
+
 ## Ready for Human (Post-Swarm 2026-05-15)
 
 These items require human execution — chroot builds, branch management, secret
