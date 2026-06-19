@@ -46,5 +46,8 @@ packages/*/.SRCINFO
 # Ignore AUR .git metadata 
 packages/*/.git
 
+# Downloaded license files (source=("LICENSE.txt::..."))
+packages/*/LICENSE*
+
 # Downloaded data artifacts (e.g. GeoIP databases)
 *.mmdb
