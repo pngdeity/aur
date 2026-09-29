@@ -1,18 +1,19 @@
-# Maintainer: Nathan Somers <pngdeity@tutanota.com>
-# Contributor: colelawrence <https://github.com/colelawrence/pkl-lsp>
-_githubname="colelawrence/pkl-lsp"
-_deploy_aur=true
+# Maintainer: pngdeity <pngdeity@tutanota.com>
+# DEPRECATED: upstream (apple/pkl-lsp) does not publish native binaries.
+# This package tracks a stale fork (colelawrence/pkl-lsp) and MUST NOT be
+# AUR-deployed. Do not set _deploy_aur=true. See TASKS.md §14i.
+_pkgname=pkl-lsp
 
 pkgname=pkl-lsp-bin
 pkgver=0.6.0
-pkgrel=1
-pkgdesc="Language Server Protocol implementation for Pkl (GraalVM native binary)"
+pkgrel=2
+pkgdesc="Language Server Protocol implementation for Pkl"
 arch=('x86_64' 'aarch64')
-url="https://github.com/colelawrence/pkl-lsp"
+url="https://github.com/apple/pkl-lsp"
 license=('Apache-2.0')
 depends=('glibc' 'zlib')
-provides=('pkl-lsp')
-conflicts=('pkl-lsp')
+provides=("$_pkgname")
+conflicts=("$_pkgname")
 source_x86_64=("${url}/releases/download/${pkgver}-native.20260518.5/pkl-lsp-${pkgver}-native.20260518.5-linux-x64.tar.gz")
 source_aarch64=("${url}/releases/download/${pkgver}-native.20260518.5/pkl-lsp-${pkgver}-native.20260518.5-linux-arm64.tar.gz")
 sha512sums_x86_64=('922dfac283b844dfdbb30809bcbfd9b125a7f97d7c41ec476f73800653f4975098e0d546bae3f608e71b800212b5c8c8e7d6676cc9007da16019f2d9da87e39c')
