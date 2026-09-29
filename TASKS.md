@@ -268,18 +268,18 @@ array, but build only tested on x86_64. Requires aarch64 hardware.
 
 **Files:** None (build logic is arch-agnostic).
 
-### 14h. GraalVM stable migration
+### 14h. GraalVM stable migration ✅
 
-**Problem:** Current `_graalvm_ver=25.1.3-dev-20260619_0111` references a dev
-build because GraalVM CE 25.0.2 has a `linkToNative` bug. Dev build URL is
-ephemeral.
+**Done:** Migrated from the pruned `graalvm-ce-dev-builds` tag
+`25.1.3-dev-20260619_0111` (upstream 404s) to the current stable GraalVM CE
+release `25.4.4.1.1`. Moved to `graalvm-ce-builds` and the stable asset naming
+(`graalvm-community-jdk-25i4-25.0.4.1.1_linux-{x64,aarch64}_bin.tar.gz`),
+registered in `_graalvm_dir`. Checksums regenerated via `updpkgsums`; both
+tarballs verified to contain `bin/native-image`. Local `makepkg` build succeeds:
+`native-image` completes, binary reports `pkl-lsp version 0.7.1-dev+`, namcap
+clean. Committed 2026-09-29.
 
-**Proposed fix:** When GraalVM CE 25.1.x stable ships (~June 25 2026): bump
-`_graalvm_ver`, update `source_x86_64`/`source_aarch64` URL patterns (stable
-releases use `graalvm/graalvm-ce-builds` with different path conventions), run
-`updpkgsums`, rebuild, push AUR update.
-
-**Files:** `PKGBUILD` (lines 16, 22-27, 31-32).
+**Files:** `PKGBUILD` (lines 18-35).
 
 ### 14i. `pkl-lsp-bin` rewrite (blocked)
 
@@ -294,16 +294,16 @@ with `_pkgname=pkl-lsp`, `provides/conflicts`, `options=('!strip')`,
 
 **Files:** `packages/pkl-lsp-bin/PKGBUILD`, `.nvchecker.toml`.
 
-### 14j. Metadata regeneration
+### 14j. Metadata regeneration ✅
 
-**Problem:** `package.json` and `package.pkl` stale after `makedepends` changed
-from `('python')` to `('git' 'python')`. Also the build warnings in
-`pkgctl-build-output.txt` §0.2 need triage (7 native-image deprecation
-warnings; tracked, no action until GraalVM enforces `-H:+UnlockExperimentalVMOptions`).
+**Done:** Regenerated 2026-09-29 via `scripts/validate-pkgbuilds-pkl.sh`, which
+now passes end-to-end (25 packages, exit 0). Required a `pkl_writer.py` fix:
+the emitter no longer includes arbitrary local `_`-prefixed variables, only the
+custom variables declared in `schemas/arch_pkg.pkl` (previously `_graalvm_ver`
+produced invalid Pkl). Regenerated metadata reflects the corrected maintainer,
+`pkgname`, `pkgrel`, `url`, and `makedepends`.
 
-**Proposed fix:** Regenerate both metadata files. Document deprecation timeline.
-
-**Files:** `package.json`, `package.pkl`.
+**Files:** `package.json`, `package.pkl` (generated artifacts, not tracked).
 
 ### 14k. Native-image deprecation warnings ✅
 
