@@ -275,37 +275,37 @@ are quality improvements deferred from initial development.
       download and pulls heavy `checkdepends`. **Recommendation**: smoke test only
       (`pkl-lsp --version` or LSP initialize JSON-RPC). Full Gradle test suite
       deferred to CI or manual verification.
-- [ ] **Update `package.json` / `package.pkl`**: Auto-generated metadata is stale
-      after `makedepends` changed from `('python')` to `('git' 'python')`.
+- [x] **Update `package.json` / `package.pkl`**: Regenerated 2026-09-29 via
+      `scripts/validate-pkgbuilds-pkl.sh` (now passes, exit 0). Required a
+      `pkl_writer.py` fix so local helper variables such as `_graalvm_ver` are
+      no longer emitted.
 
 ### GraalVM Migration
 
-- [ ] **Switch to stable GraalVM**: Current `_graalvm_ver=25.1.3-dev-20260619_0111`
-      references a dev build (from `graalvm/graalvm-ce-dev-builds`) because
-      GraalVM CE 25.0.2 has a `linkToNative` bug in `PolymorphicSignatureWrapperMethod`
-      that crashes native-image compilation for any application using jtreesitter
-      FFM downcalls. The fix exists in the 25.1.x branch. When a stable 25.1.x
-      release ships (~June 25 2026 per release calendar):
-  1. Update `_graalvm_ver` to the stable version tag.
-  2. Update `source_x86_64` and `source_aarch64` URL patterns (stable releases
-     use `graalvm/graalvm-ce-builds` with different filename conventions).
-  3. Run `updpkgsums` to regenerate checksums.
-  4. Rebuild and validate.
+- [x] **Switch to stable GraalVM**: Migrated 2026-09-29 to `_graalvm_ver=25.4.4.1.1`
+      on `graalvm/graalvm-ce-builds` (the dev tag `25.1.3-dev-20260619_0111` was
+      pruned upstream and 404s). Checksums regenerated via `updpkgsums`; both
+      linux tarballs verified to contain `bin/native-image`; local `makepkg`
+      build succeeds and the binary reports `pkl-lsp version 0.7.1-dev+`.
 
 ## `pkl-lsp-bin` Package
 
-The `packages/pkl-lsp-bin/` package is deferred. It currently points at a
-single native binary release from the `colelawrence/pkl-lsp` fork at version
-`0.6.0-native.20260518.5` and needs a full rewrite:
+The `packages/pkl-lsp-bin/` package is deferred and marked DEPRECATED in its
+PKGBUILD header. It still points at a native binary release from the
+`colelawrence/pkl-lsp` fork at version `0.6.0-native.20260518.5`; `_deploy_aur`
+has been removed so the stale fork is never pushed to the AUR.
 
+Metadata hygiene items below were completed 2026-09-29; the source rebase
+remains blocked until Apple publishes native binaries (issue #60):
+
+- [x] **Update maintainer format**: `pngdeity <pngdeity@tutanota.com>`.
+- [x] **Add `_pkgname` variable**: `_pkgname=pkl-lsp`; `provides`/`conflicts`
+      now derive from it.
+- [x] **Fix `license=`**: Verified Apache-2.0 upstream.
 - [ ] **Rebase to `apple/pkl-lsp`**: Switch from `colelawrence/pkl-lsp` fork to
-      official `apple/pkl-lsp` releases. Determine if Apple publishes native
-      binaries, or if this package should download pre-built native images from
-      the `pkl-lsp` package's build output.
-- [ ] **Update maintainer format**: Fix `# Maintainer:` line to match repo
-      standard (`pngdeity <pngdeity@tutanota.com>`).
-- [ ] **Add `_pkgname` variable**: Per repo variant conventions.
-- [ ] **Fix `license=`**: Verify license matches upstream (Apache-2.0).
+      official `apple/pkl-lsp` releases. Blocked — Apple publishes only a JAR
+      (no native binaries) through 0.8.0. When binaries appear, repoint the
+      sources and set `_deploy_aur=true`.
 
 ## Ready for Human (Post-Swarm 2026-05-15)
 

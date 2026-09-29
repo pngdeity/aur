@@ -5,7 +5,7 @@ _deploy_aur=true
 
 pkgname=$_pkgname
 pkgver=0.7.1
-pkgrel=3
+pkgrel=4
 pkgdesc="Language Server Protocol implementation for Pkl"
 arch=('x86_64' 'aarch64')
 url="https://github.com/apple/pkl-lsp"
@@ -103,6 +103,12 @@ build() {
     --enable-sbom=false \
     -jar "${JAR}" \
     -o "${pkgname}"
+}
+
+check() {
+  cd "${srcdir}/${pkgname}-${pkgver}"
+
+  ./${pkgname} --version | grep -q "^${pkgname} version "
 }
 
 package() {
