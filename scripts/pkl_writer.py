@@ -19,6 +19,26 @@ from typing import Any
 
 _LIFECYCLE_FUNC_KEYS: set[str] = {"verify", "pkgverFunc", "prepare", "build", "check", "packageFunc"}
 
+# Custom _-prefixed variables declared as fields in schemas/arch_pkg.pkl.
+# Local PKGBUILD helper variables (e.g. _graalvm_ver) are intentionally NOT
+# emitted — they are not schema fields and would fail Pkl validation.
+_KNOWN_CUSTOM_VARS: set[str] = {
+    "_deploy_aur",
+    "_pkgname",
+    "_githubname",
+    "_upstream_aur_pkg",
+    "_upstream_arch_repo",
+    "_demote_upstream_maintainer",
+    "_auto_merge_build",
+    "_use_common_gemini_settings",
+    "_repo_subarch",
+    "_tag",
+    "_npmscope",
+    "_npmname",
+    "_npmver",
+    "_name",
+}
+
 
 def _is_multiline(s: str) -> bool:
     return "\n" in s
@@ -212,8 +232,12 @@ def write_pkl_module(vars_: dict[str, Any], funcs: dict[str, str]) -> str:
         lines.append(_format_field(key, val, body_indent))
 
     # Emit hidden _-prefixed variables (without "hidden" keyword — already in class def)
-    hidden_vars = [k for k in sorted(vars_) if k.startswith("_") and k not in emitted]
-    for key in hidden_vars:
+    hidden_vars = [
+        k
+        for k in vars_
+        if k.startswith("_") and k not in emitted and k in _KNOWN_CUSTOM_VARS
+    ]
+    for key in sorted(hidden_vars):
         val = vars_[key]
         if _is_empty_value(val):
             continue
