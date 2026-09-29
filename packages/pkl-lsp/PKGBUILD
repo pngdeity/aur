@@ -15,23 +15,24 @@ depends=('glibc' 'zlib')
 provides=("$_pkgname")
 conflicts=("$_pkgname")
 
-_graalvm_ver=25.1.3-dev-20260619_0111
+_graalvm_ver=25.4.4.1.1
+_graalvm_dir=graalvm-community-jdk-25i4-25.0.4.1.1
 source=(
   "${pkgname}-${pkgver}.tar.gz::${url}/archive/refs/tags/${pkgver}.tar.gz"
   "LICENSE.txt::https://raw.githubusercontent.com/${_githubname}/${pkgver}/LICENSE.txt"
   "run-lsp-agent.py"
 )
 source_x86_64=(
-  "graalvm-jdk-${_graalvm_ver}-x64.tar.gz::https://github.com/graalvm/graalvm-ce-dev-builds/releases/download/${_graalvm_ver}/graalvm-community-dev-linux-amd64.tar.gz"
+  "graalvm-jdk-${_graalvm_ver}-x64.tar.gz::https://github.com/graalvm/graalvm-ce-builds/releases/download/graal-${_graalvm_ver}/${_graalvm_dir}_linux-x64_bin.tar.gz"
 )
 source_aarch64=(
-  "graalvm-jdk-${_graalvm_ver}-arm64.tar.gz::https://github.com/graalvm/graalvm-ce-dev-builds/releases/download/${_graalvm_ver}/graalvm-community-dev-linux-aarch64.tar.gz"
+  "graalvm-jdk-${_graalvm_ver}-arm64.tar.gz::https://github.com/graalvm/graalvm-ce-builds/releases/download/graal-${_graalvm_ver}/${_graalvm_dir}_linux-aarch64_bin.tar.gz"
 )
 sha512sums=('88fa02a73aaf99169df900ee9e300f52ad0b86f52ca4f82b54d1d1fc9fd9053af5d0a9af35cee34c112ec6aa7a99dfc77d944ce5a5ae723845ae2a11750f078d'
             '98f6b79b778f7b0a15415bd750c3a8a097d650511cb4ec8115188e115c47053fe700f578895c097051c9bc3dfb6197c2b13a15de203273e1a3218884f86e90e8'
             '0ad269086aa96c77d2c9a66bdab8fe59adb11cc8bd0e024266f33d474f415c8b5145157b26901fbaeca8bb92f32156361f12564af46727099671300b12e41d74')
-sha512sums_x86_64=('7097c459e88b4fe3bfbc81f1c5246c0d46988d6503176a373a30a3dc34836c50577b07af81ea7c82f0bdb866e5788b05c1f8434f8530c54900cc463e8f3ff7a2')
-sha512sums_aarch64=('3e3aeebdd8dfac4b8c1e2ac01ccee015dc15f3582a5f65d106c068642f547aa9d888ac3b2d3ce085497ccfb5ff4bae02819e90b6582c46005aea5b1e2b48779d')
+sha512sums_x86_64=('9ab0e2c8b0e60742e0dd976205258f460534998afce6ab3becfbff275a257b0c960a9296c8039175f00447f6139ad434009ce4dfd226719ffcb7dd4130a87970')
+sha512sums_aarch64=('a2796f1fcfab0d59b43ffe125a46aeb5409a058ffd1fcd28cf2b923c0cb7ce3977bc067627950da0d4cd9452c20c661da35940696331f24739caaf567adf7f98')
 
 prepare() {
   mkdir -p "${srcdir}/graalvm-jdk"
