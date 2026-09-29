@@ -342,13 +342,16 @@ distinct target and responsibility boundary:
 - **provides/conflicts convention**: Per the Arch Wiki
   [PKGBUILD#conflicts netbeans example](https://wiki.archlinux.org/title/PKGBUILD#conflicts),
   pacman resolves variant mutual exclusivity transitively through `provides`.
-  Every variant package must declare both `provides=("$_pkgname")` and
-  `conflicts=("$_pkgname")` — enumerating sibling variants in `conflicts` is
-  unnecessary. Two additional rules apply universally: (1) every entry in
-  `conflicts` or `replaces` must have a matching entry in `provides` (no
-  unprovided conflicts); (2) `provides` and `conflicts` must not contain the
-  package's own `pkgname` (self-reference). See the quality rules engine TODO
-  (`docs/TODO.md`) for planned automation of these checks.
+  Every sibling variant (a package whose `_pkgname` differs from its `pkgname`)
+  must declare both `provides=("$_pkgname")` and `conflicts=("$_pkgname")` —
+  enumerating sibling variants in `conflicts` is unnecessary. The base package
+  (where `_pkgname` equals `pkgname`) MUST NOT declare `provides`/`conflicts`:
+  it is the name the variants provide, so declaring it would be a self-reference
+  (rejected by the `no_self_reference` policy rule). Two additional rules apply
+  universally: (1) every entry in `conflicts` or `replaces` must have a matching
+  entry in `provides` (no unprovided conflicts); (2) `provides` and `conflicts`
+  must not contain the package's own `pkgname` (self-reference). See the quality
+  rules engine TODO (`docs/TODO.md`) for planned automation of these checks.
 
 ### Tool Supremacy & Precision
 

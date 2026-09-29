@@ -12,8 +12,6 @@ url="https://github.com/apple/pkl-lsp"
 license=('Apache-2.0')
 makedepends=('git' 'python')
 depends=('glibc' 'zlib')
-provides=("$_pkgname")
-conflicts=("$_pkgname")
 
 _graalvm_ver=25.4.4.1.1
 _graalvm_dir=graalvm-community-jdk-25i4-25.0.4.1.1
