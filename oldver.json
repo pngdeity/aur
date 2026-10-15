@@ -3,9 +3,6 @@
   "data": {
     "clash-geoip": {
       "version": "202610150028"
-    },
-    "opencode-git": {
-      "version": "1.16.2"
     }
   }
 }

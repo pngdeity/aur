@@ -1,4 +1,0 @@
-[opencode-git]
-source = "git"
-git = "https://github.com/anomalyco/opencode.git"
-prefix = "v"
