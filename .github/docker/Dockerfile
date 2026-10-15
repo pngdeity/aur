@@ -7,6 +7,7 @@ RUN pacman -Syu --noconfirm \
     sudo \
     jq \
     nvchecker \
+    python-packaging \
     openssh \
     pacman-contrib \
     rsync \
