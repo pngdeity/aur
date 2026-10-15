@@ -191,6 +191,17 @@ Outstanding architectural and documentation items requiring completion.
 
 ## Documentation
 
+- [ ] **`aur-deploy.sh` changelog guard is silent**: `scripts/aur-deploy.sh`
+      copies a package's `changelog=` file only if it exists (lines 47-49 for
+      the staging dir, 129-131 for the AUR clone), so a PKGBUILD declaring a
+      `changelog=` that is absent is deployed **without** the file and nothing
+      reports it. Found 2026-10-15: `amass-git` and `amass-bin` both declared
+      changelogs that never existed in any commit (introduced by `c98db45`),
+      which made `makepkg` fail outright (`changelog file (...) does not exist
+      or is not a regular file`) and left the AUR copies stuck at pkgrel 1.
+      Both declarations were dropped 2026-10-15. The script is being replaced on
+      another branch and must not be modified here; the gap is recorded so the
+      replacement does not inherit it. (Due: Indeterminate)
 - [ ] **Withdrawn-maintainership audit**: `_deploy_aur=true` was found on four
       packages whose AUR entries are now ABSENT — `apm`, `apm-go-git`,
       `python-azure-ai-inference`, `python-llm-github-models`. All four flags
