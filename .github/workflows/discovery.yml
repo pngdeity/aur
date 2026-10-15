@@ -41,8 +41,11 @@ jobs:
           # repository, then "not in a git directory" from gh).
           #
           # git also refuses a repository owned by another user, so the tree is
-          # registered as safe for both users.
-          find . -mindepth 1 -maxdepth 1 -not -name .git -exec chown -R builder:builder {} +
+          # registered as safe for both users. The tree root itself is included
+          # because nvchecker writes newver.json into it, so builder needs write
+          # permission on the directory, not just on its contents.
+          chown -R builder:builder .
+          chown -R root:root .git
           git config --global --add safe.directory "$PWD"
           sudo -u builder git config --global --add safe.directory "$PWD"
 
