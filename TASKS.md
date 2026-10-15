@@ -201,32 +201,104 @@ All items refer to `packages/pkl-lsp/` — builds a GraalVM native image of
 (`pkgctl-build-output.txt` line 268). GraalVM embeds classpath/source paths in
 stack traces. Cosmetic but violates Arch packaging hygiene.
 
-**Proposed fix:** Test `-H:-PathInStackTrace` and `-H:+RemoveSaturatedTypeFlows`
-flags. If ineffective, accept as cosmetic.
+**Investigated (2026-10-15):** Both proposed flags are wrong for this.
 
-**Files:** `PKGBUILD`.
+- `-H:-PathInStackTrace` does not exist in GraalVM 25. There is no option of
+  that name — `native-image --expert-options-all` (2661 lines) has no
+  `PathInStackTrace` entry. The nearest matches are runtime stack-trace
+  controls (`-H:MaxJavaStackTraceDepth`, `-H:±OmitHotExceptionStacktrace`,
+  `-H:±StackTrace` which is "Deprecated, has no effect") and none of them strip
+  build-time source paths from the image.
+- `-H:±RemoveSaturatedTypeFlows` **is already enabled by default**
+  (`--expert-options-all`: "Default: + (enabled)"), so passing it changes
+  nothing.
 
-### 14b. `-H:+FullRelro` ✅
+**Root cause of the leak (reproduced):** The strings are real source artifacts,
+not stack-trace metadata. The built binary contains
+`/tmp/makepkg/pkl-lsp/src/pkl-lsp-0.7.1/.gradle/zig/zig-linux-amd64-0.16.0/lib/libc/include/generic-glibc/*.h`
+and `build/repos/tree-sitter` paths. The pkl-lsp native build compiles
+tree-sitter via **zig**, and the bundled zig libc headers carry absolute build
+paths into the object files that `native-image` then links. No native-image
+flag governs strings that arrive via the linker from a foreign toolchain.
+
+**Status:** Accepted as cosmetic. Removing it would require controlling zig's
+header staging (patching upstream's `zig.gradle.kts`/tree-sitter build) for a
+warning with no runtime effect.
+
+**Files:** `PKGBUILD` (no change), `buildSrc/.../zig.gradle.kts` (upstream).
+
+### 14b. `-H:+FullRelro` (done)
 
 **Done:** Added `-H:NativeLinkerOption=-Wl,-z,relro,-z,now` (2026-06-19). `-H:+FullRelro`
 doesn't exist in GraalVM 25; the correct approach is passing linker flags. namcap clean.
 
 **Files:** `PKGBUILD` (line 99).
 
-### 14c. Reflection surface verification
+### 14c. Reflection surface verification (done)
 
 **Problem:** `run-lsp-agent.py` was written for `colelawrence/pkl-lsp`. Five
 reflection surfaces (kotlin-reflect, Gson, lsp4j Proxy, jtreesitter FFM,
 ServiceLoader SPI) must be verified against `apple/pkl-lsp` v0.7.1 classes.
 
-**Proposed fix:** Run a full LSP session trace (initialize → didOpen →
-completion → hover → diagnostic). Diff trace metadata against agent-generated
-`META-INF/native-image/*.json`. Update agent if gaps found. Then run
-`--exact-reachability-metadata` as one-off validation.
+**Root cause (found 2026-10-15):** The old driver spawned the JAR as a
+subprocess over pipes, so the tracing agent observed only JSON-RPC wire traffic.
+lsp4j's launcher reflection surface (`Launcher.Builder.create()` delegate
+discovery, `ServiceEndpoints.toEndpoint` / `toServiceObject` proxy creation,
+`GenericEndpoint` construction) never executed in the traced JVM. The resulting
+metadata therefore registered **0 of 565** lsp4j classes and was structurally
+blind to the whole DTO surface. Reproduced live against the installed package:
+a well-formed `initialize` carrying `workspaceFolders` aborted with
+`MissingReflectionRegistrationError: Cannot reflectively invoke constructor
+'public org.eclipse.lsp4j.WorkspaceFolder()'` and published no diagnostics.
 
-**Files:** `run-lsp-agent.py` (if gaps), `PKGBUILD` (temporary flag).
+**Done:** Replaced the subprocess driver with upstream's two-step mechanism
+(`apple/pkl-lsp` PR #226, which is why this issue is fixed upstream):
 
-### 14d. Tighten `-H:IncludeResources` ✅
+1. `RunLspAgent.java` — hosts client and server **in the same JVM** (mirrors
+   upstream `simpleclientrunner`), so the agent observes the lsp4j launcher
+   internals. 243 reflection entries, 5 `proxy` entries (`LanguageServer`,
+   `TextDocumentService`, `WorkspaceService`, `NotebookDocumentService`,
+   `PklLanguageClient`), a `foreign` key (FFM/tree-sitter) and 12 resources.
+   Still only 182/565 lsp4j classes — the sweep is what closes the remainder.
+2. `merge-lsp4j-metadata.py` — the classgraph equivalent (upstream
+   `reflectionmetadatagenerator`): drops agent `org.eclipse.lsp4j` entries, then
+   registers every `org/eclipse/lsp4j/**.class` in the fat JAR. Final metadata:
+   **626 reflection entries** (565 lsp4j + 61 agent), 5 proxies, 1 foreign,
+   12 resources.
+
+`run-lsp-agent.py` is deleted. Verified A/B on the same request: installed
+0.7.1-3 crashes with the `WorkspaceFolder` error; the rebuilt binary returns a
+valid `initialize` result advertising `workspace.workspaceFolders.changeNotifications`
+and serves a full session with clean stderr. 31.63 MiB stripped in 2m45s.
+
+**Injection path (found 2026-10-15, after the first three builds):** the merged
+metadata was produced correctly but the binary still died, this time on the
+`PklLanguageClient`/`Endpoint` proxy. `jar -u` stores the archive path verbatim
+from its argument, and more importantly native-image only scans
+`META-INF/native-image/<group>/<artifact>/*.json`. A file placed directly at
+`META-INF/native-image/reachability-metadata.json` is **silently ignored** —
+confirmed with controlled probes: the direct-child path produced no
+`Apply jar:...` line under `native-image --verbose`, while one- and two-level
+subdirectories both did. The recipe now stages to
+`META-INF/native-image/${pkgname}/${pkgname}/reachability-metadata.json` and
+guards the result with an `unzip -p | grep -q '"proxy"'` check, because without
+that guard the build silently succeeds and ships a binary that crashes on any
+real LSP client.
+
+Also fixed here: `--initialize-at-build-time=` (empty argument) means
+*initialize all packages* — once lsp4j was registered it ran
+`com.sun.jna.internal.Cleaner`'s static initializer at build time and failed with
+`UnsupportedFeatureException: Detected a started Thread in the image heap.
+Thread name: JNA Cleaner.` The flag is removed. Upstream passes neither
+`--initialize-at-build-time` nor `--initialize-at-run-time`.
+
+**Not fixed (not packaging):** `PklLspServer.kt:79` throws `NullPointerException`
+in `initialized()` when the client's `initialize` omits the `workspace`
+capability. Upstream Kotlin source bug, present in tag `0.7.1`.
+
+**Files:** `RunLspAgent.java`, `merge-lsp4j-metadata.py`, `PKGBUILD`.
+
+### 14d. Tighten `-H:IncludeResources` (done)
 
 **Done:** Removed `-H:IncludeResources='.*'` entirely (2026-06-19). The
 agent-generated `reachability-metadata.json` auto-detected by native-image
@@ -238,17 +310,25 @@ or Gradle artifacts embedded.
 
 **Files:** `PKGBUILD`.
 
-### 14e. Binary size optimization (partial)
+### 14e. Binary size optimization (partial) (done)
 
 **Done:** Primary reduction via 14d (82% drop). Added `-R:MaxHeapSize=1g` to
 cap generated image runtime heap. G1GC for builder JVM (`-J-XX:+UseG1GC`)
 attempted but conflicts with native-image's internal GC configuration.
 
-**Remaining:** Verify `-H:+RemoveUnusedSymbols` active (likely default in
-GraalVM 25). Evaluate dropping `-H:+ReportExceptionStackTraces` (debug info
-tradeoff).
+**Remaining:** Both flagged items are now resolved (2026-10-15):
 
-**Files:** `PKGBUILD`.
+- `-H:+RemoveUnusedSymbols` is **already enabled by default** in GraalVM 25
+  (`--expert-options-all`: "Use linker option to prevent unreferenced symbols in
+  image. Default: + (enabled)"). Nothing to add.
+- `-H:+ReportExceptionStackTraces` also **requires no unlock** — it is a plain
+  `-H:±` expert option ("Show exception stack traces for exceptions during image
+  building. Default: - (disabled)"), unlike `-H:+StripDebugInfo` which is gated
+  behind `-H:+UnlockExperimentalVMOptions`. It is left enabled deliberately:
+  the cost is build-time-only verbosity in the event of a build failure, with no
+  effect on the produced image. The existing unlock scope stands as-is.
+
+**Files:** `PKGBUILD` (no change).
 
 ### 14f. Check function
 
@@ -268,7 +348,7 @@ array, but build only tested on x86_64. Requires aarch64 hardware.
 
 **Files:** None (build logic is arch-agnostic).
 
-### 14h. GraalVM stable migration ✅
+### 14h. GraalVM stable migration (done)
 
 **Done:** Migrated from the pruned `graalvm-ce-dev-builds` tag
 `25.1.3-dev-20260619_0111` (upstream 404s) to the current stable GraalVM CE
@@ -301,7 +381,7 @@ register, deploy.
 
 **Files:** `packages/pkl-lsp-bin/PKGBUILD`, root `.nvchecker.toml`.
 
-### 14j. Metadata regeneration ✅
+### 14j. Metadata regeneration (done)
 
 **Done:** Regenerated 2026-09-29 via `scripts/validate-pkgbuilds-pkl.sh`, which
 now passes end-to-end (25 packages, exit 0). Required a `pkl_writer.py` fix:
@@ -312,7 +392,7 @@ produced invalid Pkl). Regenerated metadata reflects the corrected maintainer,
 
 **Files:** `package.json`, `package.pkl` (generated artifacts, not tracked).
 
-### 14k. Native-image deprecation warnings ✅
+### 14k. Native-image deprecation warnings (done)
 
 **Done:** Removed `-H:+ForeignAPISupport` (default-on in GraalVM 25.0+, causes
 warning when passed explicitly). Removed `--no-fallback` (deprecated, no effect).

@@ -191,6 +191,12 @@ Outstanding architectural and documentation items requiring completion.
 
 ## Documentation
 
+- [x] **Emoji Removal**: Remove all emoji and pictographic glyphs from repository
+      prose and script output. Resolved 2026-10-15. `TASKS.md` section headings now
+      express completion textually (e.g. `(done)`), `scripts/check-pkgdesc-consistency.sh`
+      prints `OK`/`FAIL`, and `docs/KCL-OPA-PHASE3-RENDERER-CI.md` shows `OK`/`ERR`.
+      Typographic arrows (`→`) and dashes are not emoji and are out of scope.
+      (Due: Indeterminate)
 - [x] **Bash Completion Shared Convention**: The `_comp_` namespace and
       `_comp_compgen_help` conventions are duplicated across
       `gemini-bash-completion` and `doas-bash-completion` local AGENTS.md files.
@@ -244,10 +250,48 @@ are quality improvements deferred from initial development.
       `reachability-metadata.json` resources section (84 resources, 10 MiB).
       Binary: 328 MiB → 60 MiB (–82%), compressed: 107 MiB → 19 MiB (–82%).
       Build time: 5m 36s → 2m 56s (–47%).
-- [ ] **Verify `run-lsp-agent.py` reflection surfaces**: Confirm all 5 reflection
-      surfaces (kotlin-reflect, Gson, lsp4j Proxy, jtreesitter FFM, ServiceLoader
-      SPI) are exercised against `apple/pkl-lsp` v0.7.1 classes, not the
-      `colelawrence/pkl-lsp` fork for which the agent was originally written.
+- [x] **Verify reflection surfaces**: Fixed 2026-10-15. The old driver spawned
+      the JAR as a subprocess, so the tracing agent saw only wire traffic and
+      lsp4j's launcher reflection surface never executed in the traced JVM —
+      0 of 565 lsp4j classes were registered, and a well-formed `initialize`
+      carrying `workspaceFolders` crashed with
+      `MissingReflectionRegistrationError` on `WorkspaceFolder`. Replaced with
+      upstream's two-step mechanism: `RunLspAgent.java` (client and server in one
+      JVM, mirroring upstream `simpleclientrunner`) plus
+      `merge-lsp4j-metadata.py` (classgraph equivalent, registers every
+      `org.eclipse.lsp4j` class in the fat JAR). Final metadata: 626 reflection
+      entries, 5 proxies, 1 foreign, 12 resources. `run-lsp-agent.py` deleted.
+- [x] **Metadata injection path**: Found and fixed 2026-10-15. native-image only
+      scans `META-INF/native-image/<group>/<artifact>/*.json`; a file placed
+      directly at `META-INF/native-image/reachability-metadata.json` is silently
+      ignored, so the correct metadata never reached the image builder and the
+      binary died on the `PklLanguageClient`/`Endpoint` proxy. Verified by probe:
+      direct-child path emits no `Apply jar:...` line under `--verbose`; one- and
+      two-level subdirectories both do. Recipe stages to
+      `META-INF/native-image/${pkgname}/${pkgname}/` and guards with an
+      `unzip -p | grep -q '"proxy"'` check so the failure can never be silent
+      again.
+- [x] **`--initialize-at-build-time=` removal**: The empty argument means
+      *initialize all packages*; with lsp4j registered it ran `com.sun.jna`'s
+      `Cleaner` static initializer at build time and failed with
+      `Detected a started Thread in the image heap. Thread name: JNA Cleaner.`
+      Flag removed; upstream passes neither build-time nor run-time init flags.
+- [x] **Upstream bug documented**: `PklLspServer.kt:79` throws `NullPointerException`
+      in `initialized()` when the client's `initialize` omits the `workspace`
+      capability. Upstream Kotlin defect in tag `0.7.1`; not addressable in a
+      PKGBUILD.
+- [x] **Dead flag audit (`-H:+RemoveUnusedSymbols`, `-H:+ReportExceptionStackTraces`)**:
+      Both closed 2026-10-15 against `native-image --expert-options-all`.
+      `RemoveUnusedSymbols` is already on by default ("Default: + (enabled)").
+      `ReportExceptionStackTraces` is a plain expert `-H:±` option needing no
+      experimental unlock; kept on deliberately (build-time-only verbosity, no
+      image impact).
+- [x] **`$srcdir` leak**: Closed 2026-10-15 as cosmetic. `-H:-PathInStackTrace`
+      does not exist in GraalVM 25, and `-H:±RemoveSaturatedTypeFlows` is already
+      default-on. The absolute paths arrive from the **zig** toolchain's bundled
+      libc headers during the tree-sitter native build
+      (`.../zig-linux-amd64-0.16.0/lib/libc/include/generic-glibc/*.h`,
+      `build/repos/tree-sitter`), so no native-image flag can remove them.
 - [ ] **`--exact-reachability-metadata` verification**: Run as one-off validation
       to detect missing reflection, JNI, or resource registrations in the
       agent-generated metadata.
@@ -265,15 +309,16 @@ are quality improvements deferred from initial development.
 
 ### Completeness
 
-- [ ] **`check()` function**: Upstream tests are JUnit 5 (Jupiter) with two custom
-      test engines — `ParserSnippetTestEngine` and `DiagnosticsSnippetTestEngine` —
-      that parse `.pkl` snippet files with embedded assertions from `src/test/files/`.
+- [x] **`check()` function**: Added 2026-09-29 as a smoke test. Upstream tests are
+      JUnit 5 (Jupiter) with two custom test engines — `ParserSnippetTestEngine`
+      and `DiagnosticsSnippetTestEngine` — that parse `.pkl` snippet files with
+      embedded assertions from `src/test/files/`.
       Dependencies: `assertj` 3.27.7, `junit-jupiter` 6.1.0, plus a native
       Pkl CLI binary (`pklCli`, ~95 MB) downloaded as a test dependency and passed
       via `-DpklExecutable=`. Tests also require `--enable-native-access=ALL-UNNAMED`.
-      **Not suitable for `check()`** — requires network access for the Pkl CLI
-      download and pulls heavy `checkdepends`. **Recommendation**: smoke test only
-      (`pkl-lsp --version` or LSP initialize JSON-RPC). Full Gradle test suite
+      Not suitable for `check()` — it requires network access for the Pkl CLI
+      download and pulls heavy `checkdepends`. The recipe therefore ships the
+      smoke test only (`pkl-lsp --version`); the full Gradle test suite is
       deferred to CI or manual verification.
 - [x] **Update `package.json` / `package.pkl`**: Regenerated 2026-09-29 via
       `scripts/validate-pkgbuilds-pkl.sh` (now passes, exit 0). Required a
@@ -295,6 +340,16 @@ PKGBUILD header. It still points at a native binary release from the
 `colelawrence/pkl-lsp` fork at version `0.6.0-native.20260518.5`; `_deploy_aur`
 has been removed so the stale fork is never pushed to the AUR.
 
+Upstream status (checked 2026-10-15): [issue #60](https://github.com/apple/pkl-lsp/issues/60)
+closed 2026-08-04 as completed, and PR #226 "Add native executable" landed that
+same hour. Releases are still unchanged — every tag through 0.8.0 ships exactly
+one asset, the JAR — because `main` is 30 commits ahead of the newest tag. The
+`release.yml` workflow now publishes `pkl-lsp-{linux-amd64,linux-aarch64,macos-*,
+windows-amd64,alpine-linux-amd64}` alongside `build/libs/*`, so the rebase
+becomes possible as soon as a release includes #226. Note that
+`packages/pkl-lsp` has now backported the metadata half of #226 (see 14c), so
+the source build no longer depends on waiting for it.
+
 Metadata hygiene items below were completed 2026-09-29; the source rebase
 remains blocked until Apple publishes native binaries (issue #60):
 
@@ -303,9 +358,9 @@ remains blocked until Apple publishes native binaries (issue #60):
       now derive from it.
 - [x] **Fix `license=`**: Verified Apache-2.0 upstream.
 - [ ] **Rebase to `apple/pkl-lsp`**: Switch from `colelawrence/pkl-lsp` fork to
-      official `apple/pkl-lsp` releases. Blocked — Apple publishes only a JAR
-      (no native binaries) through 0.8.0. When binaries appear, repoint the
-      sources and set `_deploy_aur=true`.
+      official `apple/pkl-lsp` releases. Blocked — releases still ship only a
+      JAR through 0.8.0. When a release containing #226 appears, repoint the
+      sources, add `options=('!strip')` and set `_deploy_aur=true`.
 
 ## Ready for Human (Post-Swarm 2026-05-15)
 
