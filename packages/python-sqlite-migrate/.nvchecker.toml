@@ -1,3 +1,0 @@
-[python-sqlite-migrate]
-source = "git"
-git = "https://github.com/simonw/sqlite-migrate.git"

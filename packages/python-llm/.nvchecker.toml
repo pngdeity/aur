@@ -1,3 +1,0 @@
-[python-llm]
-source = "git"
-git = "https://github.com/simonw/llm.git"

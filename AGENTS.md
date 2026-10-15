@@ -343,7 +343,7 @@ distinct target and responsibility boundary:
   processing. Variant PKGBUILDs themselves are never AUR-deployed.
 - **Shared pkgdesc**: All packages sharing the same `_pkgname` value MUST use an
   identical `pkgdesc` string. This ensures consistent presentation across
-  variant package listings (e.g., `apm`, `apm-bin`, `pkl-lsp`, `pkl-lsp-bin`).
+  variant package listings (e.g., `amass-git`, `amass-bin`, `pkl-lsp`, `pkl-lsp-bin`).
   The `_pkgname` variable is the authoritative discriminator for variant groups.
   Run `scripts/check-pkgdesc-consistency.sh` to validate. The convention:
   `_pkgname` present and equal to `pkgname` signals the base package (variants
