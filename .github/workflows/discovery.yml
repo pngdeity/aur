@@ -53,14 +53,18 @@ jobs:
           # keyfile is a __config__ key, so it must be written inside the
           # __config__ table -- appending it after the package tables would put
           # it in the last package's section and nvchecker would ignore it.
-          { echo "[__config__]"; echo "oldver = 'oldver.json'"; echo "keyfile = 'keyfile.toml'"; } > master.toml
+          # nvtake requires *both* version files to be declared: load_file only
+          # populates ver_files when oldver and newver are present together, and
+          # nvtake exits 2 otherwise. nvchecker writes newver.json during the run
+          # and nvtake --all folds it into oldver.json. newver.json needs no
+          # pre-creation -- read_verfile returns {} when the file is absent.
+          { echo "[__config__]"; echo "oldver = 'oldver.json'"; echo "newver = 'newver.json'"; echo "keyfile = 'keyfile.toml'"; } > master.toml
           {
             find packages -mindepth 2 -maxdepth 2 -name .nvchecker.toml -print0 |
               xargs -0 grep -hv '^\[__config__\]'
           } >> master.toml
           [ ! -f oldver.json ] && echo '{}' > oldver.json
           chown builder:builder master.toml oldver.json
-
           sudo -u builder nvchecker -c master.toml --logger json > results.json
 
           jq -r 'select(.event == "updated") | "\(.name)\t\(.version)"' results.json | while IFS=$'\t' read -r name ver; do
