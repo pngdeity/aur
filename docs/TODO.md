@@ -268,9 +268,18 @@ are quality improvements deferred from initial development.
       binary died on the `PklLanguageClient`/`Endpoint` proxy. Verified by probe:
       direct-child path emits no `Apply jar:...` line under `--verbose`; one- and
       two-level subdirectories both do. Recipe stages to
-      `META-INF/native-image/${pkgname}/${pkgname}/` and guards with an
-      `unzip -p | grep -q '"proxy"'` check so the failure can never be silent
-      again.
+      `META-INF/native-image/${pkgname}/${pkgname}/` and verifies the result.
+- [x] **Injection guard must not assume `unzip`**: Found 2026-10-15 in the first
+      successful clean-chroot run (`pkgctl build`), which failed with
+      `/startdir/PKGBUILD: line 111: unzip: command not found`. `unzip` is not in
+      base-devel, so the guard could never have run for any AUR user. It also
+      turned up a trap while replacing it: `jar` has no stdout-extract mode, and
+      `jar --extract` exits **0 even when it matches nothing**, so its exit status
+      cannot be the check. The guard now extracts to `${srcdir}/jar-verify` and
+      tests for the file on disk before grepping `"proxy"` out of it. Verified in
+      both directions: a bogus path leaves no file and trips the guard, and the
+      real injected entry yields the expected 5 proxy entries. No extra
+      `makedepends` are needed — only `jar`, `mkdir`, `rm`, `grep`.
 - [x] **`--initialize-at-build-time=` removal**: The empty argument means
       *initialize all packages*; with lsp4j registered it ran `com.sun.jna`'s
       `Cleaner` static initializer at build time and failed with

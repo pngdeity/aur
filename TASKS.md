@@ -281,9 +281,19 @@ confirmed with controlled probes: the direct-child path produced no
 `Apply jar:...` line under `native-image --verbose`, while one- and two-level
 subdirectories both did. The recipe now stages to
 `META-INF/native-image/${pkgname}/${pkgname}/reachability-metadata.json` and
-guards the result with an `unzip -p | grep -q '"proxy"'` check, because without
-that guard the build silently succeeds and ships a binary that crashes on any
-real LSP client.
+guards the result, because without that guard the build silently succeeds and
+ships a binary that crashes on any real LSP client.
+
+**Guard corrected for the chroot (same day):** the first successful
+`pkgctl build` failed at the guard with
+`/startdir/PKGBUILD: line 111: unzip: command not found` — `unzip` is not in
+base-devel, so the check was inoperable for every AUR user. Replacing it exposed
+a second trap: `jar` has no stdout-extract mode, and `jar --extract` returns
+**exit 0 even when it matches nothing**, so its status cannot serve as the gate.
+The guard now extracts into `${srcdir}/jar-verify` and tests for the file on
+disk before grepping `"proxy"`. Verified both ways — a bogus path leaves no file
+and trips the guard; the real entry yields 5 proxy entries. Uses only `jar`,
+`mkdir`, `rm` and `grep`, so no new `makedepends`.
 
 Also fixed here: `--initialize-at-build-time=` (empty argument) means
 *initialize all packages* — once lsp4j was registered it ran

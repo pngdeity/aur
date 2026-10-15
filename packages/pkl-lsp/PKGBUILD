@@ -108,8 +108,24 @@ build() {
 
   jar --file "${JAR}" -u -C "${STAGE_DIR}" "META-INF/native-image/${pkgname}/${pkgname}/reachability-metadata.json"
 
-  if ! unzip -p "${JAR}" "META-INF/native-image/${pkgname}/${pkgname}/reachability-metadata.json" | grep -q '"proxy"'; then
+  # Verify the update actually landed inside the archive. `jar` cannot extract to
+  # stdout, `unzip` is not available in a clean chroot, and `jar --extract` exits
+  # 0 even when it matches nothing, so the check must be for the file on disk.
+  local VERIFY_DIR="${srcdir}/jar-verify"
+  rm -rf "${VERIFY_DIR}"
+  mkdir -p "${VERIFY_DIR}"
+  jar --extract --file "${JAR}" --dir "${VERIFY_DIR}" \
+    "META-INF/native-image/${pkgname}/${pkgname}/reachability-metadata.json"
+
+  local VERIFY_JSON="${VERIFY_DIR}/META-INF/native-image/${pkgname}/${pkgname}/reachability-metadata.json"
+
+  if [[ ! -f "${VERIFY_JSON}" ]]; then
     echo "::error::merged reflection metadata was not injected into the JAR"
+    exit 1
+  fi
+
+  if ! grep -q '"proxy"' "${VERIFY_JSON}"; then
+    echo "::error::injected reflection metadata contains no proxy entries"
     exit 1
   fi
 
