@@ -32,9 +32,18 @@ jobs:
 
           # makepkg refuses to run as root, so sync-package.sh (which calls
           # updpkgsums) must run as the image's unprivileged builder user, the
-          # same way build.yml invokes arch-builder.sh. The checkout is
-          # root-owned, so hand it over and mark it safe for the other user.
-          chown -R builder:builder .
+          # same way build.yml invokes arch-builder.sh. sync-package.sh rewrites
+          # PKGBUILDs in place, so the working tree must be builder-writable --
+          # but .git must not change hands: actions/checkout stores the push
+          # credential in .git/config, and the Open PR step runs as root and has
+          # to keep reading that repo. Chowning .git made git reject the
+          # repository in the next step ('origin' does not appear to be a git
+          # repository, then "not in a git directory" from gh).
+          #
+          # git also refuses a repository owned by another user, so the tree is
+          # registered as safe for both users.
+          find . -mindepth 1 -maxdepth 1 -not -name .git -exec chown -R builder:builder {} +
+          git config --global --add safe.directory "$PWD"
           sudo -u builder git config --global --add safe.directory "$PWD"
 
           # nvchecker's github source reads a token only from a TOML keyfile or
