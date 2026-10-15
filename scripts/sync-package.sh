@@ -28,10 +28,10 @@ cd "${PKG_DIR}"
 # --- Helper: Identity Protection ---
 # Snapshots critical identity variables to preserve them across upstream merges
 snapshot_identity() {
-    grep -E '^(pkgname|pkgver|pkgrel|provides|conflicts|replaces|source)=' PKGBUILD > .identity.tmp
+    grep -E '^(pkgname|pkgver|pkgrel|provides|conflicts|replaces|source)=' PKGBUILD >.identity.tmp
     # Handle pkgver() function if it exists
     if grep -q "^pkgver()" PKGBUILD; then
-        sed -n '/^pkgver()/,/^}/p' PKGBUILD > .pkgver_func.tmp
+        sed -n '/^pkgver()/,/^}/p' PKGBUILD >.pkgver_func.tmp
     fi
 }
 
@@ -41,15 +41,15 @@ restore_identity() {
         var_name=$(echo "$line" | cut -d= -f1)
         # Use a delimiter that won't appear in the line for sed
         sed -i "s|^${var_name}=.*|$line|" PKGBUILD
-    done < .identity.tmp
-    
+    done <.identity.tmp
+
     # Restore pkgver() function
     if [[ -f .pkgver_func.tmp ]]; then
         # Remove any existing pkgver() or static pkgver that might have been merged
         sed -i '/^pkgver()/,/^}/d' PKGBUILD
         # Insert the function after the maintainer header or at top
-        cat .pkgver_func.tmp >> PKGBUILD.new_func
-        cat PKGBUILD >> PKGBUILD.new_func
+        cat .pkgver_func.tmp >>PKGBUILD.new_func
+        cat PKGBUILD >>PKGBUILD.new_func
         mv PKGBUILD.new_func PKGBUILD
         rm .pkgver_func.tmp
     fi
@@ -57,20 +57,98 @@ restore_identity() {
 }
 
 # --- Helper: Asset Discovery ---
+# Collects every name/local-name declared in any source array -- source=(),
+# source_x86_64=(), source_aarch64=(), etc. Emits "local_name<TAB>url" per
+# entry that names a URL, skipping entries that are repo-local files.
+collect_source_assets() {
+    local upstream_content="$1"
+
+    # Match every source array assignment, not just the plain source=(). The
+    # previous sed range /^source=(/,/)/p stopped at the first line ending in
+    # ')'. Since these are commonly one-line assignments, it captured only
+    # source=() plus the first arch variant and silently dropped the rest --
+    # which is how source_aarch64 was missed entirely.
+    #
+    # Strip the "source...(...)" delimiters in place rather than deleting the
+    # lines that contain them: single-line arrays put the closing paren on the
+    # same line as the entries, so a line-level filter would drop the entries
+    # along with the syntax.
+    echo "$upstream_content" | awk '
+        /^source(_[A-Za-z0-9_]+)?=\(/ { inarray = 1 }
+        inarray {
+            print
+            if ($0 ~ /\)[[:space:]]*$/) { inarray = 0 }
+        }
+    ' | sed 's/^[[:space:]]*source\(_[A-Za-z0-9_]*\)\?=(//;s/)[[:space:]]*$//' |
+        tr -d '"' | tr -d "'" |
+        sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | grep -v '^$' |
+        while IFS= read -r entry; do
+            local name url
+            if [[ "$entry" == *"::"* ]]; then
+                name="${entry%%::*}"
+                url="${entry#*::}"
+            else
+                # A bare entry is a repo-local file (a patch, a script) that
+                # lives beside the PKGBUILD, or an absolute URL. Only emit the
+                # URL form; local files must never be fetched from upstream.
+                [[ "$entry" == *"://"* ]] || continue
+                url="$entry"
+                name="${url##*/}"
+            fi
+            [[ "$url" == *"://"* ]] || continue
+            printf '%s\t%s\n' "$name" "$url"
+        done
+}
+
 fetch_upstream_assets() {
     local upstream_content="$1"
-    local base_url="$2"
     echo "  -> Scanning for missing upstream assets..."
-    
-    # Extract files from source array that are not URLs
-    local assets=$(echo "$upstream_content" | sed -n '/^source=(/,/)/p' | grep -v '=(' | grep -v ')' | tr -d '"' | tr -d "'" | xargs -n1 echo | grep -v '://' | cut -d: -f1 || true)
-    
-    for asset in $assets; do
-        if [[ ! -f "$asset" ]]; then
-            echo "    -> Downloading missing asset: $asset"
-            curl -sL "${base_url}/${asset}" -o "$asset"
+
+    # Two source arrays may declare the same local name while pointing at
+    # different artifacts -- e.g. regal's per-arch entries are both named
+    # regal_Linux but fetch regal_Linux_x86_64 and regal_Linux_arm64. Sharing
+    # one filename makes updpkgsums hash whichever file won the race for every
+    # arch, producing a checksum that is wrong for all but one of them. When a
+    # name maps to more than one URL, fetch under the URL basename and rewrite
+    # PKGBUILD.new so the checksums line up with the per-arch files.
+    local tmp
+    tmp=$(mktemp)
+    collect_source_assets "$upstream_content" >"$tmp"
+
+    local name url base urls_count
+    while IFS=$'\t' read -r name url; do
+        [[ -z "$name" ]] && continue
+        urls_count=$(awk -F'\t' -v n="$name" '$1 == n { c++ } END { print c+0 }' "$tmp")
+        if [[ "$urls_count" -gt 1 ]]; then
+            base="${url##*/}"
+            base="${base%%\?*}"
+        else
+            base="$name"
         fi
-    done
+
+        if [[ ! -f "$base" ]]; then
+            echo "    -> Downloading missing asset: $base"
+            if ! curl -sL --fail -o "$base" "$url"; then
+                echo "  -> WARNING: failed to download ${url}" >&2
+                rm -f "$base"
+            fi
+        fi
+    done <"$tmp"
+
+    # Rewrite colliding local names in PKGBUILD.new to the downloaded basename.
+    local escaped_name escaped_url
+    while IFS=$'\t' read -r name url; do
+        [[ -z "$name" ]] && continue
+        urls_count=$(awk -F'\t' -v n="$name" '$1 == n { c++ } END { print c+0 }' "$tmp")
+        [[ "$urls_count" -gt 1 ]] || continue
+        base="${url##*/}"
+        base="${base%%\?*}"
+        escaped_name=$(printf '%s' "$name" | sed 's|[][\\^$.*/&]|\\&|g')
+        escaped_url=$(printf '%s' "$url" | sed 's|[][\\^$.*/&]|\\&|g')
+        sed -i "s|${escaped_name}::${escaped_url}|${base}::${url}|g" PKGBUILD.new
+    done <"$tmp"
+
+    rm -f "$tmp"
 }
 
 # --- Helper: Concern Classification ---
@@ -99,28 +177,28 @@ classify_upstream_changes() {
     local has_build=false
 
     # Classify changes by matching diff lines against concern patterns
-    echo "$diff_output" | grep -qE '^[<>].*# (Maintainer|Contributor):'  && has_authorship=true  || true
-    echo "$diff_output" | grep -qE '^[<>].*(pkgname=|provides=|conflicts=|replaces=)' && has_identity=true    || true
-    echo "$diff_output" | grep -qE '^[<>].*(pkgver=|pkgrel=|^pkgver\(\))'        && has_version=true     || true
+    echo "$diff_output" | grep -qE '^[<>].*# (Maintainer|Contributor):' && has_authorship=true || true
+    echo "$diff_output" | grep -qE '^[<>].*(pkgname=|provides=|conflicts=|replaces=)' && has_identity=true || true
+    echo "$diff_output" | grep -qE '^[<>].*(pkgver=|pkgrel=|^pkgver\(\))' && has_version=true || true
     echo "$diff_output" | grep -qE '^[<>].*(pkgdesc=|url=|license=|arch=|backup=|install=|options=)' && has_metadata=true || true
-    echo "$diff_output" | grep -qE '^[<>].*depends='                              && has_depends=true    || true
-    echo "$diff_output" | grep -qE '^[<>].*makedepends='                          && has_makedepends=true || true
-    echo "$diff_output" | grep -qE '^[<>].*checkdepends='                         && has_checkdepends=true || true
-    echo "$diff_output" | grep -qE '^[<>].*optdepends='                           && has_optdepends=true  || true
-    echo "$diff_output" | grep -qE '^[<>].*(source=|sha256sums=|sha512sums=|b2sums=)' && has_source=true  || true
+    echo "$diff_output" | grep -qE '^[<>].*depends=' && has_depends=true || true
+    echo "$diff_output" | grep -qE '^[<>].*makedepends=' && has_makedepends=true || true
+    echo "$diff_output" | grep -qE '^[<>].*checkdepends=' && has_checkdepends=true || true
+    echo "$diff_output" | grep -qE '^[<>].*optdepends=' && has_optdepends=true || true
+    echo "$diff_output" | grep -qE '^[<>].*(source=|sha256sums=|sha512sums=|b2sums=)' && has_source=true || true
     echo "$diff_output" | grep -qE '^[<>].*(prepare\(\)|build\(\)|check\(\)|package\(\))' && has_build=true || true
 
     local events=()
-    $has_authorship  && events+=('"AUTHORSHIP"')
-    $has_identity    && events+=('"IDENTITY"')
-    $has_version     && events+=('"VERSION"')
-    $has_metadata    && events+=('"METADATA"')
-    $has_depends     && events+=('"DEPENDS"')
+    $has_authorship && events+=('"AUTHORSHIP"')
+    $has_identity && events+=('"IDENTITY"')
+    $has_version && events+=('"VERSION"')
+    $has_metadata && events+=('"METADATA"')
+    $has_depends && events+=('"DEPENDS"')
     $has_makedepends && events+=('"MAKEDEPENDS"')
     $has_checkdepends && events+=('"CHECKDEPENDS"')
-    $has_optdepends  && events+=('"OPTDEPENDS"')
-    $has_source      && events+=('"SOURCES"')
-    $has_build       && events+=('"BUILD"')
+    $has_optdepends && events+=('"OPTDEPENDS"')
+    $has_source && events+=('"SOURCES"')
+    $has_build && events+=('"BUILD"')
 
     if [[ ${#events[@]} -gt 0 ]]; then
         local event_list
@@ -130,8 +208,8 @@ classify_upstream_changes() {
         echo "  -> Upstream changes detected: [${event_list}]" >&2
         echo "  -> Review required: ${review_list}" >&2
         # Store for later use by PREREVIEW marker logic
-        printf '%s' "${event_list}" > .upstream_events.tmp
-        $has_build && printf '%s' "true" > .upstream_build_changed.tmp || printf '%s' "false" > .upstream_build_changed.tmp
+        printf '%s' "${event_list}" >.upstream_events.tmp
+        $has_build && printf '%s' "true" >.upstream_build_changed.tmp || printf '%s' "false" >.upstream_build_changed.tmp
     fi
 }
 
@@ -159,7 +237,7 @@ apply_prereview_marker() {
             local action="# Review the diff, verify build, then remove this marker to unblock release."
             awk -v m="$marker" -v a="$action" \
                 '/^# Maintainer:/ { print; print m; print a; next } 1' \
-                PKGBUILD > PKGBUILD.prereview.tmp
+                PKGBUILD >PKGBUILD.prereview.tmp
             mv PKGBUILD.prereview.tmp PKGBUILD
         else
             echo "  -> Build logic changed upstream. Auto-merging (_auto_merge_build=true)."
@@ -196,7 +274,7 @@ if [[ -n "${UPSTREAM_URL:-}" ]]; then
                 classify_upstream_changes ".PKGBUILD.upstream" "PKGBUILD.new"
 
                 # Download new assets referenced in upstream
-                fetch_upstream_assets "$(cat PKGBUILD.new)" "$BASE_URL"
+                fetch_upstream_assets "$(cat PKGBUILD.new)"
 
                 # Perform protected merge
                 snapshot_identity
@@ -221,7 +299,7 @@ if [[ -n "${UPSTREAM_URL:-}" ]]; then
             fi
         else
             echo "  -> Initial upstream tracking setup."
-            fetch_upstream_assets "$(cat PKGBUILD.new)" "$BASE_URL"
+            fetch_upstream_assets "$(cat PKGBUILD.new)"
             mv PKGBUILD.new .PKGBUILD.upstream
 
             # Apply declarative identity rules (demotion) to local PKGBUILD
@@ -268,14 +346,14 @@ if [[ -n "${GITHUB_REPO}" ]]; then
     TAG_PATTERN=$("$SCRIPT_DIR/pkgvar" PKGBUILD _tag)
     TAG=${TAG_PATTERN:-"v${NEW_VER}"}
     TAG=$(echo "${TAG}" | sed "s/\${pkgver}/${NEW_VER}/g")
-    
+
     # Extract API version if specified, fallback to "2026-03-10"
     API_VER=$("$SCRIPT_DIR/pkgvar" PKGBUILD _github_api_version)
     API_VER="${API_VER:-2026-03-10}"
 
     CHANGELOG_FILE="${PKG_NAME}.changelog"
     bash "${SCRIPT_DIR}/generate-changelog.sh" "${GITHUB_REPO}" "${TAG}" "${CHANGELOG_FILE}" "${API_VER}"
-    
+
     # Inject 'changelog' variable into PKGBUILD only if not present
     if ! grep -q "^changelog=" PKGBUILD; then
         echo "  -> Injecting changelog variable"
