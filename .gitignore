@@ -47,6 +47,15 @@ packages/*/.SRCINFO
 # Ignore AUR .git metadata 
 packages/*/.git
 
+# makepkg bare clones for git+ sources. makepkg checks out <name>/ in the
+# PKGBUILD's directory (and src/<name>/ for the worktree), where <name> is the
+# upstream repo name, not the package name. amass-git gets packages/amass-git/
+# amass/ and opendoas gets packages/opendoas/opendoas/. Without this, a
+# discovery run stages a multi-hundred-MB clone and the push is rejected.
+packages/*/*/.git/
+packages/amass-git/amass/
+packages/opendoas/opendoas/
+
 # Downloaded license files (source=("LICENSE.txt::..."))
 packages/*/LICENSE*
 
