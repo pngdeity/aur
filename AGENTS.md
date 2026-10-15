@@ -281,9 +281,11 @@ If any two sources in the hierarchy above contradict:
 ### Standard Operating Routine: The Maintenance Pulse
 
 To maintain a proactive (not reactive) repository, you MUST periodically run
-`nvchecker -c .nvchecker.toml` to identify upstream version drifts. Every
-detected delta must be resolved via the `pkg-update` skill, which handles the
-full sync → verify → acknowledge cycle.
+`nvchecker -c packages/<name>/.nvchecker.toml` for each package, or synthesize
+a combined config the way CI does (concatenate every
+`packages/*/.nvchecker.toml`, which is the authoritative location; there is no
+root-level `.nvchecker.toml`). Every detected delta must be resolved via the
+`pkg-update` skill, which handles the full sync → verify → acknowledge cycle.
 
 ### Publishing Targets & Platform Responsibilities
 

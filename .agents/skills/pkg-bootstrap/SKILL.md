@@ -83,10 +83,13 @@ examples, not an exhaustive list:
    Otherwise skip this step. The file must follow the Hierarchical Policies in
    the root `AGENTS.md`.
 
-5. Register the package in the root `.nvchecker.toml` for global version
-   monitoring. Also ensure the `[__config__]` section has `oldver` and `newver`
-   paths configured (e.g., `oldver = "oldver.json"`, `newver = "newver.json"`),
-   otherwise `nvtake` will fail.
+5. Confirm the package-local `.nvchecker.toml` from step 3 is in place — it is
+   the ONLY location CI reads (the workflow synthesizes its `master.toml` by
+   concatenating `packages/*/.nvchecker.toml`). There is no root-level
+   `.nvchecker.toml`, so a package with no local file has no version check at
+   all and will drift silently. Ensure the root `master.toml` `[__config__]`
+   section (built by CI, not committed) resolves `oldver`, otherwise `nvtake`
+   will fail.
 
 6. Run the full verification sequence:
    ```bash

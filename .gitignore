@@ -23,6 +23,7 @@ logpipe.*
 handoffs/
 
 # nvchecker local state
+keyfile.toml
 
 # Python bytecode cache
 __pycache__/

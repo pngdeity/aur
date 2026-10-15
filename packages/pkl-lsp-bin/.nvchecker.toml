@@ -1,0 +1,4 @@
+[pkl-lsp-bin]
+source = "github"
+github = "colelawrence/pkl-lsp"
+use_latest_tag = true

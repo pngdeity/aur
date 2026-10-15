@@ -16,6 +16,9 @@ jobs:
       packages: read
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # Dedicated read-only token. The automatic installation token is scoped to
+      # this repository, and nvchecker queries upstream repos owned by others.
+      NVCHECKER_GITHUB_TOKEN: ${{ secrets.NVCHECKER_GITHUB_TOKEN }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -27,7 +30,20 @@ jobs:
           set -euo pipefail
           rm -f /tmp/has_changes
 
-          { echo "[__config__]"; echo "oldver = 'oldver.json'"; } > master.toml
+          # nvchecker's github source reads a token only from a TOML keyfile or
+          # ~/.netrc -- it never consults GITHUB_TOKEN. Write the keyfile from
+          # the environment so the value stays off every command line.
+          install -m 600 /dev/null keyfile.toml
+          python3 - <<'PY'
+          import os, pathlib
+          tok = os.environ["NVCHECKER_GITHUB_TOKEN"]
+          pathlib.Path("keyfile.toml").write_text(f'[keys]\ngithub = "{tok}"\n')
+          PY
+
+          # keyfile is a __config__ key, so it must be written inside the
+          # __config__ table -- appending it after the package tables would put
+          # it in the last package's section and nvchecker would ignore it.
+          { echo "[__config__]"; echo "oldver = 'oldver.json'"; echo "keyfile = 'keyfile.toml'"; } > master.toml
           {
             find packages -mindepth 2 -maxdepth 2 -name .nvchecker.toml -print0 |
               xargs -0 grep -hv '^\[__config__\]'
@@ -50,6 +66,8 @@ jobs:
           else
             echo "changed=false" >> "$GITHUB_OUTPUT"
           fi
+
+          rm -f keyfile.toml
       - name: Open PR
         if: steps.sync.outputs.changed == 'true'
         run: |
