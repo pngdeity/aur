@@ -30,14 +30,24 @@ jobs:
           set -euo pipefail
           rm -f /tmp/has_changes
 
+          # makepkg refuses to run as root, so sync-package.sh (which calls
+          # updpkgsums) must run as the image's unprivileged builder user, the
+          # same way build.yml invokes arch-builder.sh. The checkout is
+          # root-owned, so hand it over and mark it safe for the other user.
+          chown -R builder:builder .
+          sudo -u builder git config --global --add safe.directory "$PWD"
+
           # nvchecker's github source reads a token only from a TOML keyfile or
           # ~/.netrc -- it never consults GITHUB_TOKEN. Write the keyfile from
-          # the environment so the value stays off every command line.
-          install -m 600 /dev/null keyfile.toml
+          # the environment so the value stays off every command line. It is
+          # created builder-owned because nvchecker runs as builder and the
+          # 0600 mode would otherwise lock that user out.
+          install -m 600 -o builder -g builder /dev/null keyfile.toml
           python3 - <<'PY'
           import os, pathlib
-          tok = os.environ["NVCHECKER_GITHUB_TOKEN"]
-          pathlib.Path("keyfile.toml").write_text(f'[keys]\ngithub = "{tok}"\n')
+          pathlib.Path("keyfile.toml").write_text(
+            f'[keys]\ngithub = "{os.environ["NVCHECKER_GITHUB_TOKEN"]}"\n'
+          )
           PY
 
           # keyfile is a __config__ key, so it must be written inside the
@@ -49,16 +59,17 @@ jobs:
               xargs -0 grep -hv '^\[__config__\]'
           } >> master.toml
           [ ! -f oldver.json ] && echo '{}' > oldver.json
+          chown builder:builder master.toml oldver.json
 
-          nvchecker -c master.toml --logger json > results.json
+          sudo -u builder nvchecker -c master.toml --logger json > results.json
 
           jq -r 'select(.event == "updated") | "\(.name)\t\(.version)"' results.json | while IFS=$'\t' read -r name ver; do
-            bash scripts/sync-package.sh "$name" "$ver"
+            sudo -u builder bash scripts/sync-package.sh "$name" "$ver"
             echo "true" > /tmp/has_changes
           done
 
           if [ -f /tmp/has_changes ]; then
-            nvtake -c master.toml --all
+            sudo -u builder nvtake -c master.toml --all
           fi
 
           if [ -f /tmp/has_changes ]; then
