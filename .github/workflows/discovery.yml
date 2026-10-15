@@ -111,6 +111,22 @@ jobs:
           git config user.name "GitHub Action"
           git checkout -b "$BRANCH"
           git add oldver.json packages/
+
+          # makepkg leaves build artifacts for git+ sources in the package
+          # directory (a bare clone named after the upstream repo). .gitignore
+          # covers the known ones, but a package added later can introduce a new
+          # name, and the staging above sweeps the whole tree. Fail here rather
+          # than at push time, where the only signal is a rejected transfer after
+          # uploading hundreds of megabytes.
+          LARGE=$(git diff --cached --name-only -z |
+            xargs -0 -r du -k 2>/dev/null |
+            awk '$1 > 51200 { print $2 }')
+          if [ -n "$LARGE" ]; then
+            echo "Refusing to commit: staged files exceed 50 MB." >&2
+            echo "$LARGE" >&2
+            exit 1
+          fi
+
           if git diff --cached --quiet; then
             echo "No changes to commit."
             exit 0
