@@ -1,8 +1,79 @@
 {
   "version": 2,
   "data": {
+    "amass-bin": {
+      "version": "5.1.1",
+      "gitref": "refs/tags/v5.1.1",
+      "revision": "79299dce87b0085db0f2f4ef3e9c52cccb49f514"
+    },
+    "amass-git": {
+      "version": "5.1.1",
+      "gitref": "refs/tags/v5.1.1",
+      "revision": "79299dce87b0085db0f2f4ef3e9c52cccb49f514"
+    },
+    "apm": {
+      "version": "0.33.0",
+      "gitref": "refs/tags/v0.33.0",
+      "revision": "18c4c43c924ceae890fe0f2038806690e5b2d6c8",
+      "url": "https://github.com/microsoft/apm/releases/tag/v0.33.0",
+      "revision_creation_time": "2026-10-02T16:12:44Z"
+    },
+    "bifrost": {
+      "version": "2.3.0",
+      "gitref": "refs/tags/transports/v2.3.0",
+      "revision": "0d9633778dbf145f99aaa9698f2f38df575e0d91"
+    },
     "clash-geoip": {
-      "version": "202610150028"
+      "version": "202610152117",
+      "gitref": "refs/tags/202610152117",
+      "revision": "a75dda826d5ee65c3f5ce3aef5c0362ddd759946"
+    },
+    "dnstwist": {
+      "version": "20250130",
+      "url": "https://pypi.org/project/dnstwist/20250130/",
+      "creation_time": "2025-01-30T19:42:33.588928Z"
+    },
+    "go-regal-bin": {
+      "version": "0.43.0",
+      "gitref": "refs/tags/v0.43.0",
+      "revision": "6189089eff8c384af8a0e821f2ef9bad594970e9",
+      "url": "https://github.com/StyraInc/regal/releases/tag/v0.43.0",
+      "revision_creation_time": "2026-09-28T13:55:16Z"
+    },
+    "jules-tools": {
+      "version": "0.1.42",
+      "url": "https://www.npmjs.com/package/@google/jules/v/0.1.42"
+    },
+    "opendoas": {
+      "version": "6.8.2",
+      "gitref": "refs/tags/v6.8.2",
+      "revision": "581ef0499a84898e06931aac1c47e994f68a70ac",
+      "url": "https://github.com/Duncaen/OpenDoas/releases/tag/v6.8.2",
+      "revision_creation_time": "2022-01-26T17:09:21+01:00"
+    },
+    "pkl-lsp": {
+      "version": "0.8.0",
+      "gitref": "refs/tags/0.8.0",
+      "revision": "065be4a106e6ae5a0e6236831fef863acc718b92",
+      "url": "https://github.com/apple/pkl-lsp/releases/tag/0.8.0",
+      "revision_creation_time": "2026-07-08T12:00:09-07:00"
+    },
+    "pkl-lsp-bin": {
+      "version": "0.6.0",
+      "gitref": "refs/tags/0.6.0-native.20260518.5",
+      "revision": "6a477c504bde7c6d4ba0eea6a45ac5b75ea58154",
+      "url": "https://github.com/colelawrence/pkl-lsp/releases/tag/0.6.0-native.20260518.5",
+      "revision_creation_time": "2026-05-18T17:09:53Z"
+    },
+    "python-llm-github-models": {
+      "version": "0.18.0",
+      "url": "https://pypi.org/project/llm-github-models/0.18.0/",
+      "creation_time": "2025-08-13T00:55:07.738727Z"
+    },
+    "python-whois": {
+      "version": "0.9.6",
+      "url": "https://pypi.org/project/python-whois/0.9.6/",
+      "creation_time": "2025-10-07T04:36:12.328722Z"
     }
   }
 }
