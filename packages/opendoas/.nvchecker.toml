@@ -2,3 +2,6 @@
 source = "github"
 github = "Duncaen/OpenDoas"
 use_latest_tag = true
+# Upstream tags are v-prefixed; the PKGBUILD's git source adds the v itself
+# (#tag=v${pkgver}), so the reported version must not carry it.
+prefix = "v"
