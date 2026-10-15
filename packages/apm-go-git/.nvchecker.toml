@@ -1,3 +1,0 @@
-[apm-go-git]
-source = "git"
-git = "https://github.com/githubnext/apm.git"
