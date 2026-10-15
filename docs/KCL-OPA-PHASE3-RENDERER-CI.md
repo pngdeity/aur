@@ -849,8 +849,8 @@ After Phase 3, the validation flow across all insertion points:
 │              ├─ ... (all 12 rules)                           │
 │              └─ exception (per-package rule exemptions)      │
 │                                                              │
-│  ✓ validation passed → commit accepted                       │
-│  ✗ validation failed → commit blocked                       │
+│  OK validation passed -> commit accepted                     │
+│  ERR validation failed -> commit blocked                     │
 └──────────────────────────────────────────────────────────────┘
 
 ┌──────────────────────────────────────────────────────────────┐

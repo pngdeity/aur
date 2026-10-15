@@ -10,6 +10,8 @@ standards to ensure the highest quality, security, and automation compatibility.
   non-interactive mode. Never attempt `doas`, `sudo`, or any root-requiring
   command. For builds requiring a clean chroot (`pkgctl build`, etc.), report
   the step as pending human execution.
+- **No emoji**: Never emit emoji or pictographic glyphs in code, commits, docs,
+  or command output. Use terse ASCII text (`(done)`, `OK`, `FAIL`).
 
 ## 1. Foundational Documentation & Specifications
 
