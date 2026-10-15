@@ -191,6 +191,18 @@ Outstanding architectural and documentation items requiring completion.
 
 ## Documentation
 
+- [ ] **Withdrawn-maintainership audit**: `_deploy_aur=true` was found on four
+      packages whose AUR entries are now ABSENT — `apm`, `apm-go-git`,
+      `python-azure-ai-inference`, `python-llm-github-models`. All four flags
+      were removed 2026-10-15. The root cause is that `packages/` holds three
+      categories of package (owned AUR entries, custom variants of
+      other-maintainer AUR packages, custom variants of official repo packages)
+      and nothing detected when a package crossed from owned to not-owned.
+      `aur-deploy.sh` would have attempted to push over packages this
+      repository does not own. Mitigated by policy text in `AGENTS.md` §AUR
+      Deployment Gate and `docs/PKGBUILD-CUSTOM-VARIABLES-REFERENCE.md`, but a
+      mechanical check (compare `_deploy_aur=true` set against the live AUR
+      API's `Maintainer` field) is not yet implemented. (Due: Indeterminate)
 - [x] **Emoji Removal**: Remove all emoji and pictographic glyphs from repository
       prose and script output. Resolved 2026-10-15. `TASKS.md` section headings now
       express completion textually (e.g. `(done)`), `scripts/check-pkgdesc-consistency.sh`

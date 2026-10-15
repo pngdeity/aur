@@ -313,6 +313,13 @@ distinct target and responsibility boundary:
   script processes the repo PKGBUILD (inlines `source` directives, strips
   repo-local `_`-prefixed variables and `# PREREVIEW:` markers, generates
   `.SRCINFO`) and pushes to `aur.archlinux.org`.
+- **Maintainership Assertion**: The flag asserts *current maintainership of the
+  AUR package*, not merely that the package could be published. It MUST be
+  removed when maintainership is lost (disowned, orphaned, or adopted by
+  another maintainer), or `aur-deploy.sh` will push over a package this
+  repository does not own. Verify against the live AUR API before setting or
+  retaining it. `packages/` deliberately also holds custom variants of packages
+  owned by others and of official repo packages; those never carry the flag.
 - **Mutual Exclusion**: `_deploy_aur=true` and `_repo_subarch` are mutually
   exclusive. `aur-deploy.sh` hard-blocks this combination. Variant packages are
   build targets only — never AUR-deployed.

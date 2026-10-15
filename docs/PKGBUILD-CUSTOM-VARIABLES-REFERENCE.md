@@ -83,7 +83,14 @@ packages that serve as the canonical upstream for an AUR publication. Variant
 packages (those with `_repo_subarch` set) MUST NOT set `_deploy_aur=true` — the
 script enforces this with a hard error. : **Mutual Exclusion**: Setting both
 `_deploy_aur=true` and `_repo_subarch` will cause `aur-deploy.sh` to exit with
-an error.
+an error. : **Withdrawal**: The flag asserts *current maintainership of the AUR
+package*, not merely that the package could be published. When maintainership is
+lost — the AUR package is disowned, orphaned, or adopted by another maintainer —
+the flag MUST be removed, because `aur-deploy.sh` would otherwise attempt to
+push over a package this repository does not own. Verify maintainership against
+the live AUR API before setting or retaining this flag; `packages/` also holds
+custom variants of packages owned by others and of official `extra`/`core`
+packages, which must never carry it.
 
 ### Authorship Management
 
