@@ -12,6 +12,7 @@ RUN pacman -Syu --noconfirm \
     pacman-contrib \
     rsync \
     gnupg \
+    github-cli \
     && pacman -Scc --noconfirm
 
 RUN useradd -m builder && \

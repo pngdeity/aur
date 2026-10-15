@@ -134,7 +134,8 @@ jobs:
           git commit -m "chore: automated upstream update"
 
           git push origin "$BRANCH"
-          gh pr create \
+          GH_TOKEN="$GITHUB_TOKEN" gh pr create \
+            --repo "$GITHUB_REPOSITORY" \
             --base main \
             --head "$BRANCH" \
             --title "chore: automated upstream update" \
