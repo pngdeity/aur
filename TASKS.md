@@ -195,7 +195,7 @@ repo-root/x86_64/`, and `cd "$BUILD_DIR"` to return.
 All items refer to `packages/pkl-lsp/` — builds a GraalVM native image of
 `apple/pkl-lsp` v0.7.1. Package is live on the AUR. Chroot build validated.
 
-### 14a. `$srcdir` leak in binary
+### 14a. `$srcdir` leak in binary (done)
 
 **Problem:** `namcap` warns `/usr/bin/pkl-lsp` contains a reference to `$srcdir`
 (`pkgctl-build-output.txt` line 268). GraalVM embeds classpath/source paths in
@@ -340,14 +340,11 @@ attempted but conflicts with native-image's internal GC configuration.
 
 **Files:** `PKGBUILD` (no change).
 
-### 14f. Check function
+### 14f. Check function (done)
 
-**Problem:** No `check()` in PKGBUILD. Upstream has `./gradlew test`.
+**Done:** Added `check()` as a smoke test (`pkgname --version | grep -q "^${pkgname} version "`). The full upstream Gradle suite is deliberately not used: it downloads a ~95 MB native Pkl CLI as a test dependency and needs two custom JUnit 5 engines plus `--enable-native-access=ALL-UNNAMED`, so it is unsuitable for a distribution build. Rationale recorded in `docs/TODO.md` under Completeness. Chroot-validated with the rest of the package on 2026-10-15.
 
-**Proposed fix:** Add smoke test (`pkl-lsp --version`). Upgrade to full Gradle
-test suite if tests are fast and meaningful.
-
-**Files:** `PKGBUILD`.
+**Files:** `PKGBUILD` (lines 150-154).
 
 ### 14g. aarch64 build validation
 

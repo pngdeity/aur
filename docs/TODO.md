@@ -301,12 +301,17 @@ are quality improvements deferred from initial development.
       libc headers during the tree-sitter native build
       (`.../zig-linux-amd64-0.16.0/lib/libc/include/generic-glibc/*.h`,
       `build/repos/tree-sitter`), so no native-image flag can remove them.
-- [ ] **`--exact-reachability-metadata` verification**: Run as one-off validation
-      to detect missing reflection, JNI, or resource registrations in the
-      agent-generated metadata.
+- [x] **`--exact-reachability-metadata` verification**: Closed 2026-10-15 as not
+      applicable. All reflection entries now come from the merged agent +
+      classgraph sweep (626 entries), and the broad lsp4j registration is
+      deliberately non-exact: many of the 565 `org.eclipse.lsp4j` classes cannot
+      be proven reachable by static analysis. Running the image builder in
+      exact mode would reject exactly the registrations this fix depends on.
+      For the same reason `--future-defaults=all` is declined — one of its
+      sub-options is `exact-reflection`.
 - [ ] **Test aarch64 build**: `sha512sums_aarch64` generated and GraalVM aarch64
       tarball exists in source array, but the build has only been tested on
-      x86_64.
+      x86_64. Blocked — no ARM hardware available.
 
 ### Optimization
 
@@ -376,16 +381,20 @@ remains blocked until Apple publishes native binaries (issue #60):
 These items require human execution — chroot builds, branch management, secret
 provisioning, and CI verification.
 
-- [ ] **chroot builds — 23 packages**: Run `pkgctl build` for all packages in a
-      clean chroot. Verify no build failures, dependency resolution errors, or
-      namcap issues.
+- [ ] **chroot builds — remaining packages**: Run `pkgctl build` for all packages
+      in a clean chroot. Verify no build failures, dependency resolution errors,
+      or namcap issues. (`pkl-lsp` 0.7.1-5 is now validated; 25 others are not.)
 - [x] **fix/packages-opendoas-ranger-jules disposition**: Resolved — branch
       deleted; changes absorbed into main.
 - [x] **HPA rebase onto `dev`**: Cancelled — no HPA branch exists; swarm task
       was never started.
-- [ ] **AUR deployment (SSH auth)**: Configure AUR SSH keys and test
-      `aur-deploy.sh` push for `_deploy_aur=true` packages (amass-bin, opendoas,
-      python-whois).
+- [x] **AUR deployment (SSH auth)**: Resolved — AUR SSH auth is working and
+      verified live. `amass-bin` (5.1.1-1) and `python-whois` (0.9.6-1) are
+      published on the AUR, and `pkl-lsp` 0.7.1-5 was pushed manually
+      2026-10-15. Note the item's premise is superseded: `scripts/aur-deploy.sh`
+      is being replaced (work lives on another branch), and it cannot deploy
+      packages whose `source[]` carries local files. `opendoas` `_deploy_aur` is
+      unset for that reason, not because of auth.
 - [x] **oldver.json decision**: Resolved — tracked as shared nvchecker state in
       `.nvchecker.toml` `[__config__]` section.
 - [ ] **CI results review**: Check discovery workflow run on `dev` branch
