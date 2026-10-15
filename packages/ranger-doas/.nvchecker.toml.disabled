@@ -1,0 +1,14 @@
+# PARKED. Renamed from .nvchecker.toml so CI's discovery step stops
+# enumerating this package: that step globs for the exact filename
+# (find packages -mindepth 2 -maxdepth 2 -name .nvchecker.toml), so renaming
+# is the opt-out. This package is a work in progress and is NOT operational --
+# it should not be tracked or auto-updated until it builds again.
+#
+# To resume: restore the filename and resolve the deferred endwin/ncurses work
+# described in the PKGBUILD's prepare() comment.
+
+[ranger-doas]
+source = "github"
+github = "ranger/ranger"
+use_latest_tag = true
+prefix = "v"
