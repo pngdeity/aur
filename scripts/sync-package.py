@@ -186,7 +186,9 @@ def _resolve_upstream(vars_: dict) -> tuple[str | None, str | None]:
 # ── fetch upstream ────────────────────────────────────────────────────────
 
 
-def _fetch_upstream(url: str, base_url: str, pkg_dir: Path) -> tuple[bool, bool]:
+def _fetch_upstream(
+    url: str, base_url: str, pkg_dir: Path, newver: str
+) -> tuple[bool, bool]:
     """Returns (ok, changed). ok=False on fetch/validation failure.
     changed=True means upstream differs from cache (or first sync).
     """
@@ -214,31 +216,93 @@ def _fetch_upstream(url: str, base_url: str, pkg_dir: Path) -> tuple[bool, bool]
             return True, False
         return True, True
     else:
-        _fetch_assets(content, base_url, pkg_dir)
+        _fetch_assets(pkg_dir, newver)
         return True, True
 
 
-def _fetch_assets(upstream_text: str, base_url: str, pkg_dir: Path) -> None:
+def _expand_source_url(url: str, pkgver: str, pkgrel: str = "1") -> str:
+    """Substitute the PKGBUILD variables a source URL is written in terms of.
+
+    A source URL is written the way makepkg will evaluate it --
+    ``.../download/v${pkgver}/...`` -- and makepkg expands it against the
+    PKGBUILD in hand. Requesting the raw text would ask the server for a
+    literal ``${pkgver}`` path.
+    """
+    url = url.replace("${pkgver}", pkgver).replace("$pkgver", pkgver)
+    url = url.replace("${pkgrel}", pkgrel).replace("$pkgrel", pkgrel)
+    return url
+
+
+def _fetch_assets(pkg_dir: Path, pkgver: str) -> None:
+    """Fetch the payloads this package's own source arrays point at.
+
+    Reads the LOCAL PKGBUILD, not the upstream one. An upstream PKGBUILD
+    commonly hardcodes the release it was written around, while a mirror
+    tracks ``${pkgver}``; downloading upstream's URLs then stores an old
+    release's bytes under the new version's name. Every step still succeeds
+    -- the file downloads, the name matches, the hash is taken -- so nothing
+    reports the mismatch until the package fails to build or install.
+
+    Two source arrays may also declare the same local name while pointing at
+    different artifacts -- regal's per-arch entries are both named
+    ``regal_Linux`` but fetch ``regal_Linux_x86_64`` and ``regal_Linux_arm64``.
+    Sharing one filename makes the checksum step hash whichever file won the
+    race for every architecture, so a colliding name is fetched under its URL
+    basename instead. The matching rewrite of the declared names is separate
+    (see ``_disambiguate_source_names``) because it must run after the merge.
+    """
     _log("  -> Scanning for missing upstream assets...")
-    for line in upstream_text.split("\n"):
-        line = line.strip().strip("'\"")
-        if "://" in line or "=(" in line or line.startswith(")"):
+    entries = list(_iter_source_entries((pkg_dir / "PKGBUILD").read_text()))
+
+    name_counts: dict[str, int] = {}
+    for entry in entries:
+        name_counts[entry["filename"]] = name_counts.get(entry["filename"], 0) + 1
+
+    for entry in entries:
+        name = entry["filename"]
+        resolved = _expand_source_url(entry["url"], pkgver)
+        if "://" not in resolved:
+            continue  # repo-local file, never fetched
+
+        # A name shared by more than one URL cannot name both artifacts.
+        if name_counts.get(name, 0) > 1:
+            base = resolved.rstrip("/").rsplit("/", 1)[-1].split("?", 1)[0]
+        else:
+            base = name
+        if not base:
             continue
-        name = line.split(":")[0] if ":" in line else line
-        if not name:
-            continue
-        asset = pkg_dir / name
+
+        asset = pkg_dir / base
         if asset.exists():
+            # A file already sitting at this name is not necessarily the
+            # artifact this source points at: a previous run for another
+            # version leaves its payload behind under the same basename, and
+            # updpkgsums treats a matching local name as found without
+            # verifying content, so it would hash the stale bytes. Re-fetch
+            # when the URL's bytes differ from what is on disk.
+            try:
+                remote = _download(resolved)
+            except Exception as e:
+                _log(f"    -> WARN: cannot verify {resolved}: {e}")
+                continue
+            if hashlib.sha256(asset.read_bytes()).digest() != hashlib.sha256(
+                remote
+            ).digest():
+                _log(f"    -> Refreshing stale asset: {base}")
+                asset.write_bytes(remote)
             continue
+
         try:
-            _log(f"    -> Downloading missing asset: {name}")
-            req = urllib.request.Request(
-                f"{base_url}/{name}", headers={"User-Agent": "sync-package/1.0"}
-            )
-            with urllib.request.urlopen(req, timeout=30) as resp:
-                asset.write_bytes(resp.read())
+            _log(f"    -> Downloading missing asset: {base}")
+            asset.write_bytes(_download(resolved))
         except Exception as e:
-            _log(f"    -> Failed to download {name}: {e}")
+            _log(f"    -> Failed to download {base}: {e}")
+
+
+def _download(url: str) -> bytes:
+    req = urllib.request.Request(url, headers={"User-Agent": "sync-package/1.0"})
+    with urllib.request.urlopen(req, timeout=60) as resp:
+        return resp.read()
 
 
 # ── merge ─────────────────────────────────────────────────────────────────
@@ -434,9 +498,17 @@ def _iter_source_entries(text: str):
             if "::" in value:
                 filename, url = value.split("::", 1)
             else:
-                filename = url = value
-                if "://" not in url:
-                    continue  # repo-local file, never fetched
+                # A bare entry is either a repo-local file (a patch, a script)
+                # that lives beside the PKGBUILD, or a plain URL. Repo-local
+                # files are never fetched; an absolute URL is named after its
+                # own basename, the way makepkg names it on disk -- without
+                # this the local name would be the whole URL.
+                if "://" not in value:
+                    continue
+                url = value
+                filename = url.rstrip("/").rsplit("/", 1)[-1].split("?", 1)[0]
+                if not filename:
+                    continue
             yield {"filename": filename, "url": url}
 
 
@@ -740,7 +812,7 @@ def main() -> None:
     upstream_url, base_url = _resolve_upstream(vars_)
 
     if upstream_url and base_url:
-        fetched, changed = _fetch_upstream(upstream_url, base_url, pkg_dir)
+        fetched, changed = _fetch_upstream(upstream_url, base_url, pkg_dir, new_ver)
         cache = pkg_dir / ".PKGBUILD.upstream"
         if fetched and changed and cache.exists():
             _log("  -> Upstream PKGBUILD changed, classifying and merging...")
@@ -754,7 +826,7 @@ def main() -> None:
                 _log(f"  -> Review required: {['BUILD'] if build_changed else '[]'}")
 
             # Download new upstream assets
-            _fetch_assets((pkg_dir / "PKGBUILD.new").read_text(), base_url, pkg_dir)
+            _fetch_assets(pkg_dir, new_ver)
 
             # Protected merge
             vars_, funcs, ok = _merge_with_identity(vars_, funcs, pkg_dir)
@@ -773,8 +845,15 @@ def main() -> None:
         elif fetched and changed:
             # Initial bootstrap — cache doesn't exist yet
             _log("  -> Initial upstream tracking setup.")
-            _fetch_assets((pkg_dir / "PKGBUILD.new").read_text(), base_url, pkg_dir)
+            _fetch_assets(pkg_dir, new_ver)
             (pkg_dir / "PKGBUILD.new").rename(pkg_dir / ".PKGBUILD.upstream")
+
+            # Rename colliding source entries here too: .PKGBUILD.upstream is
+            # gitignored, so the first sync of any package takes this branch,
+            # where the merge below never runs and _disambiguate_source_names
+            # would otherwise never be reached.
+            _disambiguate_source_names(pkg_dir)
+
             upstream_changed = True
 
     # 1. Version update
