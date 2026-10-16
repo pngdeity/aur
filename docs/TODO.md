@@ -51,8 +51,8 @@ Outstanding architectural and documentation items requiring completion.
       has `set -e` — so the first failure killed the whole job and every later
       package was silently unbuilt. In sort order `apm` is third, and it failed
       on `python-frontmatter`, `python-llm` and `python-llm-github-models`, none
-      of which exists in any Arch repository (the first two are AUR-only;
-      `python-llm-github-models` exists on neither the repos nor the AUR).
+      of which exists in any Arch repository (the first two are AUR-only; the
+      third, then carried here, existed on neither the repos nor the AUR).
       Effect: **the last 12 packages in sort order had never once been built by
       CI**. Resolved 2026-10-16 with both separable fixes:
   - **(a) The orchestration defect.** The loop now builds each package
@@ -68,10 +68,12 @@ Outstanding architectural and documentation items requiring completion.
     unbuildable here and is not on a path to publication (`apm` carries no
     `_deploy_aur`; `apm-bin` on the AUR belongs to another maintainer). If the
     generator is ever to be shipped, the dependency chain must be packaged
-    first — `python-llm-github-models` pulls `python-llm`,
-    `python-frontmatter` and `python-azure-ai-inference` — which is a
-    `pkg-bootstrap` task, and `apm` would also need a version bump from
-    0.16.0. (Closed 2026-10-16)
+    first — `apm` pulls `python-llm`, `python-frontmatter` and
+    `python-llm-github-models`, the last of which in turn pulls
+    `python-azure-ai-inference` — which is a `pkg-bootstrap` task, and `apm`
+    would also need a version bump from 0.16.0. (Two members of that chain
+    were carried here and decommissioned 2026-10-16; see the entry below.)
+    (Closed 2026-10-16)
 - [x] **`main`'s `go-regal-bin` carried stale per-arch checksums**: Recorded as
       a defect, then **withdrawn as one — it was a version lag, not a defect**.
       At `pkgver=0.40.0` the digests `sha512sums_x86_64='23916fdc…'` and
@@ -118,21 +120,18 @@ Outstanding architectural and documentation items requiring completion.
     (`Successfully built dnstwist-20250130-py3-none-any.whl`). The recipe should
     add that file as a `source` entry (pinned to the tag) so the build is
     offline-reproducible rather than fetching it. (Due: Indeterminate)
-  - **`python-azure-ai-inference` and `python-llm-github-models` — a
-    repository-coverage limit, not a recipe defect.** Both declare runtime
-    dependencies that exist only on the AUR or nowhere: `python-azure-core`
-    (AUR, dpeukert) for the first, and `python-llm` (AUR, cotsuka) plus the
-    sibling `python-azure-ai-inference` for the second. The builder image
-    (`.github/docker/Dockerfile`) is stock `archlinux:base-devel` plus a fixed
-    tool list, with no AUR and no third-party repository configured, so any
-    package whose dependency is AUR-only **cannot** be built by CI regardless of
-    its recipe. These two are the dependency chain `apm` needs, so they share
-    its disposition rather than having separate one. The cause is distinct from
-    `apm`'s, though: `apm` names three deps that are absent from the repos, and
-    these two name deps that are absent from anything the container can reach.
-    Addressing either means packaging the chain (a `pkg-bootstrap` task) or
-    teaching the builder image to consume AUR/third-party repositories — the
-    latter a deliberate policy choice, not an oversight. (Due: Indeterminate)
+  - **Narrowed 2026-10-16 by decommissioning.** The second failure group —
+    `python-azure-ai-inference` and `python-llm-github-models` — no longer
+    exists. Both were removed from `packages/`: they had exactly one terminal
+    consumer, `apm`, and existed only to satisfy its dependency chain. `apm` is
+    itself deferred as feature work (see the entry above), so with it deferred
+    the two had no remaining consumer and no independent reason to exist.
+    Neither was `_deploy_aur`-flagged and neither was ever on the AUR. Note
+    that neither had ever been shown to build — both fail on dependencies
+    (`python-azure-core`, `python-llm`) belonging to other maintainers — so
+    what was removed was unverified recipe work, not working packages.
+    Reproducing them, if `apm` is picked up, is a `pkg-bootstrap` task on the
+    whole chain. (Due: Indeterminate)
 - [ ] **The builder image cannot reach the AUR or any third-party repository**:
       `.github/docker/Dockerfile` builds `FROM archlinux:base-devel` and adds a
       fixed tool list (`devtools git sudo jq nvchecker python-packaging openssh
@@ -140,9 +139,10 @@ Outstanding architectural and documentation items requiring completion.
       third-party repository, so `pacman` inside the build container resolves
       only the official repos. **Any package whose dependency exists solely on
       the AUR cannot be built by CI, whatever its recipe says** — the recipe is
-      correct, the environment cannot resolve it. Three of the fifteen packages
-      are in exactly this position (`apm`, `python-azure-ai-inference`,
-      `python-llm-github-models`), and `apm` is why the build job aborted at
+      correct, the environment cannot resolve it. Two of the thirteen packages
+      are in exactly this position (`apm`, and `python-llm-github-models`'s
+      sibling `python-llm` was the other until the chain was decommissioned on
+      2026-10-16), and `apm` is why the build job aborted at
       position 3 for its whole life before the orchestration fix.
       This is a **structural gap, not an oversight in any single recipe**: the
       repository deliberately holds variants of AUR and official-repo packages
@@ -155,13 +155,16 @@ Outstanding architectural and documentation items requiring completion.
     installed in the image, `makepkg` run as a non-root user (already the case —
     `arch-builder.sh` runs under `sudo -u builder`), and a decision about
     whether the builder trusts the AUR as a dependency source at build time.
-  - **Build and publish our own dependency repository.** Our `packages/` already
-    holds `python-azure-ai-inference` and `python-llm-github-models`; adding
-    `python-azure-core` and `python-llm` would close the chain entirely from
-    sources we control. Most reproducible, and consistent with the repository
-    already producing its own binary repo for deployment — but it means
-    maintaining four more packages, two of which belong to other AUR
-    maintainers.
+  - **Build and publish our own dependency repository.** Adding
+    `python-azure-core` and `python-llm` to `packages/` would close `apm`'s
+    chain entirely from sources we control. Most reproducible, and consistent
+    with the repository already producing its own binary repo for deployment —
+    but it means maintaining more packages that belong to other AUR
+    maintainers, and takes on the packaging burden for software we would
+    otherwise not carry. (Two earlier members of this chain,
+    `python-azure-ai-inference` and `python-llm-github-models`, were carried
+    for exactly this reason and decommissioned 2026-10-16 once `apm` was
+    deferred.)
   - **Configure the builder to consume our own published repository** (the
     Apache-hosted `nightly` repo that `release.yml` deploys). Would let the
     builder resolve anything we already publish, without an AUR helper — but
@@ -403,7 +406,9 @@ Outstanding architectural and documentation items requiring completion.
 - [ ] **Withdrawn-maintainership audit**: `_deploy_aur=true` was found on four
       packages whose AUR entries are now ABSENT — `apm`, `apm-go-git`,
       `python-azure-ai-inference`, `python-llm-github-models`. All four flags
-      were removed 2026-10-15. The root cause is that `packages/` holds three
+      were removed 2026-10-15, and the latter three have since been deleted from
+      `packages/` outright (2026-10-16). The root cause is that `packages/`
+      holds three
       categories of package (owned AUR entries, custom variants of
       other-maintainer AUR packages, custom variants of official repo packages)
       and nothing detected when a package crossed from owned to not-owned.
