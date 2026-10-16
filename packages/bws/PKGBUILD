@@ -10,13 +10,13 @@ pkgrel=1
 pkgdesc="Bitwarden Secrets Manager CLI"
 arch=('x86_64' 'aarch64')
 url="https://github.com/bitwarden/sdk-sm"
-license=('custom:BITWARDEN SOFTWARE DEVELOPMENT KIT LICENSE AGREEMENT')
+license=('custom:Bitwarden-SDK-License-Agreement')
 makedepends=('cargo' 'rust')
 depends=('gcc-libs')
 provides=('bws-bin')
 conflicts=('bws-bin')
 source=("${pkgname}-${pkgver}.tar.gz::${url}/archive/refs/tags/bws-v${pkgver}.tar.gz")
-sha256sums=('SKIP')
+sha256sums=('3ea669ae57b1d3090f98ff2c09894b4da0bf2c700a4f8d79f70a0f96615cd9ed')
 
 build() {
 	cd "sdk-sm-bws-v${pkgver}"
