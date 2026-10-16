@@ -34,6 +34,44 @@ Outstanding architectural and documentation items requiring completion.
 
 ## Engineering (CI/CD)
 
+- [ ] **Silent-failure pattern across the sync pipeline**: Nine defects found
+      in one session shared a single shape — each produced a plausible
+      artifact instead of a signal, so it could go unnoticed indefinitely.
+      They are not nine coincidences; they are one property of this tooling.
+      The instances, with what each produced instead of an error:
+  1. The `unzip`-not-in-base-devel guard in `pkl-lsp` — a guard that silently
+     skipped its own purpose.
+  2. `amass-git`/`amass-bin` declaring `changelog=` files that never existed
+     in any commit — `aur-deploy.sh` copies the changelog only `-f` it
+     exists, so a PKGBUILD was shipped referencing a file the AUR repo does
+     not contain.
+  3. The nvchecker token gap — a `no-result` error is non-fatal, nvchecker
+     exits 0, and CI filters for `updated` events, so six packages had dead
+     version checks producing no output at all.
+  4. The CI per-package migration — a package with no local
+     `.nvchecker.toml` simply has no check, and nothing reports the absence.
+  5. Version-string shape mismatches (`pkl-lsp-bin`'s hyphenated tag,
+     `opendoas` missing `prefix`) — reported versions that `makepkg` rejects,
+     visible only once a check actually ran.
+  6. `ranger-doas`'s phantom patch files — declared in `source=()` and
+     applied in `prepare()`, absent from every commit.
+  7. `nvtake` requiring `newver` — `load_file` sets `ver_files` only when
+     both `oldver` and `newver` are present, so the step could never have
+     worked; latent because an earlier step always failed first.
+  8. A 386 MB `makepkg` clone staged by `git add packages/`, rejected at
+     push time — the `.gitignore` pattern `packages/*/.git` cannot match a
+     clone nested one level deeper.
+  9. `fetch_upstream_assets()` reading only the first source array and
+     downloading colliding local names to one file, so `updpkgsums` wrote the
+     x86_64 checksum into `sha512sums_aarch64` — a package that would fail
+     its own checksum check on aarch64.
+
+      The common root is that a failure in these tools yields a *result*
+      rather than an *error*, so nothing escalates. Consider: making each
+      stage assert its own postcondition (a check per package, a file per
+      declared asset, a distinct checksum per source specifier), and failing
+      loudly when an input it declares cannot be found. (Due: Indeterminate)
+
 - [ ] **Local Repository for Circular Dependencies**: The original
       `arch-builder.sh` and `build.yml` had placeholder logic for a
       `/tmp/local-repo` pacman repository to resolve inter-package circular
