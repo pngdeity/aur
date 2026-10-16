@@ -66,8 +66,13 @@ packages/*/.PKGBUILD.upstream
 # pulls any source entry named with the local-name form (foo::https://...) into
 # the package directory. These are build inputs, reproducible from the URL in
 # source=, so they do not belong in history.
+#
+# regal declares the same local name for both architectures (regal_Linux), so
+# the entries are fetched under their URL basenames instead -- regal_Linux_*
+# covers those as well as the bare name. Enumerating exact names here missed
+# the per-arch files and a discovery run committed them.
 *.tgz
-packages/*/regal_Linux
+packages/*/regal_Linux*
 
 # Downloaded license files (source=("LICENSE.txt::..."))
 packages/*/LICENSE*
