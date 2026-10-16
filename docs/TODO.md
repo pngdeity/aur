@@ -344,6 +344,35 @@ All items below refer to `packages/pkl-lsp/` (build-from-source via GraalVM
 native-image from `apple/pkl-lsp` source). The package builds and works; these
 are quality improvements deferred from initial development.
 
+### Version 0.8.0 — not a version bump (blocked)
+
+Upstream 0.8.0 restructured the build and can no longer be handled by bumping
+`pkgver`. Measured 2026-10-16:
+
+- **0.8.0 produces no native binary.** PR #226 "Add native executable" merged
+  2026-08-04, but the tag's build has no `native-image` invocation; its
+  `release.yml` runs `./gradlew check shadowJar verifyDistribution` and uploads
+  `build/libs/*`. The release asset is `pkl-lsp-0.8.0.jar` alone, 16 MB. Our
+  native-image pipeline in `build()` is therefore ours to carry forward
+  unaided — it is not upstream's build step.
+- **The Gradle build gained requirements incompatible with a clean chroot.**
+  `gradle/libs.versions.toml` pins a `zig` toolchain (`0.16.0`) that the
+  `installZig` task downloads from `zigmirror.com` **at build time**, then
+  clones two repositories over the network — `tree-sitter/tree-sitter` at
+  `v0.26.8` and `apple/tree-sitter-pkl` at `v0.21.0` — to cross-compile the
+  tree-sitter native libraries into `build/generated/libs/native/`. It also
+  requires JDK 25 (`jdkVersion=25`, `jdkTargetVersion=23`) and Maven artifacts
+  for `pkl` 0.32.0.
+- **Consequence for `source=()`.** Keeping the build offline and reproducible
+  means vendoring the zig toolchain and both tree-sitter trees as sources, then
+  overriding the Gradle tasks that fetch them — a build-authoring project, not
+  an update, and unverifiable here (no network in a clean chroot, and the
+  chroot build is human-run).
+- **Alternatives, neither taken yet.** (a) Stay on 0.7.1 until a tag carries
+  native binaries. (b) Ship 0.8.0 as a JVM package: drop `native-image`, install
+  a launcher that execs `java -jar`, and add a JRE `depends` — a change to what
+  the package *is*, so it needs an explicit decision.
+
 ### Before AUR Deployment
 
 - [x] **`pkgctl build` chroot validation**: Completed 2026-06-19. No dependency
@@ -467,27 +496,36 @@ PKGBUILD header. It still points at a native binary release from the
 `colelawrence/pkl-lsp` fork at version `0.6.0-native.20260518.5`; `_deploy_aur`
 has been removed so the stale fork is never pushed to the AUR.
 
-Upstream status (checked 2026-10-15): [issue #60](https://github.com/apple/pkl-lsp/issues/60)
+Upstream status (re-checked 2026-10-16): [issue #60](https://github.com/apple/pkl-lsp/issues/60)
 closed 2026-08-04 as completed, and PR #226 "Add native executable" landed that
-same hour. Releases are still unchanged — every tag through 0.8.0 ships exactly
-one asset, the JAR — because `main` is 30 commits ahead of the newest tag. The
-`release.yml` workflow now publishes `pkl-lsp-{linux-amd64,linux-aarch64,macos-*,
-windows-amd64,alpine-linux-amd64}` alongside `build/libs/*`, so the rebase
-becomes possible as soon as a release includes #226. Note that
-`packages/pkl-lsp` has now backported the metadata half of #226 (see 14c), so
-the source build no longer depends on waiting for it.
+same hour. **No release contains it.** Every tag through 0.8.0 still ships
+exactly one asset, the JAR (`pkl-lsp-0.8.0.jar`, 16 MB) — the release workflow
+at each tag runs `./gradlew check shadowJar verifyDistribution` and creates the
+release from `build/libs/*`.
+
+`main` is ahead of every tag and its `release.yml` now uploads
+`build/libs/* build/executable/*`, so a future tag would carry per-platform
+binaries. That is a claim about `main`, not about any release that exists: the
+`build/executable/*` half is absent at both 0.7.1 and 0.8.0. A previous version
+of this note read the `main` workflow and described it as if it had shipped.
+The rebase is therefore blocked on a tag that has not been cut, not on one that
+has failed.
+
+Note that `packages/pkl-lsp` has backported the metadata half of #226 (see 14c),
+so the source build does not depend on waiting for it.
 
 Metadata hygiene items below were completed 2026-09-29; the source rebase
-remains blocked until Apple publishes native binaries (issue #60):
+remains blocked until Apple publishes a tag carrying native binaries:
 
 - [x] **Update maintainer format**: `pngdeity <pngdeity@tutanota.com>`.
 - [x] **Add `_pkgname` variable**: `_pkgname=pkl-lsp`; `provides`/`conflicts`
       now derive from it.
 - [x] **Fix `license=`**: Verified Apache-2.0 upstream.
 - [ ] **Rebase to `apple/pkl-lsp`**: Switch from `colelawrence/pkl-lsp` fork to
-      official `apple/pkl-lsp` releases. Blocked — releases still ship only a
-      JAR through 0.8.0. When a release containing #226 appears, repoint the
-      sources, add `options=('!strip')` and set `_deploy_aur=true`.
+      official `apple/pkl-lsp` releases. Blocked — every tag through 0.8.0
+      ships only a JAR; `main`'s workflow would publish natives but no tag has
+      been cut since #226. When such a tag appears, repoint the sources, add
+      `options=('!strip')` and set `_deploy_aur=true`.
 
 ## Ready for Human (Post-Swarm 2026-05-15)
 

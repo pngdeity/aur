@@ -371,8 +371,8 @@ clean. Committed 2026-09-29.
 ### 14i. `pkl-lsp-bin` rewrite (blocked)
 
 `packages/pkl-lsp-bin/` is deferred and marked DEPRECATED in its PKGBUILD
-header. Apple does not publish native binaries for `pkl-lsp`; the GitHub
-releases ship only a `.jar`, so the package still tracks the
+header. Apple has never published a native binary for `pkl-lsp` — every tag
+through 0.8.0 ships a single `.jar` — so the package still tracks the
 `colelawrence/pkl-lsp` fork and `_deploy_aur` is removed.
 
 **Canonical status: `docs/TODO.md` § "`pkl-lsp-bin` Package"** — it carries the
