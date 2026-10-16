@@ -5,7 +5,8 @@ _demote_upstream_maintainer=true
 _githubname="StyraInc/regal"
 
 pkgname=go-regal-bin
-pkgver=0.40.0
+changelog=go-regal-bin.changelog
+pkgver=0.43.0
 pkgrel=1
 pkgdesc="A linter and language server for Rego"
 arch=('x86_64' 'aarch64')
@@ -15,13 +16,19 @@ depends=('glibc')
 provides=('go-regal' 'go-regal-git' 'regal')
 conflicts=('go-regal' 'go-regal-git' 'regal')
 source=("regal-license::https://raw.githubusercontent.com/StyraInc/regal/refs/heads/main/LICENSE")
-source_x86_64=("regal_Linux::https://github.com/StyraInc/regal/releases/download/v${pkgver}/regal_Linux_x86_64")
-source_aarch64=("regal_Linux::https://github.com/StyraInc/regal/releases/download/v${pkgver}/regal_Linux_arm64")
+source_x86_64=("regal_Linux_x86_64::https://github.com/StyraInc/regal/releases/download/v${pkgver}/regal_Linux_x86_64")
+source_aarch64=("regal_Linux_arm64::https://github.com/StyraInc/regal/releases/download/v${pkgver}/regal_Linux_arm64")
 sha512sums=('dc6b68d13b8cf959644b935f1192b02c71aa7a5cf653bd43b4480fa89eec8d4d3f16a2278ec8c3b40ab1fdb233b3173a78fd83590d6f739e0c9e8ff56c282557')
-sha512sums_x86_64=('23916fdcda50e72612dd5e964763de6ae2554a638854c91515971504cc55527ce9bff890834a6361c7f3cf959eac72d3c2bf08946f0957768bba3f1b67cf99dd')
-sha512sums_aarch64=('f3af02d0067653f03d4400598957d0cec4d08f208e6fe79aa76fd7afe3f18f931bfbe8d6e9dfcd1e87d2f12b4249755b38839a167bd8cc0956a3e8ac07830841')
+sha512sums_x86_64=('f930136bb3f8b86c54328b1491356d16b003f1170e5d17fa9e18effc945ac6b6cc52d66ad6afc5638afcef144303f5194346aedf6ce8976992e586f41812341f')
+sha512sums_aarch64=('5eeed01afe01534e6ec5f1b1634f8dd82914326c31e6ebbebd121cb45ee06d2e761238b7b04dc5e745194147fb1d757c969b3fa1cba3452287fb111ee227914b')
 
 package() {
 	install -Dm644 "${srcdir}/regal-license" "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
-	install -Dm755 "${srcdir}/regal_Linux" "${pkgdir}/usr/bin/regal"
+
+	# The upstream release names ship as regal_Linux_<arch>, but for aarch64 the
+	# URL basename is "arm64" -- the renamed source keeps that name, so map CARCH
+	# onto it rather than hardcoding x86_64.
+	local _arch=arm64
+	[[ "${CARCH}" == "x86_64" ]] && _arch=x86_64
+	install -Dm755 "${srcdir}/regal_Linux_${_arch}" "${pkgdir}/usr/bin/regal"
 }

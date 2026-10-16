@@ -3,6 +3,13 @@
   "data": {
     "clash-geoip": {
       "version": "202610150028"
+    },
+    "go-regal-bin": {
+      "version": "0.43.0",
+      "gitref": "refs/tags/v0.43.0",
+      "revision": "6189089eff8c384af8a0e821f2ef9bad594970e9",
+      "url": "https://github.com/StyraInc/regal/releases/tag/v0.43.0",
+      "revision_creation_time": "2026-09-28T13:55:16Z"
     }
   }
 }
