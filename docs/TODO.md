@@ -444,18 +444,17 @@ provisioning, and CI verification.
 
 - [ ] **chroot builds — remaining packages**: Run `pkgctl build` for all packages
       in a clean chroot. Verify no build failures, dependency resolution errors,
-      or namcap issues. (`pkl-lsp` 0.7.1-5 is now validated; 25 others are not.)
+      or namcap issues. (`pkl-lsp` 0.7.1-5 is now validated; the rest are not.)
 - [x] **fix/packages-opendoas-ranger-jules disposition**: Resolved — branch
       deleted; changes absorbed into main.
 - [x] **HPA rebase onto `dev`**: Cancelled — no HPA branch exists; swarm task
       was never started.
 - [x] **AUR deployment (SSH auth)**: Resolved — AUR SSH auth is working and
-      verified live. `amass-bin` (5.1.1-1) and `python-whois` (0.9.6-1) are
+      verified live. `amass-bin` (5.1.1-1) and `python-whois` (0.9.6-3) are
       published on the AUR, and `pkl-lsp` 0.7.1-5 was pushed manually
       2026-10-15. Note the item's premise is superseded: `scripts/aur-deploy.sh`
-      is being replaced (work lives on another branch), and it cannot deploy
-      packages whose `source[]` carries local files. `opendoas` `_deploy_aur` is
-      unset for that reason, not because of auth.
+      cannot deploy packages whose `source[]` carries local files. `opendoas`
+      `_deploy_aur` is unset for that reason, not because of auth.
 - [x] **oldver.json decision**: Resolved — tracked as shared nvchecker state, its
       path declared as `oldver` in the `[__config__]` section CI synthesizes.
 - [ ] **CI results review**: Check discovery workflow run on `dev` branch

@@ -343,7 +343,7 @@ distinct target and responsibility boundary:
   processing. Variant PKGBUILDs themselves are never AUR-deployed.
 - **Shared pkgdesc**: All packages sharing the same `_pkgname` value MUST use an
   identical `pkgdesc` string. This ensures consistent presentation across
-  variant package listings (e.g., `amass-git`, `amass-bin`, `pkl-lsp`, `pkl-lsp-bin`).
+  variant package listings (e.g., `amass-git`, `amass-bin`).
   The `_pkgname` variable is the authoritative discriminator for variant groups.
   Run `scripts/check-pkgdesc-consistency.sh` to validate. The convention:
   `_pkgname` present and equal to `pkgname` signals the base package (variants
@@ -381,11 +381,13 @@ distinct target and responsibility boundary:
   values and cannot resolve variable references. Boolean presence checks
   (`grep -q "pattern"`) are acceptable where the exact resolved value is not
   needed. Run `scripts/pkgvar --help` for the full interface.
-- **pkgdesc Enforcement Topology** (4-layer): (1) Pre-commit hook
-  (`.pre-commit-config.yaml`) blocks commits of inconsistent PKGBUILDs; (2)
-  `sync-package.sh` §5 warns during automated sync; (3) CI `discovery.yml` gate
-  aborts the pipeline before `git push`; (4) CI `build.yml` gate blocks build of
-  inconsistent packages. All four call `scripts/check-pkgdesc-consistency.sh`.
+- **pkgdesc Enforcement Topology**: pkgdesc consistency is a rule in
+  `policies/repository.rego`, evaluated by the full validator. It is invoked
+  where packages are validated; the pre-commit hook
+  (`.pre-commit-config.yaml`) and the CI `build.yml` gate are the two that run
+  `scripts/check-pkgdesc-consistency.sh` directly. The automated-sync path only
+  emits a `::warning::` naming the mismatch, so a run can finish with
+  inconsistent variants and no commit blocked.
 
 ### Semantic Commit Standards
 

@@ -370,23 +370,15 @@ clean. Committed 2026-09-29.
 
 ### 14i. `pkl-lsp-bin` rewrite (blocked)
 
-**Blocked:** Apple does not currently publish native binaries for `pkl-lsp`
-(tracking [issue #60](https://github.com/apple/pkl-lsp/issues/60)); the GitHub
-releases ship only a `.jar`. Interrogated `apple/pkl-lsp` releases through
-0.8.0 — every tag has exactly one asset, the JAR.
+`packages/pkl-lsp-bin/` is deferred and marked DEPRECATED in its PKGBUILD
+header. Apple does not publish native binaries for `pkl-lsp`; the GitHub
+releases ship only a `.jar`, so the package still tracks the
+`colelawrence/pkl-lsp` fork and `_deploy_aur` is removed.
 
-**Partial (2026-09-29):** Metadata hygiene applied without awaiting binaries —
-maintainer line corrected, `_pkgname=pkl-lsp` added, `pkgdesc` aligned with the
-base, `url`/`_githubname` pointed at `apple/pkl-lsp`, `_deploy_aur` removed
-(previously set, and would have pushed the stale fork to the AUR), duplicate
-`.nvchecker.toml` removed, `pkgrel` bumped to 2. The package is now explicitly
-marked DEPRECATED in the PKGBUILD header.
+**Canonical status: `docs/TODO.md` § "`pkl-lsp-bin` Package"** — it carries the
+full upstream findings and the completion checklist. Update it there, not here.
 
-**Remaining fix:** When native binaries appear: repoint source URLs, add
-`options=('!strip')`, set `_deploy_aur=true`. Bootstrap, chroot validate,
-register, deploy.
-
-**Files:** `packages/pkl-lsp-bin/PKGBUILD`, root `.nvchecker.toml`.
+**Files:** `packages/pkl-lsp-bin/PKGBUILD`, `packages/pkl-lsp-bin/.nvchecker.toml`.
 
 ### 14j. Metadata regeneration (done)
 
