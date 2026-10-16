@@ -28,11 +28,18 @@ optdepends=(
   'python-pillow: perceptual image hashing (--phash)'
   'python-selenium: web page rendering for screenshots (--screenshots)'
 )
-source=("https://files.pythonhosted.org/packages/source/${_name::1}/$_name/$_name-$pkgver.tar.gz")
-sha256sums=('8b6dd9c42a643a0e8b087903c0e6d75c0f6cebf94920ab0b7760ac2522c6bb42')
+source=(
+  "https://files.pythonhosted.org/packages/source/${_name::1}/$_name/$_name-$pkgver.tar.gz"
+  "requirements.txt::${url}/raw/refs/tags/${pkgver}/requirements.txt"
+  "LICENSE::${url}/raw/refs/tags/${pkgver}/LICENSE"
+)
+sha256sums=('8b6dd9c42a643a0e8b087903c0e6d75c0f6cebf94920ab0b7760ac2522c6bb42'
+            '8f213a16cf09675c848fd7c97dc559ed1f66b74f8e9b923e469d662a4f4457bc'
+            'cb0a3c4decf390f764ae452e017c8d4b9b91eb7664e428f6ffc8d30d79a7bb3e')
 
 build() {
   cd "$_name-$pkgver"
+  cp "${srcdir}/requirements.txt" "${srcdir}/LICENSE" .
   python -m build --wheel --no-isolation
 }
 

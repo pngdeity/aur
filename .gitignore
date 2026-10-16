@@ -77,5 +77,8 @@ packages/*/regal_Linux*
 # Downloaded license files (source=("LICENSE.txt::..."))
 packages/*/LICENSE*
 
+# Upstream helper files copied into the source tree by build()
+packages/*/requirements.txt
+
 # Downloaded data artifacts (e.g. GeoIP databases)
 *.mmdb
