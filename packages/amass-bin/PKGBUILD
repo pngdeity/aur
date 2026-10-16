@@ -4,8 +4,9 @@ _deploy_aur=true
 
 _pkgname=amass
 pkgname=${_pkgname}-bin
+changelog=amass-bin.changelog
 pkgver=5.1.1
-pkgrel=1
+pkgrel=2
 pkgdesc="In-depth Attack Surface Mapping and Asset Discovery"
 arch=('x86_64')
 url="https://github.com/owasp-amass/amass"
