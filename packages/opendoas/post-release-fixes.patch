@@ -1,3 +1,25 @@
+From: Duncan Overbruck <mail@duncano.de>
+Date: 2022-02-21 21:01:24 +0000
+Subject: [PATCH] Squash of 6 upstream master commits after v6.8.2
+
+Aggregate of 6 upstream commits on Duncaen/OpenDoas master
+after v6.8.2 (released 2022-01-26):
+  cfa9f0d — remove pam.d configuration files
+  9474e41 — Replace build/installation instructions with discouragements
+  adeb56b — fixed typo in README.md
+  9a25a6d — fix some wording in README.md
+  6266763 — Fix: improve formatting and add Wikipedia reference.
+  b96106b — pam: always print pam_conv messages to stderr
+
+---
+ GNUmakefile            |  7 +--
+ README.md              | 46 ++++++++++++++++------
+ configure              |  4 --
+ pam.c                  |  2 +-
+ pam.d__doas__darwin    |  5 ---
+ pam.d__doas__linux     |  4 --
+ 6 files changed, 101 insertions(+), 83 deletions(-)
+
 diff --git a/GNUmakefile b/GNUmakefile
 index 9470202..2eef88e 100644
 --- a/GNUmakefile
@@ -149,24 +171,8 @@ index 1c5d989..1f92f01 100755
 -		pam_file="pam.d__doas__${OS}"
 -		[ -e "$pam_file" ] && printf 'PAM_DOAS  =	%s\n' "$pam_file" >>$CONFIG_MK
  		return 0
- 	}
- 
-diff --git a/doas.c b/doas.c
-index 0ea380a..ac3a42a 100644
---- a/doas.c
-+++ b/doas.c
-@@ -260,11 +260,6 @@ main(int argc, char **argv)
- 	const char *cwd;
- 	char **envp;
- 
--	if (argc <= 0 || argv == NULL || argv[0] == NULL) {
--		fprintf(stderr, "doas: executed without argv\n");
--		exit(1);
--	}
--
- 	setprogname("doas");
- 
- 	closefrom(STDERR_FILENO + 1);
+  	}
+
 diff --git a/pam.c b/pam.c
 index a9e2036..fa483b8 100644
 --- a/pam.c
