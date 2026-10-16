@@ -2,7 +2,9 @@
   "version": 2,
   "data": {
     "clash-geoip": {
-      "version": "202610150028"
+      "version": "202610160207",
+      "gitref": "refs/tags/202610160207",
+      "revision": "dcfc269a27da86bb335031e68e2cff63cd1b6057"
     },
     "go-regal-bin": {
       "version": "0.43.0",
