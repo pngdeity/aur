@@ -46,20 +46,36 @@ def pkgvar(pkgbuild: Path, var: str) -> str:
     return result.stdout.strip()
 
 
-def copy_changelog(pkgbuild: Path, dest_dir: Path) -> None:
+def copy_changelog(pkgbuild: Path, dest_dir: Path, source_dir: Path) -> None:
     """Copy the changelog the PKGBUILD references into dest_dir.
 
     makepkg --printsrcinfo fails when a declared changelog= is absent, and the
     AUR repo must contain the file the PKGBUILD points at, so this has to run
     before .SRCINFO is generated and before the push.
+
+    `pkgbuild` is the staged copy inside dest_dir, so its parent is not the
+    package directory -- `source_dir` is, and the changelog has to be resolved
+    against that. Deriving it from the staged copy's own parent finds nothing
+    in the staging directory and silently copies no changelog at all.
+
+    A declared-but-absent changelog is fatal: deploying without it leaves the
+    AUR repository holding a PKGBUILD that points at a file it does not
+    contain, and makepkg then fails for every user of the package. Refusing
+    here is the only place the mismatch is visible, so it must not be silent.
     """
     changelog = pkgvar(pkgbuild, "changelog")
     if not changelog:
         return
-    source = pkgbuild.parent / changelog
-    if source.is_file():
-        shutil.copy(source, dest_dir / changelog)
-        print(f"  -> Copied changelog: {changelog}")
+    source = source_dir / changelog
+    if not source.is_file():
+        print(
+            f"::error::{source_dir.name} declares changelog={changelog} "
+            f"but {source} does not exist. Refusing to deploy a PKGBUILD whose "
+            f"changelog is absent."
+        )
+        sys.exit(1)
+    shutil.copy(source, dest_dir / changelog)
+    print(f"  -> Copied changelog: {changelog}")
 
 
 def check_ssh() -> None:
@@ -105,11 +121,15 @@ def main() -> None:
     pkgbuild = pkg_dir / "PKGBUILD"
     print(f"==> AUR Deploy: {pkg_name}")
 
-    source_directive_re = re.compile(r'^source "\.\./')
-    deploys_aur_re = re.compile(r"^_deploy_aur=true")
-    subarch_re = re.compile(r"^_repo_subarch=")
-    prereview_re = re.compile(r"^# PREREVIEW:")
-    review_re = re.compile(r"^# Review the diff")
+    # These predicates mirror grep's per-line anchoring: `^` must match at the
+    # start of a line, not merely the start of the file, so every pattern needs
+    # re.MULTILINE. Without it `^_deploy_aur=true` matches nothing and the
+    # script silently concludes no package is deployable.
+    source_directive_re = re.compile(r'^source "\.\./', re.MULTILINE)
+    deploys_aur_re = re.compile(r"^_deploy_aur=true", re.MULTILINE)
+    subarch_re = re.compile(r"^_repo_subarch=", re.MULTILINE)
+    prereview_re = re.compile(r"^# PREREVIEW:", re.MULTILINE)
+    review_re = re.compile(r"^# Review the diff", re.MULTILINE)
 
     # Safety gate
     with open(pkgbuild) as f:
@@ -131,7 +151,7 @@ def main() -> None:
     aur_pkgbuild = aur_dir / "PKGBUILD"
     shutil.copy(pkgbuild, aur_pkgbuild)
     print("  -> Producing AUR-compatible PKGBUILD")
-    copy_changelog(aur_pkgbuild, aur_dir)
+    copy_changelog(aur_pkgbuild, aur_dir, pkgbuild.parent)
 
     # 1. Inline source directives
     print("  -> Resolving source directives")
@@ -220,7 +240,7 @@ def main() -> None:
 
     shutil.copy(aur_pkgbuild, aur_clone / "PKGBUILD")
     shutil.copy(aur_dir / ".SRCINFO", aur_clone / ".SRCINFO")
-    copy_changelog(aur_pkgbuild, aur_clone)
+    copy_changelog(aur_pkgbuild, aur_clone, pkgbuild.parent)
 
     subprocess.run(
         ["git", "add", "PKGBUILD", ".SRCINFO"], cwd=str(aur_clone), check=True

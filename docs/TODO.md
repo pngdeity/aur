@@ -110,10 +110,10 @@ Outstanding architectural and documentation items requiring completion.
       package sections. The lifecycle question — whether each run should open a
       PR and what verifies them — remains open, but it is a design question
       about the pipeline, not a pile of orphaned refs. (Closed 2026-10-16)
-- [ ] **Silent-failure pattern across the sync pipeline**: Nine defects found
+- [ ] **Silent-failure pattern across the sync pipeline**: Ten defects found
       in one session shared a single shape — each produced a plausible
       artifact instead of a signal, so it could go unnoticed indefinitely.
-      They are not nine coincidences; they are one property of this tooling.
+      They are not ten coincidences; they are one property of this tooling.
       The instances, with what each produced instead of an error:
   1. The `unzip`-not-in-base-devel guard in `pkl-lsp` — a guard that silently
      skipped its own purpose.
@@ -147,6 +147,18 @@ Outstanding architectural and documentation items requiring completion.
      downloading colliding local names to one file, so `updpkgsums` wrote the
      x86_64 checksum into `sha512sums_aarch64` — a package that would fail
      its own checksum check on aarch64.
+  10. The Python port's `aur-deploy.py` compiled its line-anchored predicates
+      without `re.MULTILINE`, so `^_deploy_aur=true` matched nothing and the
+      script concluded **no package was deployable** — every deployment
+      exited 0 at the opt-in check, reporting `_deploy_aur not set`. The Bash
+      original used `grep -q "^_deploy_aur=true"`, which is per-line, so the
+      port silently inverted the meaning of a predicate that gates the
+      entire publish path. Found 2026-10-16 while forward-porting the
+      changelog guard; fixed by adding `re.MULTILINE` to all five patterns.
+      A sibling defect in the same file resolved the changelog against the
+      staged copy's parent (the temporary staging directory) rather than the
+      package directory, so it had never copied a changelog either; both were
+      pre-existing on the port branch, not introduced by the forward-port.
 
       The common root is that a failure in these tools yields a *result*
       rather than an *error*, so nothing escalates. Consider: making each
