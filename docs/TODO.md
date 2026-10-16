@@ -286,6 +286,18 @@ Outstanding architectural and documentation items requiring completion.
       support via `declare -p`, with single/multi-element examples and JSON mode
       output.
 
+## `python-whois` Package
+
+- [ ] **Upstream issue/PR status check**: We filed issue #325 and opened PR #326
+      against `richardpenman/whois` (2026-10-16) — the lapsed `нарояци.com`
+      fixture in `test/test_query.py::TestQuery::test_simple_unicode_domain`.
+      Check periodically whether the PR was merged, rejected, or is going stale.
+      If merged, the eventual options on our side are to keep our `--deselect`
+      in `check()` as belt-and-braces, or drop it once we package a release
+      containing the fix. Either way the PKGBUILD comment can gain
+      `https://github.com/richardpenman/whois/issues/325` in place of the
+      `python-requests` precedent it cites today. (Due: Indeterminate)
+
 ## `pkl-lsp` Package (2026-06-18)
 
 All items below refer to `packages/pkl-lsp/` (build-from-source via GraalVM
