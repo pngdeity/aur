@@ -83,20 +83,94 @@ Outstanding architectural and documentation items requiring completion.
       is now at **0.43.0** (`875bc61`), with `f930136b…` / `5eeed01a…` and
       distinct local names. The sync exposed a genuine defect, recorded
       separately below. (Closed 2026-10-16)
-- [ ] **`sync-package.sh` rename handling does not follow references into
-      `package()`**: `disambiguate_source_names()` rewrites colliding local
-      source names by `sed` over the `source*` arrays only. It never inspects
-      `package()`, so when `go-regal-bin`'s two architectures collided on
-      `regal_Linux` and were rewritten to `regal_Linux_x86_64` /
-      `regal_Linux_arm64`, `package()` still installed `${srcdir}/regal_Linux`
-      and the build failed with `install: cannot stat … No such file or
-      directory`. The sync reported success. Found live 2026-10-16 while
-      updating `go-regal-bin`; fixed by hand in that PKGBUILD. This is a new
-      instance of the silent-failure class: the tool produced a plausible
-      result (a rewritten source array) while leaving a dangling reference
-      behind, and only a build revealed it. The rename should either assert
-      that no `package()` reference still names the old local name, or map the
-      reference too. (Due: Indeterminate)
+- [x] **`sync-package.sh` rename handling did not follow references into
+      `package()`**: Fixed 2026-10-16 on the Python port. The problem:
+      `disambiguate_source_names()` rewrote colliding local source names by
+      `sed` over the `source*` arrays only. It never inspected `package()`, so
+      when `go-regal-bin`'s two architectures collided on `regal_Linux` and were
+      rewritten to `regal_Linux_x86_64` / `regal_Linux_arm64`, `package()` still
+      installed `${srcdir}/regal_Linux` and the build failed with
+      `install: cannot stat … No such file or directory`. The sync reported
+      success. The fix makes the rename **assert** rather than half-apply:
+      `_assert_no_dangling_rename()` scans the text outside the `source*` arrays
+      for any surviving reference to an old local name and raises a `SystemExit`
+      naming the file and line, before the PKGBUILD is written — so a rename
+      that cannot be completed safely fails loudly and leaves the recipe
+      untouched. Verified against the exact pre-fix `go-regal-bin` shape
+      (refuses, file unmodified on disk), a CARCH-mapping recipe (passes), and a
+      longer-name neighbour such as `regal_Linux_x86_64` (no false positive).
+      The Bash original on `main` still carries this gap; the port is where it
+      is closed.
+- [ ] **Three packages fail CI for dependency reasons, each a different cause**:
+      The fixed orchestration (above) surfaced the first complete picture of the
+      build set — `11 passed, 3 failed, 1 excluded` on run `38953816887`. The
+      three failures are independent, and only one of them is the `apm` chain:
+  - **`dnstwist` — an upstream packaging bug, fixable here.** Its `setup.py`
+    calls `get_extras('requirements.txt')` at import time to populate the
+    `full` extra, but the **sdist does not ship `requirements.txt`** (it exists
+    only in the git tree — verified present at the `20250130` tag and on
+    `master`). `python -m build --wheel --no-isolation` therefore dies with
+    `FileNotFoundError: [Errno 2] No such file or directory: 'requirements.txt'`
+    before any wheel is produced. `install_requires` is empty, so the extra is
+    optional and the omission never shows up for a pip user resolving from git.
+    Reproduced locally and the fix confirmed: adding the tag's
+    `requirements.txt` to the source directory lets the build complete
+    (`Successfully built dnstwist-20250130-py3-none-any.whl`). The recipe should
+    add that file as a `source` entry (pinned to the tag) so the build is
+    offline-reproducible rather than fetching it. (Due: Indeterminate)
+  - **`python-azure-ai-inference` and `python-llm-github-models` — a
+    repository-coverage limit, not a recipe defect.** Both declare runtime
+    dependencies that exist only on the AUR or nowhere: `python-azure-core`
+    (AUR, dpeukert) for the first, and `python-llm` (AUR, cotsuka) plus the
+    sibling `python-azure-ai-inference` for the second. The builder image
+    (`.github/docker/Dockerfile`) is stock `archlinux:base-devel` plus a fixed
+    tool list, with no AUR and no third-party repository configured, so any
+    package whose dependency is AUR-only **cannot** be built by CI regardless of
+    its recipe. These two are the dependency chain `apm` needs, so they share
+    its disposition rather than having separate one. The cause is distinct from
+    `apm`'s, though: `apm` names three deps that are absent from the repos, and
+    these two name deps that are absent from anything the container can reach.
+    Addressing either means packaging the chain (a `pkg-bootstrap` task) or
+    teaching the builder image to consume AUR/third-party repositories — the
+    latter a deliberate policy choice, not an oversight. (Due: Indeterminate)
+- [ ] **The builder image cannot reach the AUR or any third-party repository**:
+      `.github/docker/Dockerfile` builds `FROM archlinux:base-devel` and adds a
+      fixed tool list (`devtools git sudo jq nvchecker python-packaging openssh
+      pacman-contrib rsync gnupg github-cli`). It configures no AUR helper and no
+      third-party repository, so `pacman` inside the build container resolves
+      only the official repos. **Any package whose dependency exists solely on
+      the AUR cannot be built by CI, whatever its recipe says** — the recipe is
+      correct, the environment cannot resolve it. Three of the fifteen packages
+      are in exactly this position (`apm`, `python-azure-ai-inference`,
+      `python-llm-github-models`), and `apm` is why the build job aborted at
+      position 3 for its whole life before the orchestration fix.
+      This is a **structural gap, not an oversight in any single recipe**: the
+      repository deliberately holds variants of AUR and official-repo packages
+      and is the build source for its own deployment targets, so "the
+      dependencies will come from the official repos" was never a safe
+      assumption. It should be a deliberate, recorded policy.
+      Options, none chosen:
+  - **Configure the builder with an AUR helper and the AUR as a package source.**
+    Closest to how a user actually builds an AUR package. Needs the helper
+    installed in the image, `makepkg` run as a non-root user (already the case —
+    `arch-builder.sh` runs under `sudo -u builder`), and a decision about
+    whether the builder trusts the AUR as a dependency source at build time.
+  - **Build and publish our own dependency repository.** Our `packages/` already
+    holds `python-azure-ai-inference` and `python-llm-github-models`; adding
+    `python-azure-core` and `python-llm` would close the chain entirely from
+    sources we control. Most reproducible, and consistent with the repository
+    already producing its own binary repo for deployment — but it means
+    maintaining four more packages, two of which belong to other AUR
+    maintainers.
+  - **Configure the builder to consume our own published repository** (the
+    Apache-hosted `nightly` repo that `release.yml` deploys). Would let the
+    builder resolve anything we already publish, without an AUR helper — but
+    creates a build-order dependency: a package cannot be built until its
+    dependency has been published, which the current flat build loop does not
+    model.
+      A companion question, worth resolving with it: the build loop is currently
+      a flat `sort`-ordered pass with no dependency graph, so even once the
+      packages are resolvable, the *order* is accidental. (Due: Indeterminate)
 - [x] **Automated-update branches accumulate unmerged and unverified**:
       Resolved 2026-10-16, with the finding corrected. The premise of "seven
       orphaned branches" was **wrong**: those six `aupr*` refs existed only as
