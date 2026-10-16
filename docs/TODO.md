@@ -54,7 +54,11 @@ Outstanding architectural and documentation items requiring completion.
      `opendoas` missing `prefix`) — reported versions that `makepkg` rejects,
      visible only once a check actually ran.
   6. `ranger-doas`'s phantom patch files — declared in `source=()` and
-     applied in `prepare()`, absent from every commit.
+     applied in `prepare()`, absent from every commit. Resolved 2026-10-16:
+     the patches are removed. The change they carried is upstream
+     (`ranger/ranger#3039`, merged 2025-01-03), so there was nothing to
+     port. The package remains parked on `.nvchecker.toml.disabled`; whether
+     to revive it is a separate question.
   7. `nvtake` requiring `newver` — `load_file` sets `ver_files` only when
      both `oldver` and `newver` are present, so the step could never have
      worked; latent because an earlier step always failed first.
