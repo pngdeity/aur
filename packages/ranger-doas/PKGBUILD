@@ -54,12 +54,14 @@ prepare() {
   # Apply doas substitution patch
   patch -Np1 -i "../doas-substitution.patch"
 
-  # DEFERRED: the endwin/ncurses fixes this recipe used to carry as three
-  # hand-applied patches (ranger-1.9.4-fix-ncurses-endwin-error-{1,2,3}.patch)
-  # are not reproducible -- they exist in no commit and update.sh never
-  # generated them. The work landed upstream as ranger/ranger#3039
-  # (branch toonn/curses-endwin), so it can be recovered as a single patch
-  # against that PR rather than reconstructed by hand.
+  # This recipe used to carry three hand-applied patches
+  # (ranger-1.9.4-fix-ncurses-endwin-error-{1,2,3}.patch) that exist in no
+  # commit, that update.sh never generated, and that the AUR copy never
+  # carried. They are gone because the change is already upstream:
+  # ranger/ranger#3039, "Adapt to NCurses endwin() error behavior", merged
+  # 2025-01-03 -- the try/except around curses.curs_set(1) and the moved
+  # self.win.refresh() are in the branch we track. Look there first if the
+  # curs_set handling regresses.
 }
 
 build() {
