@@ -27,7 +27,7 @@ checkdepends=(
     # No standard test runner identified; normally would be gtest or similar
 )
 source=("$_pkgname-src::git+$url.git#tag=v${pkgver}")
-sha256sums=('SKIP')
+sha256sums=('896f4d3699dbcf20ca8791778cd7d51d666ec0a5fa265c542f03deb9a4583d83')
 backup=(
     # config file paths
 )
