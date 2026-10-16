@@ -109,8 +109,12 @@ fetch_upstream_assets() {
     # regal_Linux but fetch regal_Linux_x86_64 and regal_Linux_arm64. Sharing
     # one filename makes updpkgsums hash whichever file won the race for every
     # arch, producing a checksum that is wrong for all but one of them. When a
-    # name maps to more than one URL, fetch under the URL basename and rewrite
-    # PKGBUILD.new so the checksums line up with the per-arch files.
+    # name maps to more than one URL, fetch under the URL basename instead.
+    #
+    # The matching rewrite of the declared names is separate (see
+    # disambiguate_source_names) because it must run after the merge: the
+    # merge resolves source= lines in favour of the local PKGBUILD, so a
+    # rewrite applied to PKGBUILD.new beforehand is discarded.
     local tmp
     tmp=$(mktemp)
     collect_source_assets "$upstream_content" >"$tmp"
@@ -135,18 +139,40 @@ fetch_upstream_assets() {
         fi
     done <"$tmp"
 
-    # Rewrite colliding local names in PKGBUILD.new to the downloaded basename.
-    local escaped_name escaped_url
+    rm -f "$tmp"
+}
+
+# Rewrite declared local names that map to more than one URL, so each source
+# entry names the file actually downloaded for it. Must be called on the
+# post-merge PKGBUILD: applied earlier, the merge overwrites it.
+disambiguate_source_names() {
+    local file="$1"
+    echo "  -> Disambiguating colliding source names..."
+
+    local tmp
+    tmp=$(mktemp)
+    collect_source_assets "$(cat "$file")" >"$tmp"
+
+    local name url base urls_count escaped_name escaped_url changed=0
     while IFS=$'\t' read -r name url; do
         [[ -z "$name" ]] && continue
         urls_count=$(awk -F'\t' -v n="$name" '$1 == n { c++ } END { print c+0 }' "$tmp")
         [[ "$urls_count" -gt 1 ]] || continue
         base="${url##*/}"
         base="${base%%\?*}"
+        [[ "$base" == "$name" ]] && continue
+        if ! grep -qF "${name}::${url}" "$file"; then
+            continue
+        fi
         escaped_name=$(printf '%s' "$name" | sed 's|[][\\^$.*/&]|\\&|g')
         escaped_url=$(printf '%s' "$url" | sed 's|[][\\^$.*/&]|\\&|g')
-        sed -i "s|${escaped_name}::${escaped_url}|${base}::${url}|g" PKGBUILD.new
+        sed -i "s|${escaped_name}::${escaped_url}|${base}::${url}|g" "$file"
+        changed=1
     done <"$tmp"
+
+    if [[ "$changed" -eq 1 ]]; then
+        echo "    -> Renamed colliding source entries to their downloaded files"
+    fi
 
     rm -f "$tmp"
 }
@@ -202,7 +228,10 @@ classify_upstream_changes() {
 
     if [[ ${#events[@]} -gt 0 ]]; then
         local event_list
-        event_list=$(IFS=,; echo "${events[*]}")
+        event_list=$(
+            IFS=,
+            echo "${events[*]}"
+        )
         local review_list="[]"
         $has_build && review_list='["BUILD"]'
         echo "  -> Upstream changes detected: [${event_list}]" >&2
@@ -285,6 +314,12 @@ if [[ -n "${UPSTREAM_URL:-}" ]]; then
                 fi
                 restore_identity
 
+                # Rename colliding source entries on the MERGED PKGBUILD. The
+                # merge keeps our source= lines, so rewriting PKGBUILD.new
+                # before it would be discarded and updpkgsums would then hash
+                # one architecture's file for every architecture.
+                disambiguate_source_names PKGBUILD
+
                 # Apply declarative identity rules (demotion) post-merge
                 apply_declarative_rules
 
@@ -365,7 +400,6 @@ fi
 # updpkgsums requires the source files to be reachable/downloadable
 echo "  -> Updating checksums"
 updpkgsums
-
 
 # 5. Variant pkgdesc Consistency Check
 # Warn if this package's pkgdesc differs from other variants sharing the same _pkgname
