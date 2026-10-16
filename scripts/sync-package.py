@@ -463,6 +463,7 @@ def _disambiguate_source_names(pkg_dir: Path) -> None:
 
     _log("  -> Disambiguating colliding source names...")
     changed = False
+    renamed: dict[str, str] = {}
     for name, urls in colliding.items():
         for url in urls:
             base = url.rstrip("/").rsplit("/", 1)[-1].split("?", 1)[0]
@@ -472,11 +473,44 @@ def _disambiguate_source_names(pkg_dir: Path) -> None:
             if needle not in text:
                 continue
             text = text.replace(needle, f"{base}::{url}")
+            renamed[base] = name
             changed = True
 
-    if changed:
-        _log("    -> Renamed colliding source entries to their downloaded files")
-        pkgbuild.write_text(text)
+    if not changed:
+        return
+
+    # The rename above touches only the source*= arrays. A reference to the old
+    # local name from anywhere else in the PKGBUILD -- package() is the usual
+    # place -- would silently dangle: the sync would report success and the
+    # build would fail later on a missing file. Assert instead of shipping a
+    # broken recipe.
+    _assert_no_dangling_rename(text, renamed)
+
+    _log("    -> Renamed colliding source entries to their downloaded files")
+    pkgbuild.write_text(text)
+
+
+def _assert_no_dangling_rename(text: str, renamed: dict[str, str]) -> None:
+    """Fail if a renamed source name is still referenced outside the arrays.
+
+    ``renamed`` maps each new basename back to the old local name. Every
+    occurrence of the old name in the text should by now be part of a
+    ``<basename>::<url>`` token; anything left is a dangling reference.
+    """
+    for base, old in renamed.items():
+        pattern = re.compile(r"(?<![\w.])" + re.escape(old) + r"(?![\w])")
+        dangling = pattern.search(
+            re.sub(r'"[^"]*::[^"]*"', "", text)
+        )
+        if dangling:
+            line = text.count("\n", 0, dangling.start()) + 1
+            raise SystemExit(
+                f"::error::Renamed source '{old}' to '{base}' but '{old}' is "
+                f"still referenced at line {line}. The rename handler only "
+                f"rewrites the source arrays; a reference elsewhere (typically "
+                f"package()) must be updated by hand before the sync can "
+                f"complete."
+            )
 
 
 def _iter_source_entries(text: str):
