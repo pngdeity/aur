@@ -4,8 +4,9 @@ _pkgname=pkl-lsp
 _deploy_aur=true
 
 pkgname=$_pkgname
-pkgver=0.7.1
-pkgrel=5
+changelog=pkl-lsp.changelog
+pkgver=0.8.0
+pkgrel=1
 pkgdesc="Language Server Protocol implementation for Pkl"
 arch=('x86_64' 'aarch64')
 url="https://github.com/apple/pkl-lsp"
@@ -27,7 +28,7 @@ source_x86_64=(
 source_aarch64=(
   "graalvm-jdk-${_graalvm_ver}-arm64.tar.gz::https://github.com/graalvm/graalvm-ce-builds/releases/download/graal-${_graalvm_ver}/${_graalvm_dir}_linux-aarch64_bin.tar.gz"
 )
-sha512sums=('88fa02a73aaf99169df900ee9e300f52ad0b86f52ca4f82b54d1d1fc9fd9053af5d0a9af35cee34c112ec6aa7a99dfc77d944ce5a5ae723845ae2a11750f078d'
+sha512sums=('2dc84ec997a73dc943f6080d719bd824362d3208e402f970ef2b554c5d2030f8b17be42a10dec9aebdf23999991059109b1da0c132909652c3d7d62debd50f12'
             '98f6b79b778f7b0a15415bd750c3a8a097d650511cb4ec8115188e115c47053fe700f578895c097051c9bc3dfb6197c2b13a15de203273e1a3218884f86e90e8'
             'b2a669ba1b7345fc213e32d75cd47f63ff593fdb3397d4260c4fdfede2a08cc3c98e9345215e344e941659462b1176d9a76575f2e4b0fea564b9a89e1618b1ca'
             'b915b4bae6577f3e88cb7b4aed5fe18b9f85061fac4821d3e04bac8b88d468ed7f28960dcd60fa1830910a3aae917c537506d78edeea276af69e2bf4a61f056e')

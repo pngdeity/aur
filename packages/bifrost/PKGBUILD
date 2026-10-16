@@ -4,7 +4,8 @@ _githubname="maximhq/bifrost"
 _tag="transports/v${pkgver}"
 
 pkgname=bifrost
-pkgver=1.5.8
+changelog=bifrost.changelog
+pkgver=2.3.0
 pkgrel=1
 pkgdesc="The Fastest LLM Gateway with built in OTel observability and MCP gateway"
 arch=('x86_64')
@@ -16,7 +17,7 @@ conflicts=("nodejs-${pkgname}")
 depends=('glibc')
 makedepends=('go' 'npm' 'nodejs')
 source=("${pkgname}-${pkgver}.tar.gz::${url}/archive/refs/tags/transports/v${pkgver}.tar.gz")
-b2sums=('b2a5a7e69b54b84f4dcdae0248dfbc32d7ce1e78c954d439afbe42c81109ec9ec4d5f5159db3256e64c9fe709c1a89c01cf624e8038c74ffac50d2f7101f34c3')
+b2sums=('8a392ba999d692b76f92d0657e0b3b0bd23ba8075e89fa671546b79b3b81b0e832c88820a0d05c5e46bc89f81ae87be8cc86dd64af79a7809089b384f087395d')
 
 prepare() {
     cd "${srcdir}/bifrost-transports-v${pkgver}"
