@@ -337,6 +337,11 @@ if [[ -n "${UPSTREAM_URL:-}" ]]; then
             fetch_upstream_assets "$(cat PKGBUILD.new)"
             mv PKGBUILD.new .PKGBUILD.upstream
 
+            # Rename colliding source entries here too: .PKGBUILD.upstream is
+            # gitignored, so the first run for any package takes this branch,
+            # not the merge branch below.
+            disambiguate_source_names PKGBUILD
+
             # Apply declarative identity rules (demotion) to local PKGBUILD
             apply_declarative_rules
 
