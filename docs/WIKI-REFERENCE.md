@@ -51,7 +51,7 @@ Consult these when publishing to or syncing from the AUR.
 | Article                   | URL                                                        | Relevant To                                                 |
 | ------------------------- | ---------------------------------------------------------- | ----------------------------------------------------------- |
 | Arch User Repository      | https://wiki.archlinux.org/title/Arch_User_Repository      | AUR structure, voting, comments, package lifecycle          |
-| AUR submission guidelines | https://wiki.archlinux.org/title/AUR_submission_guidelines | New package requirements, naming, quality standards         |
+| AUR submission guidelines | https://wiki.archlinux.org/title/AUR_submission_guidelines | New package requirements, naming, quality standards, and the registration procedure in [AUR-PACKAGE-REGISTRATION.md](AUR-PACKAGE-REGISTRATION.md) |
 | Aurweb RPC interface      | https://wiki.archlinux.org/title/Aurweb_RPC_interface      | Programmatic AUR queries, version checks, `sync-package.sh` |
 
 ## Repository Management
