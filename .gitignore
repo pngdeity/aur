@@ -52,6 +52,13 @@ packages/*/.git
 # upstream repo name, not the package name. amass-git gets packages/amass-git/
 # amass/ and opendoas gets packages/opendoas/opendoas/. Without this, a
 # discovery run stages a multi-hundred-MB clone and the push is rejected.
+#
+# The inner `*` is required. `packages/*/*/.git/` cannot do it: the pattern
+# matches the directory named .git, not the clone's contents, and listing only
+# the clone ROOT in the catch-all's run-off cannot help either -- git does not
+# re-descend into an excluded directory, so a deeper negation never takes
+# effect. Excluding the contents here is what makes the root stay excluded.
+packages/*/*/*
 packages/*/*/.git/
 packages/amass-git/amass/
 packages/opendoas/opendoas/
@@ -67,15 +74,84 @@ packages/*/.PKGBUILD.upstream
 # the package directory. These are build inputs, reproducible from the URL in
 # source=, so they do not belong in history.
 #
-# regal declares the same local name for both architectures (regal_Linux), so
-# the entries are fetched under their URL basenames instead -- regal_Linux_*
-# covers those as well as the bare name. Enumerating exact names here missed
-# the per-arch files and a discovery run committed them.
+# Enumerating exact names here does not scale: a new package's payloads are
+# unknown until its first sync, and the enumeration has already missed files
+# twice (the per-arch regal_Linux_* pair, and fantomas-bin's four). The rule
+# below is derived from the one invariant that does hold -- a repo-local source
+# is always declared as a bare filename with no URL, so every other source file
+# in a package directory arrived over the network and is reproducible.
+#
+# packages/*/ holds the PKGBUILD (a tracked repo file) and the generated
+# package.pkl/package.json (ignored above). Anything else in a package
+# directory is downloaded. Keep a new repo-local file by adding a negation in
+# the correct position -- see the ordering note below.
+#
+# The two documented exceptions are makepkg's bare clones for git+ sources
+# (listed above so a rebuild does not re-download them) and .PKGBUILD.upstream
+# (sync-package.sh reads it as a merge baseline). Both are re-included here.
+#
+# ONLY the declared source files come back. Markdown and data files are
+# deliberately excluded: every one such file in this repository today is a
+# downloaded upstream document (README.md, changelog.md, ...-LICENSE.md,
+# SECURITY.md from a source entry), never a repo-local file. The repo-local
+# sources are scripts (.sh, .py) and patches, which the negations below restore.
+#
+# .PKGBUILD.upstream is likewise NOT restored: it is a download, not a declared
+# source, so it stays excluded by the catch-all above.
+packages/*/*
+!packages/*/*/
+!packages/*/PKGBUILD
+!packages/*/PKGBUILD.common
+!packages/*/PKGBUILD.new
+!packages/*/.SRCINFO
+!packages/*/.git
+!packages/*/.nvchecker.toml
+!packages/*/.nvchecker.toml.disabled
+!packages/*/*.sh
+!packages/*/*.py
+!packages/*/*.patch
+!packages/*/*.install
+!packages/*/*.desktop
+!packages/*/*.service
+!packages/*/*.conf
+
+# A package directory holding a nested tree of its own tracked files opts out of
+# the catch-all above, so it keeps normal, enumerated .gitignore semantics. The
+# rules below are the ones that would otherwise be lost; a package that takes
+# this route keeps its payloads covered here instead.
+#
+# ranger-doas is the first such package (it carries policy_exceptions.yaml plus
+# several .patch files). Its upstream helper files are enumerated because the
+# generated source names do not all end in a recognizable extension.
+packages/ranger-doas/*
+!packages/ranger-doas/*/
+!packages/ranger-doas/PKGBUILD
+!packages/ranger-doas/*.patch
+!packages/ranger-doas/*.install
+!packages/ranger-doas/*.sh
+!packages/ranger-doas/*.py
+!packages/ranger-doas/*.yaml
+!packages/ranger-doas/*.md
+!packages/ranger-doas/.nvchecker.toml
+!packages/ranger-doas/.nvchecker.toml.disabled
+!packages/ranger-doas/.SRCINFO
+packages/ranger-doas/doas-substitution.patch.orig
+packages/ranger-doas/ranger_refs.bin
+packages/ranger-doas/*.rej
+packages/ranger-doas/*.orig
+
+# Global artifact patterns, last so that no negation above can re-include one.
+# Git applies the last matching pattern, and a negation always wins over an
+# earlier exclusion, so artifact patterns must come AFTER the negations:
+# placed before them, `*.log` would be re-included by `!packages/*/*.py`... and
+# by any other negation matching the same path.
 *.tgz
-packages/*/regal_Linux*
-
-# Downloaded license files (source=("LICENSE.txt::..."))
-packages/*/LICENSE*
-
-# Downloaded data artifacts (e.g. GeoIP databases)
 *.mmdb
+*.log
+*.pkg.tar.*
+*.src.tar.*
+*.tar.gz
+*.tar.xz
+*.tar.bz2
+*.zip
+*.tar.zst
