@@ -300,21 +300,21 @@ Outstanding architectural and documentation items requiring completion.
 
 ## Documentation
 
-- [x] **`aur-deploy.sh` changelog guard was silent**: `scripts/aur-deploy.sh`
-      copied a package's `changelog=` file only if it existed (both at the
-      staging dir and at the AUR clone), so a PKGBUILD declaring a `changelog=`
-      that is absent was deployed **without** the file and nothing reported it.
-      Found 2026-10-15: `amass-git` and `amass-bin` both declared changelogs
-      that never existed in any commit (introduced by `c98db45`), which made
-      `makepkg` fail outright and left the AUR copies stuck at pkgrel 1.
-      **Fixed 2026-10-16**: a declared-but-absent changelog is now a fatal
-      `::error::` at both sites, and the script refuses to deploy. Verified by
-      negative test (a copy declaring a nonexistent changelog exits with the
-      error) and by dry-running the real script over `clash-geoip` (declares a
-      changelog, present) and `amass-git` (declares none). The Python
-      replacement on `feat/port-scripts-to-python` must carry the same
-      behaviour; this is forward-ported rather than left to the port.
-      (Closed 2026-10-16)
+- [x] **`aur-deploy` changelog guard was silent**: The deploy script copied a
+      package's `changelog=` file only if it existed (both at the staging dir
+      and at the AUR clone), so a PKGBUILD declaring a `changelog=` that is
+      absent was deployed **without** the file and nothing reported it. Found
+      2026-10-15: `amass-git` and `amass-bin` both declared changelogs that never
+      existed in any commit (introduced by `c98db45`), which made `makepkg` fail
+      outright (`changelog file (...) does not exist or is not a regular file`)
+      and left the AUR copies stuck at pkgrel 1. Both declarations were dropped
+      2026-10-15. **Fixed 2026-10-16**: a declared-but-absent changelog is now a
+      fatal error at both sites and the script refuses to deploy. On the Bash
+      implementation (`scripts/aur-deploy.sh`, `main`) this is an `::error::`;
+      the Python port (`scripts/aur-deploy.py`) raises instead. Verified by
+      negative test — a copy declaring a nonexistent changelog exits with the
+      error — and by dry-running the real script over `clash-geoip` (declares a
+      changelog, present) and `amass-git` (declares none). (Closed 2026-10-16)
 - [ ] **Withdrawn-maintainership audit**: `_deploy_aur=true` was found on four
       packages whose AUR entries are now ABSENT — `apm`, `apm-go-git`,
       `python-azure-ai-inference`, `python-llm-github-models`. All four flags
