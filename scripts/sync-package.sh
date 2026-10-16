@@ -136,6 +136,20 @@ fetch_upstream_assets() {
                 echo "  -> WARNING: failed to download ${url}" >&2
                 rm -f "$base"
             fi
+        else
+            # A file already sitting at this name is not necessarily the
+            # artifact this source points at: a previous run for another
+            # version leaves its payload behind under the same basename, and
+            # updpkgsums treats a matching local name as found without
+            # verifying content, so it would hash the stale bytes.
+            # Re-fetch when the URL's digest does not match what is on disk.
+            if ! curl -sL --fail "$url" | cmp -s - "$base"; then
+                echo "    -> Refreshing stale asset: $base"
+                if ! curl -sL --fail -o "$base" "$url"; then
+                    echo "  -> WARNING: failed to download ${url}" >&2
+                    rm -f "$base"
+                fi
+            fi
         fi
     done <"$tmp"
 
