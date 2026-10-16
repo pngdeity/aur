@@ -66,16 +66,56 @@ jobs:
         run: ./scripts/check-pkgdesc-consistency.sh --ci
       - name: Build packages
         run: |
+          # Excluded from the build set: packages whose dependencies are not
+          # available in any Arch repository. They cannot build here, and
+          # excluding them is a statement about CI coverage, not a claim that
+          # they are correct. `apm` needs python-frontmatter, python-llm and
+          # python-llm-github-models; the last exists on neither the repos nor
+          # the AUR. See docs/TODO.md, Engineering (CI/CD).
+          EXCLUDE_PKGS=("packages/apm")
+
           if [ -n "${{ inputs.package }}" ]; then
             PKGS="${{ inputs.package }}"
           else
             PKGS=$(find packages -mindepth 2 -maxdepth 2 -name PKGBUILD -exec dirname {} \; | sort)
           fi
+
+          failed=""
+          skipped=""
+          passed=0
           for PKG_DIR in $PKGS; do
-            if [ -f "$PKG_DIR/PKGBUILD" ]; then
-              sudo -u builder ./scripts/arch-builder.sh "$PKG_DIR"
+            if [ ! -f "$PKG_DIR/PKGBUILD" ]; then
+              continue
+            fi
+
+            excluded=false
+            for excl in "${EXCLUDE_PKGS[@]}"; do
+              if [ "$PKG_DIR" = "$excl" ]; then
+                excluded=true
+                break
+              fi
+            done
+            if $excluded; then
+              echo "::warning::$PKG_DIR is excluded from the CI build set"
+              skipped="$skipped $PKG_DIR"
+              continue
+            fi
+
+            # Each package is built independently; one failure must not
+            # suppress the rest. Results are collected and reported together.
+            if sudo -u builder ./scripts/arch-builder.sh "$PKG_DIR"; then
+              passed=$((passed + 1))
+            else
+              echo "::error::$PKG_DIR failed to build"
+              failed="$failed $PKG_DIR"
             fi
           done
+
+          echo "==> Build summary: ${passed} passed, $(echo $failed | wc -w) failed, $(echo $skipped | wc -w) excluded"
+          if [ -n "$failed" ]; then
+            echo "::error::Failed packages:${failed}"
+            exit 1
+          fi
       - name: Upload artifacts
         uses: actions/upload-artifact@v7
         with:

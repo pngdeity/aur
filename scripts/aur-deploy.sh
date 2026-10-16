@@ -44,8 +44,13 @@ cp PKGBUILD "$AUR_DIR/PKGBUILD"
 
 # Copy changelog file if referenced in PKGBUILD (makepkg --printsrcinfo needs it)
 CHANGELOG_FILE=$("$SCRIPT_DIR/pkgvar" "$AUR_DIR/PKGBUILD" changelog 2>/dev/null || true)
-if [[ -n "$CHANGELOG_FILE" && -f "$CHANGELOG_FILE" ]]; then
-	cp "$CHANGELOG_FILE" "$AUR_DIR/$CHANGELOG_FILE"
+if [[ -n "$CHANGELOG_FILE" ]]; then
+	if [[ -f "$CHANGELOG_FILE" ]]; then
+		cp "$CHANGELOG_FILE" "$AUR_DIR/$CHANGELOG_FILE"
+	else
+		echo "::error::${PKG_NAME} declares changelog=${CHANGELOG_FILE} but no such file exists. Refusing to deploy a PKGBUILD whose changelog is absent."
+		exit 1
+	fi
 fi
 
 # 1. Inline source directives (recursively resolve relative paths starting with ../)
@@ -127,8 +132,13 @@ cp "$AUR_DIR/PKGBUILD" "$AUR_DIR/.SRCINFO" "$AUR_CLONE/"
 
 # Copy changelog if present (referenced by PKGBUILD changelog=)
 CHANGELOG_FILE=$("$SCRIPT_DIR/pkgvar" "$AUR_DIR/PKGBUILD" changelog 2>/dev/null || true)
-if [[ -n "$CHANGELOG_FILE" && -f "$AUR_DIR/$CHANGELOG_FILE" ]]; then
-	cp "$AUR_DIR/$CHANGELOG_FILE" "$AUR_CLONE/"
+if [[ -n "$CHANGELOG_FILE" ]]; then
+	if [[ -f "$AUR_DIR/$CHANGELOG_FILE" ]]; then
+		cp "$AUR_DIR/$CHANGELOG_FILE" "$AUR_CLONE/"
+	else
+		echo "::error::${PKG_NAME} declares changelog=${CHANGELOG_FILE} but it is not present in the staging directory. Refusing to deploy."
+		exit 1
+	fi
 fi
 
 # Diff processed output against current AUR state

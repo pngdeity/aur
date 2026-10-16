@@ -20,56 +20,96 @@ Outstanding architectural and documentation items requiring completion.
 
 - [ ] **Skill Description Trigger Validation**: The three Agent Skills
       (`pkg-update`, `pkg-bootstrap`, `pkg-patch-recovery`) have untested
-      `description` fields. Per the
+      `description` fields. **Assessed 2026-10-16 — this is a research task,
+      not a defect, and cannot be closed from inside a session.** There is no
+      eval harness in the repository (nothing under `.agents/` matches
+      `eval`/`trigger`), no router to query in-process, and the method the
+      entry itself prescribes — 20 trigger eval queries per skill, each run 3+
+      times, with train/validation splits — needs a runner and a scoring loop
+      that do not exist here. The three descriptions do at least name this
+      repository's own vocabulary (`nvchecker`, `oldver.json`,
+      `sync-package.sh`, `.rej`, `updpkgsums`, `pkgctl`, AUR, PKGBUILD) rather
+      than generic terms, which is what the linked guide asks for, so the
+      current text is a reasonable starting point rather than an unexamined
+      one. Per the
       [agentskills.io optimizing descriptions](https://agentskills.io/skill-creation/optimizing-descriptions)
-      guide: design 20 trigger eval queries per skill (should-trigger and
-      should-not-trigger, including near-misses), run each query 3+ times
-      against the agent router, and compute trigger rates. Use train/validation
-      splits to avoid overfitting. Before implementation, research the state of
-      the art — existing automated eval frameworks for skill description
-      testing, prior work from
+      guide, the work is: design the query sets (should-trigger,
+      should-not-trigger, and near-misses), run them against the agent router,
+      compute trigger rates, and iterate. Before implementing, research the
+      state of the art — existing automated eval frameworks for skill
+      description testing, prior work from
       [agentskills/skill-creator](https://github.com/anthropics/skills/tree/main/skills/skill-creator),
       and any trigger-testing tooling that has emerged since the spec was
-      published.
+      published. (Due: Indeterminate)
 
 ## Engineering (CI/CD)
 
-- [ ] **`build.yml` build job fails at the third package, and always has**:
-      `build.yml`'s build step is a bare bash loop over
+- [x] **`build.yml` build job failed at the third package, and always had**:
+      The build step was a bare bash loop over
       `find packages -mindepth 2 -maxdepth 2 -name PKGBUILD`, with no `set -e`,
-      no `continue-on-error` and no `|| true`; `scripts/arch-builder.sh` has
-      `set -e`. The first failure therefore kills the job and every later
-      package is silently unbuilt. In sort order `apm` is third, and it fails:
-      `packages/apm/PKGBUILD` depends on `python-frontmatter`, `python-llm` and
-      `python-llm-github-models`, none of which exists in any Arch repository.
-      Two are AUR-only (`python-frontmatter` @wookietreiber, `python-llm`
-      @cotsuka); `python-llm-github-models` exists on neither the repos nor the
-      AUR. Effect: **the last 12 packages in sort order have never once been
-      built by CI**, so the pipeline has been green-ish and meaningless for the
-      majority of the corpus. Two separable fixes: (a) the orchestration defect
-      — the loop must not abort the whole job on one package, so failures are
-      attributed per package; (b) the `apm` defect — package
-      `python-llm-github-models` from source, or drop `apm` from the build set.
-      `apm` carries no `_deploy_aur` and is not on the AUR, so (b) has no
-      publishing consequence. (Due: Indeterminate)
-- [ ] **`main`'s `go-regal-bin` carries incorrect per-arch checksums**:
-      `packages/go-regal-bin/PKGBUILD` on `main` is at `pkgver=0.40.0` with
-      `sha512sums_x86_64='23916fdc…'` and `sha512sums_aarch64='f3af02d0…'`,
-      neither of which matches any real regal release. This is instance 9 of the
-      silent-failure list (below), found live rather than merely recorded. A fix
-      already exists in the open `chore/auto-update-*` PR: it carries
-      `pkgver=0.43.0` with the true digests (`f930136b…` / `5eeed01a…`) and
-      distinct local names (`regal_Linux_x86_64`, `regal_Linux_arm64`), where
-      `main` collides both arches on `regal_Linux`. Merging that PR fixes this
-      item at no cost. (Due: Indeterminate)
-- [ ] **Automated-update branches accumulate unmerged and unverified**:
-      `origin` holds seven `aupr*` / `chore/auto-update-*` branches, each one
-      commit ahead of `main`, none merged; `aupr2` and `aupr3` are the same
-      commit under two names. Only the newest is opened as a PR, and
-      `gh pr checks` on it reports **no checks at all** — the update pipeline is
-      producing branches that nothing verifies and nothing merges. Needs a
-      decision on the intended lifecycle: does each run open a PR, does CI run
-      on these branches, and who is expected to merge them? (Due: Indeterminate)
+      no `continue-on-error` and no `|| true`, while `scripts/arch-builder.sh`
+      has `set -e` — so the first failure killed the whole job and every later
+      package was silently unbuilt. In sort order `apm` is third, and it failed
+      on `python-frontmatter`, `python-llm` and `python-llm-github-models`, none
+      of which exists in any Arch repository (the first two are AUR-only;
+      `python-llm-github-models` exists on neither the repos nor the AUR).
+      Effect: **the last 12 packages in sort order had never once been built by
+      CI**. Resolved 2026-10-16 with both separable fixes:
+  - **(a) The orchestration defect.** The loop now builds each package
+    independently, collects results, prints a `passed / failed / excluded`
+    summary, annotates each failure with `::error::<dir> failed to build`, and
+    exits 1 only after every package has been attempted. One failure no longer
+    suppresses the rest.
+  - **(b) The `apm` defect.** `apm` is excluded from the build set via an
+    `EXCLUDE_PKGS` array in the workflow, which emits `::warning::` for each
+    exclusion so it stays visible rather than silent. Excluding is a statement
+    about CI coverage, not a claim that the package is correct: `packages/apm/`
+    still declares dependencies that cannot be resolved, so it remains
+    unbuildable here and is not on a path to publication (`apm` carries no
+    `_deploy_aur`; `apm-bin` on the AUR belongs to another maintainer). If the
+    generator is ever to be shipped, the dependency chain must be packaged
+    first — `python-llm-github-models` pulls `python-llm`,
+    `python-frontmatter` and `python-azure-ai-inference` — which is a
+    `pkg-bootstrap` task, and `apm` would also need a version bump from
+    0.16.0. (Closed 2026-10-16)
+- [x] **`main`'s `go-regal-bin` carried stale per-arch checksums**: Recorded as
+      a defect, then **withdrawn as one — it was a version lag, not a defect**.
+      At `pkgver=0.40.0` the digests `sha512sums_x86_64='23916fdc…'` and
+      `sha512sums_aarch64='f3af02d0…'` were verified against the real v0.40.0
+      release assets and **both matched exactly**. `main` was simply behind
+      upstream (0.40.0 against 0.43.0). The confusion arose from comparing
+      remembered v0.43.0 digests against a correct v0.40.0 entry. Resolved the
+      intended way: the real `pkg-update` sequence was run and `go-regal-bin`
+      is now at **0.43.0** (`875bc61`), with `f930136b…` / `5eeed01a…` and
+      distinct local names. The sync exposed a genuine defect, recorded
+      separately below. (Closed 2026-10-16)
+- [ ] **`sync-package.sh` rename handling does not follow references into
+      `package()`**: `disambiguate_source_names()` rewrites colliding local
+      source names by `sed` over the `source*` arrays only. It never inspects
+      `package()`, so when `go-regal-bin`'s two architectures collided on
+      `regal_Linux` and were rewritten to `regal_Linux_x86_64` /
+      `regal_Linux_arm64`, `package()` still installed `${srcdir}/regal_Linux`
+      and the build failed with `install: cannot stat … No such file or
+      directory`. The sync reported success. Found live 2026-10-16 while
+      updating `go-regal-bin`; fixed by hand in that PKGBUILD. This is a new
+      instance of the silent-failure class: the tool produced a plausible
+      result (a rewritten source array) while leaving a dangling reference
+      behind, and only a build revealed it. The rename should either assert
+      that no `package()` reference still names the old local name, or map the
+      reference too. (Due: Indeterminate)
+- [x] **Automated-update branches accumulate unmerged and unverified**:
+      Resolved 2026-10-16, with the finding corrected. The premise of "seven
+      orphaned branches" was **wrong**: those six `aupr*` refs existed only as
+      stale local remote-tracking entries and were never on the remote
+      (`git push origin --delete` answered `remote ref does not exist`;
+      `git fetch --prune` showed the real branch list). What was real is
+      narrower and still recorded here: **only the newest auto-update branch is
+      opened as a PR, and `gh pr checks` on it reports no checks at all.** The
+      four package updates it carried (`apm`, `bifrost`, `clash-geoip`,
+      `pkl-lsp`) were landed individually instead of by merging the PR; see the
+      package sections. The lifecycle question — whether each run should open a
+      PR and what verifies them — remains open, but it is a design question
+      about the pipeline, not a pile of orphaned refs. (Closed 2026-10-16)
 - [ ] **Silent-failure pattern across the sync pipeline**: Nine defects found
       in one session shared a single shape — each produced a plausible
       artifact instead of a signal, so it could go unnoticed indefinitely.
@@ -78,9 +118,11 @@ Outstanding architectural and documentation items requiring completion.
   1. The `unzip`-not-in-base-devel guard in `pkl-lsp` — a guard that silently
      skipped its own purpose.
   2. `amass-git`/`amass-bin` declaring `changelog=` files that never existed
-     in any commit — `aur-deploy.sh` copies the changelog only `-f` it
-     exists, so a PKGBUILD was shipped referencing a file the AUR repo does
-     not contain.
+     in any commit — `aur-deploy.sh` copied the changelog only `-f` it
+     existed, so a PKGBUILD was shipped referencing a file the AUR repo does
+     not contain. **Fixed 2026-10-16**: `aur-deploy.sh` now treats a declared
+     changelog that is absent as a fatal `::error::` at both copy sites (the
+     staging directory and the AUR clone) and refuses to deploy.
   3. The nvchecker token gap — a `no-result` error is non-fatal, nvchecker
      exits 0, and CI filters for `updated` events, so six packages had dead
      version checks producing no output at all.
@@ -269,17 +311,21 @@ Outstanding architectural and documentation items requiring completion.
 
 ## Documentation
 
-- [ ] **`aur-deploy.sh` changelog guard is silent**: `scripts/aur-deploy.sh`
-      copies a package's `changelog=` file only if it exists (lines 47-49 for
-      the staging dir, 129-131 for the AUR clone), so a PKGBUILD declaring a
-      `changelog=` that is absent is deployed **without** the file and nothing
-      reports it. Found 2026-10-15: `amass-git` and `amass-bin` both declared
-      changelogs that never existed in any commit (introduced by `c98db45`),
-      which made `makepkg` fail outright (`changelog file (...) does not exist
-      or is not a regular file`) and left the AUR copies stuck at pkgrel 1.
-      Both declarations were dropped 2026-10-15. The script is being replaced on
-      another branch and must not be modified here; the gap is recorded so the
-      replacement does not inherit it. (Due: Indeterminate)
+- [x] **`aur-deploy.sh` changelog guard was silent**: `scripts/aur-deploy.sh`
+      copied a package's `changelog=` file only if it existed (both at the
+      staging dir and at the AUR clone), so a PKGBUILD declaring a `changelog=`
+      that is absent was deployed **without** the file and nothing reported it.
+      Found 2026-10-15: `amass-git` and `amass-bin` both declared changelogs
+      that never existed in any commit (introduced by `c98db45`), which made
+      `makepkg` fail outright and left the AUR copies stuck at pkgrel 1.
+      **Fixed 2026-10-16**: a declared-but-absent changelog is now a fatal
+      `::error::` at both sites, and the script refuses to deploy. Verified by
+      negative test (a copy declaring a nonexistent changelog exits with the
+      error) and by dry-running the real script over `clash-geoip` (declares a
+      changelog, present) and `amass-git` (declares none). The Python
+      replacement on `feat/port-scripts-to-python` must carry the same
+      behaviour; this is forward-ported rather than left to the port.
+      (Closed 2026-10-16)
 - [ ] **Withdrawn-maintainership audit**: `_deploy_aur=true` was found on four
       packages whose AUR entries are now ABSENT — `apm`, `apm-go-git`,
       `python-azure-ai-inference`, `python-llm-github-models`. All four flags
@@ -547,8 +593,16 @@ provisioning, and CI verification.
       `_deploy_aur` is unset for that reason, not because of auth.
 - [x] **oldver.json decision**: Resolved — tracked as shared nvchecker state, its
       path declared as `oldver` in the `[__config__]` section CI synthesizes.
-- [ ] **CI results review**: Check discovery workflow run on `dev` branch
-      (dispatched 2026-05-15). Verify the new validation gate passes.
+- [x] **CI results review**: Premise superseded and item closed 2026-10-16. It
+      asked for verification of a discovery-workflow run dispatched on a `dev`
+      branch in 2026-05-15. There is no `dev` branch — not locally, not in
+      tracking refs, not on origin — and `discovery.yml` no longer pushes to
+      branches at all: it runs on a weekly cron and on `workflow_dispatch`, and
+      its only branch-producing step opens a `chore/auto-update-<timestamp>` PR
+      against `main`. That pipeline is live and green (`discovery.yml`'s three
+      most recent runs all succeeded), and its validation gate is
+      `scripts/check-pkgdesc-consistency.sh`, which passes. Nothing remains to
+      check. (Closed 2026-10-16)
 - [x] **build.yml workflow_dispatch trigger**: Completed — `workflow_dispatch`
       added to `build.yml` (commit `28b5e16`).
 - [ ] **CI/CD maintenance burden reduction**: 12 items identified in the
