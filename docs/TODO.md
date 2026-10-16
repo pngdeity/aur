@@ -115,6 +115,44 @@ Outstanding architectural and documentation items requiring completion.
     Addressing either means packaging the chain (a `pkg-bootstrap` task) or
     teaching the builder image to consume AUR/third-party repositories — the
     latter a deliberate policy choice, not an oversight. (Due: Indeterminate)
+- [ ] **The builder image cannot reach the AUR or any third-party repository**:
+      `.github/docker/Dockerfile` builds `FROM archlinux:base-devel` and adds a
+      fixed tool list (`devtools git sudo jq nvchecker python-packaging openssh
+      pacman-contrib rsync gnupg github-cli`). It configures no AUR helper and no
+      third-party repository, so `pacman` inside the build container resolves
+      only the official repos. **Any package whose dependency exists solely on
+      the AUR cannot be built by CI, whatever its recipe says** — the recipe is
+      correct, the environment cannot resolve it. Three of the fifteen packages
+      are in exactly this position (`apm`, `python-azure-ai-inference`,
+      `python-llm-github-models`), and `apm` is why the build job aborted at
+      position 3 for its whole life before the orchestration fix.
+      This is a **structural gap, not an oversight in any single recipe**: the
+      repository deliberately holds variants of AUR and official-repo packages
+      and is the build source for its own deployment targets, so "the
+      dependencies will come from the official repos" was never a safe
+      assumption. It should be a deliberate, recorded policy.
+      Options, none chosen:
+  - **Configure the builder with an AUR helper and the AUR as a package source.**
+    Closest to how a user actually builds an AUR package. Needs the helper
+    installed in the image, `makepkg` run as a non-root user (already the case —
+    `arch-builder.sh` runs under `sudo -u builder`), and a decision about
+    whether the builder trusts the AUR as a dependency source at build time.
+  - **Build and publish our own dependency repository.** Our `packages/` already
+    holds `python-azure-ai-inference` and `python-llm-github-models`; adding
+    `python-azure-core` and `python-llm` would close the chain entirely from
+    sources we control. Most reproducible, and consistent with the repository
+    already producing its own binary repo for deployment — but it means
+    maintaining four more packages, two of which belong to other AUR
+    maintainers.
+  - **Configure the builder to consume our own published repository** (the
+    Apache-hosted `nightly` repo that `release.yml` deploys). Would let the
+    builder resolve anything we already publish, without an AUR helper — but
+    creates a build-order dependency: a package cannot be built until its
+    dependency has been published, which the current flat build loop does not
+    model.
+      A companion question, worth resolving with it: the build loop is currently
+      a flat `sort`-ordered pass with no dependency graph, so even once the
+      packages are resolvable, the *order* is accidental. (Due: Indeterminate)
 - [x] **`sync-package.sh` rename handling did not follow references into
       `package()`**: Fixed 2026-10-16 on the Python port. The problem:
       `disambiguate_source_names()` rewrote colliding local source names by
