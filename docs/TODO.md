@@ -34,6 +34,42 @@ Outstanding architectural and documentation items requiring completion.
 
 ## Engineering (CI/CD)
 
+- [ ] **`build.yml` build job fails at the third package, and always has**:
+      `build.yml`'s build step is a bare bash loop over
+      `find packages -mindepth 2 -maxdepth 2 -name PKGBUILD`, with no `set -e`,
+      no `continue-on-error` and no `|| true`; `scripts/arch-builder.sh` has
+      `set -e`. The first failure therefore kills the job and every later
+      package is silently unbuilt. In sort order `apm` is third, and it fails:
+      `packages/apm/PKGBUILD` depends on `python-frontmatter`, `python-llm` and
+      `python-llm-github-models`, none of which exists in any Arch repository.
+      Two are AUR-only (`python-frontmatter` @wookietreiber, `python-llm`
+      @cotsuka); `python-llm-github-models` exists on neither the repos nor the
+      AUR. Effect: **the last 12 packages in sort order have never once been
+      built by CI**, so the pipeline has been green-ish and meaningless for the
+      majority of the corpus. Two separable fixes: (a) the orchestration defect
+      — the loop must not abort the whole job on one package, so failures are
+      attributed per package; (b) the `apm` defect — package
+      `python-llm-github-models` from source, or drop `apm` from the build set.
+      `apm` carries no `_deploy_aur` and is not on the AUR, so (b) has no
+      publishing consequence. (Due: Indeterminate)
+- [ ] **`main`'s `go-regal-bin` carries incorrect per-arch checksums**:
+      `packages/go-regal-bin/PKGBUILD` on `main` is at `pkgver=0.40.0` with
+      `sha512sums_x86_64='23916fdc…'` and `sha512sums_aarch64='f3af02d0…'`,
+      neither of which matches any real regal release. This is instance 9 of the
+      silent-failure list (below), found live rather than merely recorded. A fix
+      already exists in the open `chore/auto-update-*` PR: it carries
+      `pkgver=0.43.0` with the true digests (`f930136b…` / `5eeed01a…`) and
+      distinct local names (`regal_Linux_x86_64`, `regal_Linux_arm64`), where
+      `main` collides both arches on `regal_Linux`. Merging that PR fixes this
+      item at no cost. (Due: Indeterminate)
+- [ ] **Automated-update branches accumulate unmerged and unverified**:
+      `origin` holds seven `aupr*` / `chore/auto-update-*` branches, each one
+      commit ahead of `main`, none merged; `aupr2` and `aupr3` are the same
+      commit under two names. Only the newest is opened as a PR, and
+      `gh pr checks` on it reports **no checks at all** — the update pipeline is
+      producing branches that nothing verifies and nothing merges. Needs a
+      decision on the intended lifecycle: does each run open a PR, does CI run
+      on these branches, and who is expected to merge them? (Due: Indeterminate)
 - [ ] **Silent-failure pattern across the sync pipeline**: Nine defects found
       in one session shared a single shape — each produced a plausible
       artifact instead of a signal, so it could go unnoticed indefinitely.
