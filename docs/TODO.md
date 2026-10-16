@@ -431,7 +431,7 @@ Outstanding architectural and documentation items requiring completion.
       replacement on `feat/port-scripts-to-python` must carry the same
       behaviour; this is forward-ported rather than left to the port.
       (Closed 2026-10-16)
-- [ ] **Withdrawn-maintainership audit**: `_deploy_aur=true` was found on four
+- [x] **Withdrawn-maintainership audit**: `_deploy_aur=true` was found on four
       packages whose AUR entries are now ABSENT — `apm`, `apm-go-git`,
       `python-azure-ai-inference`, `python-llm-github-models`. All four flags
       were removed 2026-10-15, and the latter three have since been deleted from
@@ -442,9 +442,21 @@ Outstanding architectural and documentation items requiring completion.
       and nothing detected when a package crossed from owned to not-owned.
       `aur-deploy.sh` would have attempted to push over packages this
       repository does not own. Mitigated by policy text in `AGENTS.md` §AUR
-      Deployment Gate and `docs/PKGBUILD-CUSTOM-VARIABLES-REFERENCE.md`, but a
-      mechanical check (compare `_deploy_aur=true` set against the live AUR
-      API's `Maintainer` field) is not yet implemented. (Due: Indeterminate)
+      Deployment Gate and `docs/PKGBUILD-CUSTOM-VARIABLES-REFERENCE.md`.
+      **(Closed 2026-10-16: `scripts/check-deploy-aur-ownership.sh` is the
+      mechanical check.** It enumerates every `_deploy_aur=true` package and
+      requires the live AUR API to report `Maintainer: pngdeity`, failing on a
+      different maintainer, a disowned entry, an absent entry, an unreachable
+      API, or an unparseable response. It runs in the `build.yml` validate job.
+      The check was written in response to a live instance of the defect: on
+      `feat/packages-to-add`, `fantomas-bin` carries the flag while its AUR
+      entry is disowned (`Maintainer: None`, submitter `vitaliikuzhdin`,
+      submitted 2025-08-03 — a pending adoption) and `bws` carries the flag
+      while its AUR entry does not exist (a pending registration). Both are
+      correct-in-intent and become valid once maintainership is established;
+      the check is what prevents either from being deployed before that
+      happens, since it fails on `main` — where a flagged package that is not
+      ours is a real defect rather than a pending intention.)
 - [x] **Emoji Removal**: Remove all emoji and pictographic glyphs from repository
       prose and script output. Resolved 2026-10-15. `TASKS.md` section headings now
       express completion textually (e.g. `(done)`), `scripts/check-pkgdesc-consistency.sh`
