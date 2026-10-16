@@ -3,7 +3,7 @@
 _pkgname=apm
 pkgname=$_pkgname
 changelog=apm.changelog
-pkgver=0.16.0
+pkgver=0.33.0
 pkgrel=1
 pkgdesc="Agent Package Manager by Microsoft"
 arch=('any')
@@ -40,7 +40,7 @@ makedepends=(
 )
 
 source=("${_pkgname}-${pkgver}.tar.gz::${url}/archive/v${pkgver}.tar.gz")
-sha256sums=('4e76efb0b21b081a1faacc6147ba6fd6d6beebfd5a5dba83937faea07244f4b3')
+sha256sums=('cb61055f5be6941593dfc7936bb858fa9bf668e90ba75f9dc09bde8b474c6cf3')
 
 build() {
   cd "${_pkgname}-${pkgver}"
