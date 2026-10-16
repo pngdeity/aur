@@ -100,16 +100,39 @@ collect_source_assets() {
         done
 }
 
-fetch_upstream_assets() {
-    local upstream_content="$1"
-    echo "  -> Scanning for missing upstream assets..."
+# Expand the PKGBUILD variables that appear in source URLs. A source URL is
+# written the way makepkg will evaluate it -- ".../download/v${pkgver}/..." --
+# and makepkg expands it against the PKGBUILD in hand. Fetching the raw text
+# would ask the server for a literal "${pkgver}" path and 404.
+expand_source_url() {
+    local url="$1" pkgver="$2" pkgrel="$3"
+    url="${url//\$\{pkgver\}/$pkgver}"
+    url="${url//\$pkgver/$pkgver}"
+    url="${url//\$\{pkgrel\}/$pkgrel}"
+    url="${url//\$pkgrel/$pkgrel}"
+    printf '%s' "$url"
+}
 
-    # Two source arrays may declare the same local name while pointing at
-    # different artifacts -- e.g. regal's per-arch entries are both named
-    # regal_Linux but fetch regal_Linux_x86_64 and regal_Linux_arm64. Sharing
-    # one filename makes updpkgsums hash whichever file won the race for every
-    # arch, producing a checksum that is wrong for all but one of them. When a
-    # name maps to more than one URL, fetch under the URL basename instead.
+fetch_upstream_assets() {
+    # Fetch from the LOCAL PKGBUILD's own source URLs, never the upstream
+    # PKGBUILD's.
+    #
+    # The two routinely disagree on the version, and upstream is the one that
+    # is wrong: AUR PKGBUILDs commonly hardcode the release they were written
+    # around (".../download/v0.41.1/...") while a mirror package tracks the
+    # version with ${pkgver}. Fetching upstream's URLs therefore downloads the
+    # OLD release's artifacts and stores them under the NEW release's names,
+    # and updpkgsums -- which hashes the bytes on disk -- records the old
+    # digests against the new pkgver. That is a package that cannot build, and
+    # nothing in the run reports a problem, because every individual step
+    # succeeded: the file was downloaded, the name matched, the hash was taken.
+    #
+    # Two source arrays may additionally declare the same local name while
+    # pointing at different artifacts -- e.g. regal's per-arch entries are both
+    # named regal_Linux but fetch regal_Linux_x86_64 and regal_Linux_arm64.
+    # Sharing one filename makes updpkgsums hash whichever file won the race
+    # for every arch. When a name maps to more than one URL, fetch under the
+    # URL basename instead.
     #
     # The matching rewrite of the declared names is separate (see
     # disambiguate_source_names) because it must run after the merge: the
@@ -117,9 +140,10 @@ fetch_upstream_assets() {
     # rewrite applied to PKGBUILD.new beforehand is discarded.
     local tmp
     tmp=$(mktemp)
-    collect_source_assets "$upstream_content" >"$tmp"
+    collect_source_assets "$(cat PKGBUILD)" >"$tmp"
+    echo "  -> Scanning for missing upstream assets..."
 
-    local name url base urls_count
+    local name url base urls_count resolved
     while IFS=$'\t' read -r name url; do
         [[ -z "$name" ]] && continue
         urls_count=$(awk -F'\t' -v n="$name" '$1 == n { c++ } END { print c+0 }' "$tmp")
@@ -130,10 +154,13 @@ fetch_upstream_assets() {
             base="$name"
         fi
 
+        resolved=$(expand_source_url "$url" "$NEW_VER" "1")
+        [[ "$resolved" == *"://"* ]] || continue
+
         if [[ ! -f "$base" ]]; then
             echo "    -> Downloading missing asset: $base"
-            if ! curl -sL --fail -o "$base" "$url"; then
-                echo "  -> WARNING: failed to download ${url}" >&2
+            if ! curl -sL --fail -o "$base" "$resolved"; then
+                echo "  -> WARNING: failed to download ${resolved}" >&2
                 rm -f "$base"
             fi
         else
@@ -143,10 +170,10 @@ fetch_upstream_assets() {
             # updpkgsums treats a matching local name as found without
             # verifying content, so it would hash the stale bytes.
             # Re-fetch when the URL's digest does not match what is on disk.
-            if ! curl -sL --fail "$url" | cmp -s - "$base"; then
+            if ! curl -sL --fail "$resolved" | cmp -s - "$base"; then
                 echo "    -> Refreshing stale asset: $base"
-                if ! curl -sL --fail -o "$base" "$url"; then
-                    echo "  -> WARNING: failed to download ${url}" >&2
+                if ! curl -sL --fail -o "$base" "$resolved"; then
+                    echo "  -> WARNING: failed to download ${resolved}" >&2
                     rm -f "$base"
                 fi
             fi
@@ -316,8 +343,11 @@ if [[ -n "${UPSTREAM_URL:-}" ]]; then
                 # Classify upstream changes before merge (produces event report to stderr)
                 classify_upstream_changes ".PKGBUILD.upstream" "PKGBUILD.new"
 
-                # Download new assets referenced in upstream
-                fetch_upstream_assets "$(cat PKGBUILD.new)"
+                # Download the assets OUR source= entries name. This runs
+                # before the merge on purpose: the merge resolves source=
+                # lines in our favour, so our URLs are the ones that will be
+                # in the PKGBUILD updpkgsums reads.
+                fetch_upstream_assets
 
                 # Perform protected merge
                 snapshot_identity
@@ -348,7 +378,7 @@ if [[ -n "${UPSTREAM_URL:-}" ]]; then
             fi
         else
             echo "  -> Initial upstream tracking setup."
-            fetch_upstream_assets "$(cat PKGBUILD.new)"
+            fetch_upstream_assets
             mv PKGBUILD.new .PKGBUILD.upstream
 
             # Rename colliding source entries here too: .PKGBUILD.upstream is
