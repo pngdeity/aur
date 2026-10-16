@@ -205,6 +205,7 @@ relevant to the current task.
 | File                                                                                        | Purpose                                                                                                                                  |
 | ------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
 | [ABS-FUNDAMENTALS.md](docs/ABS-FUNDAMENTALS.md)                                             | Core ABS concepts: PKGBUILD lifecycle, makepkg, AUR structure                                                                            |
+| [AUR-PACKAGE-REGISTRATION.md](docs/AUR-PACKAGE-REGISTRATION.md)                             | Registering a new AUR entry before `_deploy_aur=true` (auth, the clone, the push, verification)                                          |
 | [AUTOMATED-SYSTEM-ARCHITECTURE.md](docs/AUTOMATED-SYSTEM-ARCHITECTURE.md)                   | Conceptual model: Lifecycle phases, concern taxonomy, review gates                                                                       |
 | [AUTOMATED-SYSTEM-DESIGN-IMPLEMENTATION.md](docs/AUTOMATED-SYSTEM-DESIGN-IMPLEMENTATION.md) | Technical design: Engine logic, classification regex, CI/CD workflows                                                                    |
 | [BASH-COMPLETION-CONVENTIONS.md](docs/BASH-COMPLETION-CONVENTIONS.md)                       | Shared bash-completion conventions (`_comp_` namespace, `_comp_compgen_help`)                                                            |
@@ -322,6 +323,13 @@ distinct target and responsibility boundary:
   repository does not own. Verify against the live AUR API before setting or
   retaining it. `packages/` deliberately also holds custom variants of packages
   owned by others and of official repo packages; those never carry the flag.
+- **Registration Precondition**: The flag may be set only for a pkgbase that
+  already exists on the AUR **and** is owned by us. A nonexistent pkgbase cannot
+  be maintained, so registration is an ordered predecessor of the flag, not a
+  consequence of it. Registering is a human act performed with the maintainer's
+  own credentials; `aur-deploy.sh` enforces the precondition at runtime and
+  exits 1 with a `Register it first:` message rather than creating an entry. See
+  [`docs/AUR-PACKAGE-REGISTRATION.md`](docs/AUR-PACKAGE-REGISTRATION.md).
 - **Mutual Exclusion**: `_deploy_aur=true` and `_repo_subarch` are mutually
   exclusive. `aur-deploy.sh` hard-blocks this combination. Variant packages are
   build targets only — never AUR-deployed.

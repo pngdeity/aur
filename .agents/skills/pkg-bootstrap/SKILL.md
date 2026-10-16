@@ -22,7 +22,11 @@ When adding a new package to `packages/`:
    - For `gemini-cli` variants, add `_use_common_gemini_settings=true`
      (aspirational — no current packages use this)
    - `_deploy_aur=true` if this package should be published to the AUR by the
-     CI/CD pipeline
+     CI/CD pipeline. The flag asserts *current maintainership*, so the pkgbase
+     must already exist on the AUR and be owned by us before it is set --
+     registering a new entry is a separate, prior step performed with the
+     maintainer's own credentials. See
+     [`docs/AUR-PACKAGE-REGISTRATION.md`](../../docs/AUR-PACKAGE-REGISTRATION.md).
    - For CPU-optimization variants, set `_repo_subarch` (e.g., `"x86_64_v3"`) —
      mutually exclusive with `_deploy_aur` If the package is entirely custom and
      does not mirror any upstream PKGBUILD, omit the `_upstream_*` variables and
