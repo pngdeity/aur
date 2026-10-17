@@ -532,6 +532,35 @@ Outstanding architectural and documentation items requiring completion.
       support via `declare -p`, with single/multi-element examples and JSON mode
       output.
 
+## `bws` Package
+
+- [ ] **The `!lto` workaround is a package-local cost, not a free fix**: `bws`
+      carries `options=('!lto')` so that makepkg's `lto` option does not append
+      `-flto=auto` to `CFLAGS`. That suppresses LTO for every C and C++ object
+      in the package's build, which is exactly the contained effect wanted here
+      (the bundled `sqlite3.c` and `ring`'s assembly must not become GCC LTO
+      objects, because rustc links with lld and lld cannot resolve symbols
+      defined by an LTO object inside an archive), but it is a real optimisation
+      cost rather than a no-op. Rust-side LTO is unaffected — upstream
+      `Cargo.toml` sets `[profile.release] lto = "thin"` and
+      `codegen-units = 1` itself.
+
+      The workaround has no precedent in this repository, so it is a new
+      convention rather than an established one. Revisit it when either of the
+      following changes:
+
+      1. **An lld that resolves LTO archive members.** The failure is a property
+         of the linker, not of makepkg or of this package. Re-test by building
+         `bws` with `lto` re-enabled; if the link succeeds, drop the option.
+      2. **A future package that bundles C for performance.** `!lto` costs that
+         package its C-side LTO. Prefer a narrower fix there — for example
+         disabling LTO for the bundled C only — over copying this directive.
+
+      Recorded 2026-10-16 alongside the `lto` root cause in commit `bbb9fdb`,
+      after the fix was confirmed by a genuine `pkgctl build` clean-chroot run
+      and independently by the rootless container path noted under Engineering.
+      (Due: Indeterminate)
+
 ## `python-whois` Package
 
 - [ ] **Upstream issue/PR status check**: We filed issue #325 and opened PR #326
