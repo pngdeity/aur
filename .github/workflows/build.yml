@@ -24,10 +24,6 @@ on:
         required: false
         type: string
         description: 'Specific package directory to build (e.g. packages/apm)'
-      version:
-        required: false
-        type: string
-        description: 'Version string to pass to arch-builder.py'
 concurrency: build-${{ github.ref }}
 jobs:
   validate:
@@ -88,6 +84,10 @@ jobs:
             PKGS=$(find packages -mindepth 2 -maxdepth 2 -name PKGBUILD -exec dirname {} \; | sort)
           fi
 
+          echo "==> Updating container system packages before build loop"
+          sudo pacman -Syu --noconfirm
+          export SKIP_SYSUPDATE=1
+
           failed=""
           skipped=""
           passed=0
@@ -109,14 +109,9 @@ jobs:
               continue
             fi
 
-            VERSION="${{ inputs.version }}"
-            if [ -z "$VERSION" ]; then
-              VERSION=$(grep -oP '^pkgver=\K.*' "$PKG_DIR/PKGBUILD" | tr -d "'\"")
-            fi
-
             # Each package is built independently; one failure must not
             # suppress the rest. Results are collected and reported together.
-            if sudo -u builder python3 ./scripts/arch-builder.py "$PKG_DIR" "$VERSION"; then
+            if sudo -u builder SKIP_SYSUPDATE=1 python3 ./scripts/arch-builder.py "$PKG_DIR"; then
               passed=$((passed + 1))
             else
               echo "::error::$PKG_DIR failed to build"

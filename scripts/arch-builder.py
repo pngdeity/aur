@@ -18,6 +18,7 @@ from __future__ import annotations
 import argparse
 import os
 import re
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -52,57 +53,72 @@ def import_pgp_keys(pkg_dir: str) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description="Build an Arch Linux package")
     parser.add_argument("pkg_dir", help="Path to package directory")
-    parser.add_argument("version", help="Version string")
+    parser.add_argument(
+        "version",
+        nargs="?",
+        default=None,
+        help="Optional version string (deprecated/ignored)",
+    )
     args = parser.parse_args()
 
     pkg_dir = args.pkg_dir
+    pkg_name = Path(pkg_dir).name
     print(f"==> Building package in: {pkg_dir}")
 
-    os.environ.setdefault(
-        "SOURCE_DATE_EPOCH",
-        str(
-            int(
-                subprocess.run(
-                    ["date", "+%s"], capture_output=True, text=True
-                ).stdout.strip()
-            )
-        ),
-    )
+    import time
 
-    build_dir = os.environ.get("BUILDDIR", "/tmp/makepkg-build")
-    pkg_dest = os.environ.get("PKGDEST", "/tmp/makepkg-pkg")
-    src_dest = os.environ.get("SRCDEST", "/tmp/makepkg-src")
-    dist_dir = os.environ.get("DISTDIR", "/tmp/makepkg-dist")
+    os.environ.setdefault("SOURCE_DATE_EPOCH", str(int(time.time())))
+
+    base_build_dir = os.environ.get("BUILDDIR", "/tmp/makepkg-build")
+    base_pkg_dest = os.environ.get("PKGDEST", "/tmp/makepkg-pkg")
+    base_src_dest = os.environ.get("SRCDEST", "/tmp/makepkg-src")
+    dist_dir = Path(os.environ.get("DISTDIR", "/tmp/makepkg-dist"))
+
+    # Isolate build directories per package
+    build_dir = Path(base_build_dir) / pkg_name
+    pkg_dest = Path(base_pkg_dest) / pkg_name
+    src_dest = Path(base_src_dest) / pkg_name
 
     for d in (build_dir, pkg_dest, src_dest, dist_dir):
-        os.makedirs(d, exist_ok=True)
+        d.mkdir(parents=True, exist_ok=True)
 
-    os.environ["BUILDDIR"] = build_dir
-    os.environ["PKGDEST"] = pkg_dest
-    os.environ["SRCDEST"] = src_dest
+    # Clean any stale artifacts in pkg_dest before building
+    for old_pkg in pkg_dest.glob("*.pkg.tar.zst"):
+        old_pkg.unlink()
 
-    subprocess.run(["sudo", "pacman", "-Syu", "--noconfirm"], check=True)
+    os.environ["BUILDDIR"] = str(build_dir)
+    os.environ["PKGDEST"] = str(pkg_dest)
+    os.environ["SRCDEST"] = str(src_dest)
+
+    # System update (can be hoisted by setting SKIP_SYSUPDATE=1 in parent loop)
+    if not os.environ.get("SKIP_SYSUPDATE"):
+        subprocess.run(["sudo", "pacman", "-Syu", "--noconfirm"], check=True)
+
     import_pgp_keys(pkg_dir)
 
     print("  -> Starting makepkg...")
-    subprocess.run(
-        [
-            "makepkg",
-            "--syncdeps",
-            "--noconfirm",
-            "--noprogressbar",
-            "--needed",
-            "--clean",
-        ],
-        cwd=pkg_dir,
-        check=True,
-    )
+    try:
+        subprocess.run(
+            [
+                "makepkg",
+                "--syncdeps",
+                "--noconfirm",
+                "--noprogressbar",
+                "--needed",
+                "--clean",
+                "--rmdeps",
+            ],
+            cwd=pkg_dir,
+            check=True,
+        )
+    finally:
+        # Clean up build directory to conserve disk space
+        shutil.rmtree(build_dir, ignore_errors=True)
 
-    dist = Path(dist_dir)
-    pkg_dest_path = Path(pkg_dest)
-    for artifact in pkg_dest_path.glob("*.pkg.tar.zst"):
-        dst = dist / artifact.name
-        dst.write_bytes(artifact.read_bytes())
+    artifacts = list(pkg_dest.glob("*.pkg.tar.zst"))
+    for artifact in artifacts:
+        dst = dist_dir / artifact.name
+        shutil.copy2(artifact, dst)
         print(f"  -> Copied {artifact.name} to {dst}")
 
     print(f"==> Finished building {pkg_dir}")
