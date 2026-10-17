@@ -10,6 +10,17 @@ pkgrel=1
 pkgdesc="Bitwarden Secrets Manager CLI"
 arch=('x86_64' 'aarch64')
 url="https://github.com/bitwarden/sdk-sm"
+# makepkg's `lto` option appends LTOFLAGS (-flto=auto) to CFLAGS, and the `cc`
+# crate passes CFLAGS straight to the C compiler, so the bundled sqlite3.c that
+# libsqlite3-sys compiles lands in its rlib as a GCC LTO object (.gnu.lto_*
+# sections, 8.9M against 3.4M). rustc links with lld by default, and lld does
+# not resolve symbols defined by an LTO object inside an archive, so the link
+# fails with `undefined symbol: sqlite3_finalize` and the same for every
+# ring_core_0_17_14__* symbol from the prebuilt ring assembly. bfd resolves
+# them, but selecting it is not an option here: it rejects the LLD-only
+# -Wl,--icf=safe that rustc also emits. `!lto` keeps Rust's own optimisation,
+# which upstream Cargo.toml sets for the release profile itself.
+options=('!lto')
 license=('custom:Bitwarden-SDK-License-Agreement')
 makedepends=('cargo' 'jq')
 depends=('glibc' 'libgcc')
