@@ -330,6 +330,57 @@ Outstanding architectural and documentation items requiring completion.
 
 ## Engineering
 
+- [ ] **Rootless container build path for local validation**: `pkgctl build`
+      cannot run unprivileged. It chains through `archbuild` to `makechrootpkg`'s
+      `check_root()`, which unconditionally re-execs itself via `doas` or `su`
+      root, and the per-user chroot under `/var/lib/archbuild/` is
+      `root root 555`. There is no unprivileged mode, no opt-out flag and no
+      environment variable. Every clean-chroot verification is therefore a
+      human-executed step, which is why the `bws` investigation needed several
+      round trips.
+
+      **A working rootless substitute was demonstrated 2026-10-16** using
+      rootless Podman, with no host privilege at any point:
+
+      ```
+      podman build -t aur-arch-builder:local -f .github/docker/Dockerfile .github/docker/
+      podman run --rm -v "$PWD":/work:rw -w /work localhost/aur-arch-builder:local \
+        bash -c 'sudo -u builder ./scripts/arch-builder.sh packages/bws'
+      ```
+
+      The image is the CI builder image, built unconventionally from the repo's
+      own `.github/docker/Dockerfile` (`podman pull` and `podman build` both
+      succeeded unprivileged; `buildah` is absent, so `podman build` is the only
+      image path available). Inside the container, `arch-builder.sh`'s
+      `sudo pacman -Syu` is satisfied by container-root, and the image already
+      grants `builder NOPASSWD` on `/usr/bin/pacman`. It drove the full
+      `--syncdeps` dependency resolution and a complete `bws` Rust build, which
+      is what located the `lto` defect recorded elsewhere in this file.
+
+      The work is not yet turnkey. Three things must be settled before this can
+      be presented as a supported workflow:
+
+  1. **`arch-builder.sh` builds in place.** It does `cd "$PKG_DIR"` and leaves
+     `src/`, `pkg/` and the downloaded source tarball there, so a read-only
+     mount cannot be used against the real repository. The demonstrated run
+     mounted a scratch copy `:rw`. A `:ro` mount only ever worked because the
+     container's own pacman mirrors served `--syncdeps`; that is not a property
+     to rely on.
+  2. **The script cannot distinguish container-root from host-root.** Its
+     unconditional `sudo pacman -Syu` is correct in the container and forbidden
+     on the host. Any wrapper must make the boundary explicit rather than
+     assumed.
+  3. **Freshness is unverified.** The image's own comment admits the base digest
+     is only a starting point (`pacman -Syu` mutates it to current), and the
+     Dockerfile's `pacman -Scc` emits an interactive `[y/N]` prompt. Whether a
+     container run is a faithful proxy for `pkgctl build`'s chroot has not been
+     established for this repository's package set.
+
+      The value is real and immediate: this is the only known path to exercise a
+      real clean-environment build without asking the user to run one, which
+      makes it the natural inner loop for package work and a candidate for the
+      automated intake and continuing-compliance system. It complements, and
+      does not replace, `pkgctl build` as the final gate. (Due: Indeterminate)
 - [x] ~~**pkgdesc Consistency Across Package Variants**~~: Rule documented in
       `AGENTS.md` (Variant Builds §) and
       `docs/PKGBUILD-CUSTOM-VARIABLES-REFERENCE.md` (`_pkgname` entry).
@@ -480,6 +531,35 @@ Outstanding architectural and documentation items requiring completion.
       `docs/PKGBUILD-CUSTOM-VARIABLES-REFERENCE.md` now documents array variable
       support via `declare -p`, with single/multi-element examples and JSON mode
       output.
+
+## `bws` Package
+
+- [ ] **The `!lto` workaround is a package-local cost, not a free fix**: `bws`
+      carries `options=('!lto')` so that makepkg's `lto` option does not append
+      `-flto=auto` to `CFLAGS`. That suppresses LTO for every C and C++ object
+      in the package's build, which is exactly the contained effect wanted here
+      (the bundled `sqlite3.c` and `ring`'s assembly must not become GCC LTO
+      objects, because rustc links with lld and lld cannot resolve symbols
+      defined by an LTO object inside an archive), but it is a real optimisation
+      cost rather than a no-op. Rust-side LTO is unaffected — upstream
+      `Cargo.toml` sets `[profile.release] lto = "thin"` and
+      `codegen-units = 1` itself.
+
+      The workaround has no precedent in this repository, so it is a new
+      convention rather than an established one. Revisit it when either of the
+      following changes:
+
+      1. **An lld that resolves LTO archive members.** The failure is a property
+         of the linker, not of makepkg or of this package. Re-test by building
+         `bws` with `lto` re-enabled; if the link succeeds, drop the option.
+      2. **A future package that bundles C for performance.** `!lto` costs that
+         package its C-side LTO. Prefer a narrower fix there — for example
+         disabling LTO for the bundled C only — over copying this directive.
+
+      Recorded 2026-10-16 alongside the `lto` root cause in commit `bbb9fdb`,
+      after the fix was confirmed by a genuine `pkgctl build` clean-chroot run
+      and independently by the rootless container path noted under Engineering.
+      (Due: Indeterminate)
 
 ## `python-whois` Package
 
