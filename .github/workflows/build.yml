@@ -5,6 +5,9 @@ on:
       - 'packages/**'
       - 'scripts/**'
       - 'schemas/**'
+      - 'policies/**'
+      - 'src/**'
+      - '.github/workflows/build.yml'
   push:
     branches:
       - main
@@ -12,6 +15,9 @@ on:
       - 'packages/**'
       - 'scripts/**'
       - 'schemas/**'
+      - 'policies/**'
+      - 'src/**'
+      - '.github/workflows/build.yml'
   workflow_dispatch:
     inputs:
       package:

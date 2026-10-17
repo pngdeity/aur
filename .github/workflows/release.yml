@@ -22,10 +22,32 @@ jobs:
       - name: Build packages
         run: |
           set -euo pipefail
+          EXCLUDE_PKGS=("packages/apm")
           PKGS=$(find packages -mindepth 2 -maxdepth 2 -name PKGBUILD -exec dirname {} \; | sort)
           for PKG_DIR in $PKGS; do
+            if [ ! -f "$PKG_DIR/PKGBUILD" ]; then
+              continue
+            fi
+
+            excluded=false
+            for excl in "${EXCLUDE_PKGS[@]}"; do
+              if [ "$PKG_DIR" = "$excl" ]; then
+                excluded=true
+                break
+              fi
+            done
+            if $excluded; then
+              echo "::warning::$PKG_DIR is excluded from the release build set"
+              continue
+            fi
+
             echo "==> Building $PKG_DIR"
             pushd "$PKG_DIR" > /dev/null
+            KEYS=$(makepkg --printsrcinfo 2>/dev/null | sed -n 's/^\s*validpgpkeys = //p' || true)
+            for KEY in $KEYS; do
+              echo "  -> Importing PGP Key: $KEY"
+              gpg --recv-keys "$KEY" || echo "    ! Warning: Failed to fetch PGP key $KEY"
+            done
             makepkg --syncdeps --noconfirm --noprogressbar --needed --clean
             mkdir -p "$GITHUB_WORKSPACE/dist"
             cp ./*.pkg.tar.zst "$GITHUB_WORKSPACE/dist/" 2>/dev/null

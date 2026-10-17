@@ -139,26 +139,34 @@ def run_conftest() -> None:
         check=True,
     )
 
-    with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as tmp:
-        subprocess.run(
-            [
-                "conftest",
-                "test",
-                str(MANIFEST_FILE),
-                "--policy",
-                str(REPO_ROOT / "policies"),
-                "--output",
-                "json",
-            ],
-            stdout=tmp,
-            stderr=subprocess.DEVNULL,
+    tmp_path = None
+    try:
+        with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as tmp:
+            tmp_path = Path(tmp.name)
+            subprocess.run(
+                [
+                    "conftest",
+                    "test",
+                    str(MANIFEST_FILE),
+                    "--policy",
+                    str(REPO_ROOT / "policies"),
+                    "--output",
+                    "json",
+                ],
+                stdout=tmp,
+                stderr=subprocess.DEVNULL,
+                check=False,
+            )
+
+        parse_proc = subprocess.run(
+            [sys.executable, str(SCRIPTS_DIR / "parse_conftest_results.py"), str(tmp_path)],
             check=False,
         )
-
-    subprocess.run(
-        [sys.executable, str(SCRIPTS_DIR / "parse_conftest_results.py"), tmp.name],
-        check=False,
-    )
+        if parse_proc.returncode != 0:
+            sys.exit(parse_proc.returncode)
+    finally:
+        if tmp_path and tmp_path.is_file():
+            tmp_path.unlink()
 
 
 def main() -> None:

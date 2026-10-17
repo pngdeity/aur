@@ -575,11 +575,12 @@ deny_vcs_without_skip contains msg if {
 }
 
 # ─────────────────────────────────────────────────────────────────────
-# Rule 15: deny_no_version_constraints (ERROR)
+# Rule 15: warn_no_version_constraints (WARN)
 # Version operators (>=, <=, >, <, =) in depends/makedepends/checkdepends
-# are non-functional — pacman does not enforce version ranges.
+# are non-functional for ranges — pacman does not enforce version ranges.
+# Flagged as warning per PKGBUILD(5) standards.
 # ─────────────────────────────────────────────────────────────────────
-deny_no_version_constraints contains msg if {
+warn_no_version_constraints contains msg if {
 	pkg := input.packages[_]
 	not has_exception(pkg, "no_version_constraints")
 	dep_lists := [
@@ -590,12 +591,12 @@ deny_no_version_constraints contains msg if {
 	dep := dep_lists[i].entries[j]
 	regex.match(`[<>]=`, dep)
 	msg := sprintf(
-		"%s: %s entry '%s' contains version operator — pacman does not enforce version ranges (no_version_constraints rule)",
+		"%s: %s entry '%s' contains version operator — verify if version constraint is necessary (no_version_constraints rule)",
 		[pkg.pkgname, dep_lists[i].name, dep],
 	)
 }
 
-deny_no_version_constraints contains msg if {
+warn_no_version_constraints contains msg if {
 	pkg := input.packages[_]
 	not has_exception(pkg, "no_version_constraints")
 	dep_lists := [
@@ -606,7 +607,7 @@ deny_no_version_constraints contains msg if {
 	dep := dep_lists[i].entries[j]
 	regex.match(`\b=\d`, dep)
 	msg := sprintf(
-		"%s: %s entry '%s' contains version constraint — pacman does not enforce version ranges (no_version_constraints rule)",
+		"%s: %s entry '%s' contains version constraint — verify if exact version constraint is necessary (no_version_constraints rule)",
 		[pkg.pkgname, dep_lists[i].name, dep],
 	)
 }
